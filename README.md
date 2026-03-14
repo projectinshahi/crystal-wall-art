@@ -1,36 +1,153 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Crystal Wall Art
 
-## Getting Started
+A modern **E-commerce web application** for browsing and purchasing premium crystal wall art.
+Built using **Next.js App Router**, **Tailwind CSS**, and modern frontend best practices.
 
-First, run the development server:
+---
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+# 🚀 Tech Stack
+
+* **Framework:** Next.js 16 (App Router)
+* **UI:** Tailwind CSS v4
+* **Language:** TypeScript
+* **Icons:** Lucide React
+* **Styling:** Tailwind + Custom Design System
+
+---
+
+# 📂 Project Structure
+
+```
+crystal-wall-art
+│
+├── app/                # Next.js App Router pages
+│   ├── layout.tsx
+│   ├── page.tsx
+│   └── globals.css
+│
+├── components/         # Reusable UI components
+│   ├── navbar/
+│   ├── ui/
+│
+├── public/             # Static assets
+│
+├── tailwind.config.js  # Tailwind configuration
+├── package.json
+└── README.md
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+---
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+# 🛠️ Getting Started
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Clone the repository:
 
-## Learn More
+```
+git clone <repository-url>
+cd crystal-wall-art
+```
 
-To learn more about Next.js, take a look at the following resources:
+Install dependencies:
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+```
+npm install
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+Run the development server:
 
-## Deploy on Vercel
+```
+npm run dev
+```
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+or
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+```
+yarn dev
+```
+
+Open your browser:
+
+```
+http://localhost:3000
+```
+
+---
+
+# 🎨 Design System
+
+The project uses a **custom design system** built with Tailwind.
+
+### Primary Colors
+
+| Name      | Value     |
+| --------- | --------- |
+| Primary   | `#15BCC9` |
+| Secondary | `#ADCC5E` |
+| Rating    | `#FFC800` |
+
+### Neutral Colors
+
+| Name        | Value     |
+| ----------- | --------- |
+| Light Gray  | `#F8F8F8` |
+| Gray Border | `#CACACA` |
+| Gray Text   | `#9E9E9E` |
+| Dark Gray   | `#1E1E1E` |
+
+---
+
+# 🔤 Typography
+
+Fonts used in the project:
+
+* **Inter** → Primary UI font
+* **Poppins** → Headings
+* **Fira Code** → Code / mono text
+
+---
+
+# 🌿 Branch Strategy
+
+The project follows a **feature-based Git workflow**.
+
+```
+main        → Production
+develop     → Integration
+feature/*   → New features
+fix/*       → Bug fixes
+hotfix/*    → Emergency fixes
+```
+
+Example:
+
+```
+feature/navbar
+feature/product-grid
+feature/cart
+```
+
+---
+
+# 📦 Build for Production
+
+```
+npm run build
+```
+
+Start production server:
+
+```
+npm start
+```
+
+---
+
+# 📄 License
+
+This project is licensed under the **MIT License**.
+
+---
+
+# 👨‍💻 Author
+
+Developed by **Jibi George**
