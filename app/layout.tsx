@@ -5,6 +5,19 @@ import LayoutContainer from "@/components/Container/LayoutContainer";
 import { Geist } from "next/font/google";
 import { cn } from "@/lib/utils";
 
+import { Inter, Poppins } from "next/font/google"
+
+const inter = Inter({
+  subsets: ["latin"],
+  variable: "--font-sans",
+})
+
+const poppins = Poppins({
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
+  variable: "--font-heading",
+})
+
 const geist = Geist({subsets:['latin'],variable:'--font-sans'});
 
 export const metadata: Metadata = {
@@ -20,7 +33,7 @@ export default function RootLayout({
   return (
     <html lang="en" className={cn("font-sans", geist.variable)}>
       <body
-        className={`antialiased`}
+        className={`antialiased ${inter.variable} ${poppins.variable}`}
       >
         <LayoutContainer>
           {children}
