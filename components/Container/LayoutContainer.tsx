@@ -1,6 +1,7 @@
 
 import React from 'react'
 import Header from '../common/Header';
+import CartSidebar from '../CartSidebar';
 
 interface LayoutContainerProps {
     children: React.ReactNode
@@ -12,6 +13,7 @@ const LayoutContainer = ({ children }: LayoutContainerProps) => {
         <>
             <Header />
             {children}
+            <CartSidebar/>
         </>
     )
 }
