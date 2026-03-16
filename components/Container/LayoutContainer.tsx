@@ -12,8 +12,10 @@ const LayoutContainer = ({ children }: LayoutContainerProps) => {
     return (
         <>
             <Header />
-            {children}
-            <CartSidebar/>
+            <main className='flex-1'>
+                {children}
+            </main>
+            <CartSidebar />
         </>
     )
 }

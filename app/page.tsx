@@ -1,9 +1,15 @@
-import Image from "next/image";
+import AboutSection from "@/components/homePage/AboutSection";
+import CategoriesSection from "@/components/homePage/CategoriesSection";
+import FrameSelection from "@/components/homePage/FrameSelection";
+import HeroSection from "@/components/homePage/HeroSection";
 
 export default function Home() {
   return (
-    <div className="min-h-screen flex items-center justify-center">
-      <h1>Crystal Wall Art - Ecommerce Application</h1>
-    </div>
+    <>
+      <HeroSection />
+      <AboutSection />
+      <FrameSelection />
+      <CategoriesSection />
+    </>
   );
 }
