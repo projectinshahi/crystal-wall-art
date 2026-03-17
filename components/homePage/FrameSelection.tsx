@@ -51,7 +51,7 @@ const FrameSelection = () => {
                             className="group w-full rounded-[28px] bg-grayBorder border-2 border-lightBackground p-4 hover:border-primary/40 hover:shadow-lg transition-all cursor-pointer"
                         >
 
-                            <div className="flex items-center justify-center h-[150px] sm:h-[180px] lg:h-[210px]">
+                            <div className="flex items-center justify-center h-[150px] sm:h-[180px] lg:h-[210px] overflow-hidden">
 
                                 <div
                                     className={cn(
