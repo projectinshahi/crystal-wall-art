@@ -3,9 +3,10 @@
 import React, { useEffect, useState, useCallback } from "react"
 import useEmblaCarousel from "embla-carousel-react"
 import { ChevronLeft, ChevronRight } from "lucide-react"
+import Image, { StaticImageData } from "next/image"
 
 interface CarouselProps {
-  slides: React.ReactNode[]
+  slides: StaticImageData[];
   showButtons?: boolean
   showDots?: boolean
   autoplay?: boolean
@@ -119,9 +120,15 @@ export default function Carousel({
               style={{
                 flex: `0 0 ${100 / currentSlidesPerView}%`,
               }}
-              className="min-w-0"
+              className="min-w-0 h-full relative"
             >
-              {slide}
+              <Image
+                src={slide}
+                alt={`slide-${index}`}
+                width={1200}
+                height={600}
+                className="w-full h-full object-cover"
+              />
             </div>
           ))}
 
@@ -149,14 +156,14 @@ export default function Carousel({
 
       {/* Pagination Dots */}
       {showDots && hasMultipleSlides && (
-        <div className="flex justify-center gap-2 mt-4">
+        <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-10 flex gap-2">
           {slides.map((_, index) => (
             <button
               key={index}
               onClick={() => scrollTo(index)}
               className={`h-2 rounded-full transition-all ${selectedIndex === index
-                  ? "w-6 bg-black"
-                  : "w-2 bg-gray-300"
+                  ? "w-6 bg-lightBackground"
+                  : "w-2 bg-white"
                 }`}
             />
           ))}

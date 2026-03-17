@@ -1,13 +1,13 @@
 import Carousel from '../ui/carousel'
 import HomeContentWrapper from './HomeContentWrapper'
+import img1 from '@/public/hero/hero1.webp'
+import img2 from '@/public/hero/hero2.png'
+import img3 from '@/public/hero/hero3.webp'
+import img4 from '@/public/hero/hero1.webp'
 
 const HeroSection = () => {
 
-    const slides = [
-        <img src="/hero/hero1.webp" className="w-full object-cover" />,
-        <img src="/hero/hero2.png" className="w-full object-cover" />,
-        <img src="/hero/hero3.webp" className="w-full object-cover" />,
-    ]
+    const slides = [img1, img2, img3, img4]
 
     return (
         <HomeContentWrapper containerClassName='px-4 sm:px-6 lg:px-8 py-8 sm:py-14 lg:py-20'>
