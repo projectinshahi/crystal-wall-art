@@ -1,11 +1,11 @@
 import type { Metadata } from "next";
 import "./globals.css";
 
-import LayoutContainer from "@/components/Container/LayoutContainer";
 import { Geist } from "next/font/google";
 import { cn } from "@/lib/utils";
 
 import { Inter, Poppins } from "next/font/google"
+import LayoutContext from "@/components/common/LayoutContext/LayoutContext";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -18,7 +18,7 @@ const poppins = Poppins({
   variable: "--font-heading",
 })
 
-const geist = Geist({subsets:['latin'],variable:'--font-sans'});
+const geist = Geist({ subsets: ['latin'], variable: '--font-sans' });
 
 export const metadata: Metadata = {
   title: "Crystal Wall Art",
@@ -35,9 +35,9 @@ export default function RootLayout({
       <body
         className={`antialiased ${inter.variable} ${poppins.variable}`}
       >
-        <LayoutContainer>
+        <LayoutContext>
           {children}
-        </LayoutContainer>
+        </LayoutContext>
       </body>
     </html>
   );
