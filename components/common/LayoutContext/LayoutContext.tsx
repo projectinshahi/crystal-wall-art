@@ -63,6 +63,7 @@ const LayoutContext = ({ children }: { children: React.ReactNode }) => {
     const pathname = usePathname();
 
     const [override, setOverrideState] = useState<LayoutOverride | null>(null);
+    const [cartOpen, setCartOpen] = useState(false);
 
     const setOverride = useCallback((o: LayoutOverride | null) => {
         setOverrideState(o);
@@ -77,7 +78,7 @@ const LayoutContext = ({ children }: { children: React.ReactNode }) => {
     return (
         <RouteLayoutContext.Provider value={{ setOverride }}>
             {headerMode === "full" && (
-                <Header />
+                <Header cartOpen={cartOpen} setCartOpen={setCartOpen} />
             )}
             {headerMode === "back" && (
                 <BackHeader title={backTitle} onBack={onBack} />
@@ -85,7 +86,7 @@ const LayoutContext = ({ children }: { children: React.ReactNode }) => {
             <main className='flex-1'>
                 {children}
             </main>
-            <CartSidebar />
+            <CartSidebar open={cartOpen} close={() => setCartOpen(false)} />
             {showFooter && <Footer />}
         </RouteLayoutContext.Provider >
     )

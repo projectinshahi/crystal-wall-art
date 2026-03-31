@@ -25,11 +25,9 @@ const items = [
     }
 ]
 
-const CartSidebar = () => {
+const CartSidebar = ({open,close}:{open:boolean,close:any}) => {
 
     const [couponCode, setCouponCode] = useState<string>('')
-
-    const isOpen = false;
 
     const setOpen = (value: boolean) => { }
 
@@ -43,12 +41,12 @@ const CartSidebar = () => {
 
     const clearCart = () => {}
 
-    if (!isOpen) return null;
+    if (!open) return null;
 
     return (
         <>
             {/* Backdrop */}
-            <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm" onClick={() => setOpen(false)} />
+            <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm" onClick={close} />
 
             {/* Sidebar */}
             <div className="fixed right-0 top-0 bottom-0 z-50 w-full max-w-md bg-card shadow-2xl flex flex-col animate-in slide-in-from-right duration-300 bg-white">

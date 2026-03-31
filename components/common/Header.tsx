@@ -14,11 +14,11 @@ const DESKTOP_NAV = [
     { to: "/store/track-order", label: "Track Order" },
 ];
 
-const Header = () => {
+const Header = ({ cartOpen, setCartOpen }: any) => {
 
-    const [cartOpen, setCartOpen] = useState(false);
+
     const [drawerOpen, setDrawerOpen] = useState(false);
-    
+
     const cartItemCount = 10;
 
     const pathname = usePathname();
@@ -36,7 +36,7 @@ const Header = () => {
                             <button
                                 className="p-2 -ml-2 rounded-lg hover:bg-muted transition-colors"
                                 aria-label="Open menu"
-                                onClick={()=> setDrawerOpen(true)}
+                                onClick={() => setDrawerOpen(true)}
                             >
                                 <Menu className="h-6 w-6 text-primary" />
                             </button>
@@ -114,7 +114,7 @@ const Header = () => {
             </header>
 
             {/* Mobile Drawer Menu */}
-            <MobileDrawerMenus open={drawerOpen} close={setDrawerOpen}/>
+            <MobileDrawerMenus open={drawerOpen} close={setDrawerOpen} />
         </>
     )
 }
