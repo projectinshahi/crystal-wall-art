@@ -5,6 +5,7 @@ import HomeContentWrapper from './HomeContentWrapper'
 import { Typography } from '../ui/Typography'
 import Image from 'next/image'
 import { cn } from '@/lib/utils'
+import { useRouter } from 'next/navigation'
 
 const CATEGORIES = [
     {
@@ -56,7 +57,11 @@ const CATEGORIES = [
 
 const CategoriesSection = () => {
 
-    const handleCategoryClick = (key: any) => { }
+    const router = useRouter();
+
+    const handleCategoryClick = (key: any) => {
+        router.push(`/products?category=${encodeURIComponent(key)}`);
+    }
 
     return (
         <HomeContentWrapper wrapperClassName="bg-lightGray mt-5">

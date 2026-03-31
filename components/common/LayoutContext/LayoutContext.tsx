@@ -77,17 +77,19 @@ const LayoutContext = ({ children }: { children: React.ReactNode }) => {
 
     return (
         <RouteLayoutContext.Provider value={{ setOverride }}>
-            {headerMode === "full" && (
-                <Header cartOpen={cartOpen} setCartOpen={setCartOpen} />
-            )}
-            {headerMode === "back" && (
-                <BackHeader title={backTitle} onBack={onBack} />
-            )}
-            <main className='flex-1'>
-                {children}
-            </main>
-            <CartSidebar open={cartOpen} close={() => setCartOpen(false)} />
-            {showFooter && <Footer />}
+            <div className='flex flex-col min-h-screen'>
+                {headerMode === "full" && (
+                    <Header cartOpen={cartOpen} setCartOpen={setCartOpen} />
+                )}
+                {headerMode === "back" && (
+                    <BackHeader title={backTitle} onBack={onBack} />
+                )}
+                <main className='flex-1'>
+                    {children}
+                </main>
+                <CartSidebar open={cartOpen} close={() => setCartOpen(false)} />
+                {showFooter && <Footer />}
+            </div>
         </RouteLayoutContext.Provider >
     )
 }
