@@ -264,7 +264,7 @@ const MobileDrawerMenus = ({ open, close }: { open: boolean; close: (open: boole
                 className="w-[300px] sm:w-[340px] p-0 overflow-y-auto bg-white"
                 showCloseButton={false}
             >
-                <SheetHeader className="p-4 pb-2 border-b border-lightBackground">
+                <SheetHeader className="p-4 pb-2 border-b border-lightBackground sticky top-0 z-10 bg-white">
                     <SheetTitle className="text-center">
                         <Link href="/" onClick={() => close(false)} className="inline-block">
                             <img

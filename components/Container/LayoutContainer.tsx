@@ -1,7 +1,6 @@
-
 import React from 'react'
-import Header from '../common/Header';
 import CartSidebar from '../CartSidebar';
+import HeaderContext from '../common/LayoutContext/LayoutContext';
 
 interface LayoutContainerProps {
     children: React.ReactNode
@@ -11,9 +10,12 @@ const LayoutContainer = ({ children }: LayoutContainerProps) => {
 
     return (
         <>
-            <Header />
-            {children}
-            <CartSidebar/>
+            <HeaderContext>
+                <main className='flex-1'>
+                    {children}
+                </main>
+                <CartSidebar />
+            </HeaderContext>
         </>
     )
 }

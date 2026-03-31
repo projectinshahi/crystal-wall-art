@@ -78,6 +78,33 @@
 
 /* Base styles */
 
+html {
+  scroll-behavior: smooth;
+}
+
 body {
   @apply bg-white text-darkGray font-sans;
+}
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-primary) var(--color-lightGray);
+}
+
+/* Chrome, Edge, Safari */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--color-lightGray);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--color-primary);
+  border-radius: 9999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #0ea5b7; /* slightly darker primary */
 }

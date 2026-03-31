@@ -1,6 +1,5 @@
 "use client"
 
-import Link from 'next/link'
 import { usePathname } from 'next/navigation';
 import { useEffect } from 'react';
 
@@ -8,7 +7,7 @@ export default function NotFound() {
     const pathname = usePathname();
 
     useEffect(() => {
-        console.error("404 Error: User attempted to access non-existent route:", location.pathname);
+        console.error("404 Error: User attempted to access non-existent route:", pathname);
     }, [pathname]);
 
     return (
