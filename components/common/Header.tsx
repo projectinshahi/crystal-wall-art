@@ -6,6 +6,7 @@ import { usePathname } from 'next/navigation';
 import { useState } from 'react'
 import { Button } from '../ui/button';
 import MobileDrawerMenus from './MobileDrawerMenus';
+import Container from '../Container/Container';
 
 const DESKTOP_NAV = [
     { to: "/store", label: "Shop" },
@@ -29,7 +30,7 @@ const Header = ({ cartOpen, setCartOpen }: any) => {
         <>
             <header className='sticky top-0 z-40 bg-white border-b-2 border-primary'>
                 {/* Main nav bar */}
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <Container>
                     <div className="flex items-center justify-between h-14 sm:h-16">
                         {/* Left: hamburger (mobile) */}
                         <div className="flex items-center gap-2 md:hidden">
@@ -110,7 +111,7 @@ const Header = ({ cartOpen, setCartOpen }: any) => {
                             </Link>
                         </div>
                     </div>
-                </div>
+                </Container>
             </header>
 
             {/* Mobile Drawer Menu */}

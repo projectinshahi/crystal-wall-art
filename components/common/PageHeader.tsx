@@ -1,11 +1,12 @@
 "use client"
 
 import { ArrowLeft } from 'lucide-react'
+import Container from '../Container/Container'
 
 const PageHeader = ({ title, handleBack }: { title?: string, handleBack?: () => void }) => {
     return (
         <div className='w-full relative'>
-            <div className='max-w-7xl mx-auto px-4 sm:px-6 lg:px-8'>
+            <Container>
                 <div className="flex items-center justify-between h-14 sm:h-16">
                     {handleBack && (
                         <button
@@ -22,7 +23,7 @@ const PageHeader = ({ title, handleBack }: { title?: string, handleBack?: () => 
                         </h1>
                     )}
                 </div>
-            </div>
+            </Container>
         </div>
     )
 }
