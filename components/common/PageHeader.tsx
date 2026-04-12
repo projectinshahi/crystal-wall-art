@@ -18,7 +18,7 @@ const PageHeader = ({ title, handleBack }: { title?: string, handleBack?: () => 
                         </button>
                     )}
                     {title && (
-                        <h1 className="absolute left-1/2 -translate-x-1/2 text-base font-semibold truncate max-w-[60%] text-black">
+                        <h1 className="absolute left-1/2 -translate-x-1/2 text-base font-semibold truncate max-w-[60%] text-black capitalize">
                             {title}
                         </h1>
                     )}

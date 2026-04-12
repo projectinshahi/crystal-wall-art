@@ -9,10 +9,10 @@ import MobileDrawerMenus from './MobileDrawerMenus';
 import Container from '../Container/Container';
 
 const DESKTOP_NAV = [
-    { to: "/store", label: "Shop" },
-    { to: "/store/about", label: "About" },
-    { to: "/store/contact", label: "Contact" },
-    { to: "/store/track-order", label: "Track Order" },
+    { to: "/", label: "Shop" },
+    { to: "/about", label: "About" },
+    { to: "/contact", label: "Contact" },
+    { to: "/track-order", label: "Track Order" },
 ];
 
 const Header = ({ cartOpen, setCartOpen }: any) => {
@@ -28,7 +28,7 @@ const Header = ({ cartOpen, setCartOpen }: any) => {
 
     return (
         <>
-            <header className='sticky top-0 z-40 bg-white border-b-2 border-primary'>
+            <header className='bg-white border-b-2 border-primary'>
                 {/* Main nav bar */}
                 <Container>
                     <div className="flex items-center justify-between h-14 sm:h-16">

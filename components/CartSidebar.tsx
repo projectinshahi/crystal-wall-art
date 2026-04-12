@@ -6,7 +6,8 @@ import { Badge } from './ui/badge'
 import { Typography } from './ui/Typography'
 import Link from 'next/link'
 import { Input } from './ui/input'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
+import { useRouter } from 'next/navigation'
 
 const items = [
     {
@@ -25,9 +26,12 @@ const items = [
     }
 ]
 
-const CartSidebar = ({open,close}:{open:boolean,close:any}) => {
+const CartSidebar = ({ open, close }: { open: boolean, close: any }) => {
+
+    const router = useRouter();
 
     const [couponCode, setCouponCode] = useState<string>('')
+    const [visible, setVisible] = useState(open);
 
     const setOpen = (value: boolean) => { }
 
@@ -39,17 +43,30 @@ const CartSidebar = ({open,close}:{open:boolean,close:any}) => {
 
     const removeItem = (index: any) => { }
 
-    const clearCart = () => {}
+    const clearCart = () => { }
 
-    if (!open) return null;
+    useEffect(() => {
+        if (open) {
+            setVisible(true);
+        } else {
+            setTimeout(() => setVisible(false), 300);
+        }
+    }, [open]);
+
+    if (!visible) return null;
 
     return (
         <>
             {/* Backdrop */}
-            <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm" onClick={close} />
+            <div
+                className={`fixed inset-0 z-50 bg-black/40 backdrop-blur-sm transition-opacity duration-300 ${open ? "opacity-100" : "opacity-0"}`}
+                onClick={close}
+            />
 
             {/* Sidebar */}
-            <div className="fixed right-0 top-0 bottom-0 z-50 w-full max-w-md bg-card shadow-2xl flex flex-col animate-in slide-in-from-right duration-300 bg-white">
+            <div
+                className={`fixed right-0 top-0 bottom-0 z-50 w-full max-w-md bg-white shadow-2xl flex flex-col transition-transform duration-300 ${open ? "translate-x-0" : "translate-x-full"}`}
+            >
                 {/* Header */}
                 <div className="flex items-center justify-between p-6 py-4 border-b border-lightBackground">
                     <div className="flex items-center gap-2">
@@ -89,24 +106,24 @@ const CartSidebar = ({open,close}:{open:boolean,close:any}) => {
                                 {/* Info */}
                                 <div className="flex flex-col flex-1 min-w-0 space-y-2">
                                     <div className='relative flex justify-end'>
-                                    <Button variant="ghost" size="icon" className="h-6 w-6 text-destructive" onClick={() => removeItem(index)}>
-                                        <Trash2 className="h-3 w-3" />
-                                    </Button>
+                                        <Button variant="ghost" size="icon" className="h-6 w-6 text-destructive" onClick={() => removeItem(index)}>
+                                            <Trash2 className="h-3 w-3" />
+                                        </Button>
                                     </div>
                                     <p className="text-sm lg:text-base font-semibold truncate">{item.title}</p>
-                                        <div className='flex items-center gap-2'>
-                                            <span className="text-base lg:text-xl font-bold text-primary">₹{(item.offerPrice * item.quantity).toLocaleString("en-IN")}</span>
-                                            <span className="text-xs lg:text-base font-bold text-darkGray/37 line-through">₹{(item.actualPrice * item.quantity).toLocaleString("en-IN")}</span>
-                                        </div>
-                                        <div className="flex items-center gap-1">
-                                            <Button variant="outline" size="icon" className="h-6 w-6 border-lightBackground" onClick={() => updateQuantity(index, item.quantity - 1)}>
-                                                <Minus className="h-3 w-3" />
-                                            </Button>
-                                            <Typography variant='caption' className='font-semibold text-center'>{item.quantity}</Typography>
-                                            <Button variant="outline" size="icon" className="h-6 w-6 border-lightBackground" onClick={() => updateQuantity(index, item.quantity + 1)}>
-                                                <Plus className="h-3 w-3" />
-                                            </Button>
-                                        </div>
+                                    <div className='flex items-center gap-2'>
+                                        <span className="text-base lg:text-xl font-bold text-primary">₹{(item.offerPrice * item.quantity).toLocaleString("en-IN")}</span>
+                                        <span className="text-xs lg:text-base font-bold text-darkGray/37 line-through">₹{(item.actualPrice * item.quantity).toLocaleString("en-IN")}</span>
+                                    </div>
+                                    <div className="flex items-center gap-1">
+                                        <Button variant="outline" size="icon" className="h-6 w-6 border-lightBackground" onClick={() => updateQuantity(index, item.quantity - 1)}>
+                                            <Minus className="h-3 w-3" />
+                                        </Button>
+                                        <Typography variant='caption' className='font-semibold text-center'>{item.quantity}</Typography>
+                                        <Button variant="outline" size="icon" className="h-6 w-6 border-lightBackground" onClick={() => updateQuantity(index, item.quantity + 1)}>
+                                            <Plus className="h-3 w-3" />
+                                        </Button>
+                                    </div>
                                 </div>
                             </div>
                         ))
@@ -145,18 +162,25 @@ const CartSidebar = ({open,close}:{open:boolean,close:any}) => {
                         </div>
 
                         <div className="w-full h-[1px] bg-[repeating-linear-gradient(to_right,#00000054_0,#00000054_6px,transparent_6px,transparent_12px)]" />
-                        
+
                         <div className="flex items-center justify-between">
                             <span className="text-lg text-black font-bold">Total</span>
                             <span className="text-lg text-black font-bold">₹2099</span>
                         </div>
 
                         <div className='flex flex-col space-y-2'>
-                            <Link href="/store/checkout" onClick={() => setOpen(false)}>
-                                <Button className="w-full cursor-pointer text-white font-semibold" size="lg">
-                                    Checkout
-                                </Button>
-                            </Link>
+                            {/* <Link href="/checkout" onClick={() => {router.push('/checkout'), setOpen(false)}}> */}
+                            <Button
+                                className="w-full cursor-pointer text-white font-semibold"
+                                size="lg"
+                                onClick={() => {
+                                    router.push('/checkout');
+                                    close();
+                                }}
+                            >
+                                Checkout
+                            </Button>
+                            {/* </Link> */}
                             <Button variant="ghost" size="sm" className="w-full text-xs text-muted-foreground cursor-pointer" onClick={clearCart}>
                                 Clear Cart
                             </Button>
