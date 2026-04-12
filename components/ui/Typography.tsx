@@ -6,6 +6,7 @@ type Variant =
   | "h1"
   | "h2"
   | "h3"
+  | "h3_5"
   | "h4"
   | "h5"
   | "body-lg"
@@ -27,6 +28,7 @@ const styles: Record<Variant, string> = {
   h1: "text-5xl font-heading font-bold",
   h2: "text-4xl font-heading font-semibold",
   h3: "text-3xl font-heading font-semibold",
+  h3_5: "text-2_5xl font-heading font-semibold",
   h4: "text-2xl font-heading font-medium",
   h5: "text-xl font-heading font-medium",
 

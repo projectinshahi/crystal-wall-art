@@ -14,7 +14,7 @@ const ProductCard = ({ product }: { product: any }) => {
         >
 
             <button
-                onClick={() => router.push(`/products/${product.key}`)}
+                onClick={() => router.push(`/product/${product.key}`)}
                 className="group w-full rounded-[28px] border-2 border-lightBackground hover:border-primary/40 hover:shadow-lg transition-all cursor-pointer overflow-hidden"
             >
 
