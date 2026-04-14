@@ -6,6 +6,7 @@ import BackHeader from './BackHeader';
 import { usePathname } from 'next/navigation';
 import Footer from '../Footer';
 import CartSidebar from '@/components/CartSidebar';
+import { useCartSync } from '@/hooks/useCartSync';
 
 export type HeaderMode = "full" | "none" | "back";
 
@@ -74,6 +75,8 @@ const LayoutContext = ({ children }: { children: React.ReactNode }) => {
     const backTitle = override?.backTitle ?? defaults.backTitle;
     const showFooter = override?.showFooter ?? defaults.showFooter ?? headerMode === "full";
     const onBack = override?.onBack;
+
+    useCartSync();
 
     return (
         <RouteLayoutContext.Provider value={{ setOverride }}>
