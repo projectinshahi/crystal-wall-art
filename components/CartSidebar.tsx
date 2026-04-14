@@ -26,7 +26,7 @@ const items = [
     }
 ]
 
-const CartSidebar = ({ open, close }: { open: boolean, close: any }) => {
+const CartSidebar = ({ open, close }: { open?: boolean, close?: any }) => {
 
     const router = useRouter();
 
