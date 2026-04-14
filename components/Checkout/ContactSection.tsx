@@ -4,9 +4,11 @@ import FormInput from '../inputs/FormInput'
 const ContactSection = ({
     email,
     setEmail,
+    error
 }: {
     email: string;
     setEmail: (value: string) => void;
+    error?: string;
 }) => {
 
     return (
@@ -20,6 +22,7 @@ const ContactSection = ({
                 value={email}
                 onChange={setEmail}
                 required
+                error={error}
             />
         </div>
     )

@@ -6,9 +6,11 @@ import ContactSection from './ContactSection'
 import PaymentSummaryCard from './PaymentSummaryCard'
 import PaymentMethod from './PaymentMethod'
 import { Button } from '../ui/button'
+import { handleCODSubmit, handleRazorpaySubmit } from '@/lib/payment.service'
 import { useCartStore } from '@/store/cartStore'
 import { Loader2 } from 'lucide-react'
 import { useRouter } from 'next/navigation'
+import { checkoutSchema } from '@/schema/checkout.schema'
 
 export type FormInputProps = {
     type: "Home" | "Work" | "Other";
@@ -26,6 +28,7 @@ const Checkout = () => {
 
     const router = useRouter();
 
+    const [errors, setErrors] = useState<Partial<Record<keyof FormInputProps, string>>>({});
     const [form, setForm] = useState<FormInputProps>({
         type: "Home",
         name: "",
@@ -37,11 +40,32 @@ const Checkout = () => {
         email: '',
         paymentMethod: 'razorpay'
     });
+
     const [submitting, setSubmitting] = useState(false);
 
     const { items } = useCartStore();
 
-    const handleProccedCheckout = () => {  };
+    const handleProccedCheckout = () => {
+        const result = checkoutSchema.safeParse(form);
+
+        if (!result.success) {
+            const fieldErrors: any = {};
+
+            result.error.issues.forEach((err) => {
+                const field = err.path[0] as keyof FormInputProps;
+                fieldErrors[field] = err.message;
+            });
+
+            setErrors(fieldErrors);
+            return;
+        }
+
+        setErrors({});
+
+        form.paymentMethod === "cod"
+            ? handleCODSubmit({ form, cartItems: items, setSubmitting, router })
+            : handleRazorpaySubmit({ form, cartItems: items, setSubmitting, router });
+    };
 
     return (
         <div className="max-w-5xl mx-auto px-6 py-8">
@@ -58,6 +82,7 @@ const Checkout = () => {
                     />
                     <ContactSection
                         email={form.email}
+                        error={errors.email}
                         setEmail={(value: string) =>
                             setForm((prev) => ({
                                 ...prev,
