@@ -68,7 +68,7 @@ const Checkout = () => {
     };
 
     return (
-        <div className="max-w-5xl mx-auto px-6 py-8">
+        <div className="max-w-5xl mx-auto py-4 sm:py-8">
             <div className="grid md:grid-cols-[1fr_400px] gap-6">
                 <div className="space-y-4">
                     <DeliveryAddressSection

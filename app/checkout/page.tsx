@@ -21,7 +21,7 @@ const page = () => {
 
     useEffect(() => {
         if (isMobileCustomizer) {
-            setOverride({ headerMode: "full", showFooter: true });
+            setOverride({ headerMode: "full", showFooter: false });
         }
         setLoading(false)
         return () => setOverride(null);
