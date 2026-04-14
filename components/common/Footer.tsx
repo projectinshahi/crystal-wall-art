@@ -3,12 +3,12 @@
 import { Facebook, Instagram } from 'lucide-react';
 import Link from 'next/link';
 import React from 'react'
+import Container from '../Container/Container';
 
 const Footer = () => {
     return (
-        <footer className="bg-lightGray text-black mt-12 sm:mt-16">
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 sm:py-14">
-
+        <footer className="bg-lightGray text-black mt-4 sm:mt-16">
+            <Container className='max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 sm:py-14'>
                 <div className='flex flex-col sm:flex-row gap-3 justify-between items-center sm:items-start'>
                     <div className='flex flex-col sm:flex-row gap-3 sm:gap-10 justify-center sm:justify-start items-center sm:items-start'>
                         <Link href="/" className="inline-block mb-4">
@@ -46,8 +46,7 @@ const Footer = () => {
                         © {new Date().getFullYear()} Crystal Wall Art. All rights reserved.
                     </p>
                 </div>
-
-            </div>
+            </Container>
         </footer>
     )
 }

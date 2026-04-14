@@ -3,15 +3,16 @@
 import { Heart, Menu, ShoppingCart, User } from 'lucide-react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation';
-import { useState } from 'react'
+import { Suspense, useState } from 'react'
 import { Button } from '../ui/button';
 import MobileDrawerMenus from './MobileDrawerMenus';
+import Container from '../Container/Container';
 
 const DESKTOP_NAV = [
-    { to: "/store", label: "Shop" },
-    { to: "/store/about", label: "About" },
-    { to: "/store/contact", label: "Contact" },
-    { to: "/store/track-order", label: "Track Order" },
+    { to: "/", label: "Shop" },
+    { to: "/about", label: "About" },
+    { to: "/contact", label: "Contact" },
+    { to: "/track-order", label: "Track Order" },
 ];
 
 const Header = ({ cartOpen, setCartOpen }: any) => {
@@ -27,9 +28,9 @@ const Header = ({ cartOpen, setCartOpen }: any) => {
 
     return (
         <>
-            <header className='sticky top-0 z-40 bg-white border-b-2 border-primary'>
+            <header className='bg-white border-b-2 border-primary'>
                 {/* Main nav bar */}
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <Container>
                     <div className="flex items-center justify-between h-14 sm:h-16">
                         {/* Left: hamburger (mobile) */}
                         <div className="flex items-center gap-2 md:hidden">
@@ -110,11 +111,13 @@ const Header = ({ cartOpen, setCartOpen }: any) => {
                             </Link>
                         </div>
                     </div>
-                </div>
+                </Container>
             </header>
 
-            {/* Mobile Drawer Menu */}
-            <MobileDrawerMenus open={drawerOpen} close={setDrawerOpen} />
+            <Suspense fallback={null}>
+                {/* Mobile Drawer Menu */}
+                <MobileDrawerMenus open={drawerOpen} close={setDrawerOpen} />
+            </Suspense>
         </>
     )
 }

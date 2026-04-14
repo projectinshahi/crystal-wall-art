@@ -6,6 +6,7 @@ import BackHeader from './BackHeader';
 import { usePathname } from 'next/navigation';
 import Footer from '../Footer';
 import CartSidebar from '@/components/CartSidebar';
+import { useCartSync } from '@/hooks/useCartSync';
 
 export type HeaderMode = "full" | "none" | "back";
 
@@ -40,13 +41,13 @@ export function useStoreLayout() {
  */
 function getDefaultMode(pathname: string): { headerMode: HeaderMode; backTitle?: string; showFooter?: boolean; showSearch?: boolean } {
     // No header pages
-    if (pathname === "/checkout") return { headerMode: "back", backTitle: "Checkout", showFooter: false };
     if (pathname.startsWith("/order-success")) return { headerMode: "none", showFooter: false };
-
+    
     // Back-header pages
-    if (pathname.startsWith("/store/order/")) return { headerMode: "back", backTitle: "Order Details", showFooter: false };
+    if (pathname === "/checkout") return { headerMode: "back", backTitle: "Checkout", showFooter: false };
+    if (pathname.startsWith("/order/")) return { headerMode: "back", backTitle: "Order Details", showFooter: false };
     if (pathname === "/track-order") return { headerMode: "full", showSearch: false };
-
+    
     // Full navbar pages
     if (pathname === "/") return { headerMode: "full", showSearch: true };
     if (pathname.startsWith("/product/")) return { headerMode: "full", showSearch: false };
@@ -63,7 +64,7 @@ const LayoutContext = ({ children }: { children: React.ReactNode }) => {
     const pathname = usePathname();
 
     const [override, setOverrideState] = useState<LayoutOverride | null>(null);
-    const [cartOpen, setCartOpen] = useState(false);
+    const [cartOpen, setCartOpen] = useState<boolean>(false);
 
     const setOverride = useCallback((o: LayoutOverride | null) => {
         setOverrideState(o);
@@ -75,19 +76,25 @@ const LayoutContext = ({ children }: { children: React.ReactNode }) => {
     const showFooter = override?.showFooter ?? defaults.showFooter ?? headerMode === "full";
     const onBack = override?.onBack;
 
+    useCartSync();
+
     return (
         <RouteLayoutContext.Provider value={{ setOverride }}>
-            {headerMode === "full" && (
-                <Header cartOpen={cartOpen} setCartOpen={setCartOpen} />
-            )}
-            {headerMode === "back" && (
-                <BackHeader title={backTitle} onBack={onBack} />
-            )}
-            <main className='flex-1'>
-                {children}
-            </main>
-            <CartSidebar open={cartOpen} close={() => setCartOpen(false)} />
-            {showFooter && <Footer />}
+            <div className='flex flex-col min-h-screen'>
+                <div className='sticky top-0 z-50' id='header-section'>
+                    {headerMode === "full" && (
+                        <Header cartOpen={cartOpen} setCartOpen={setCartOpen} />
+                    )}
+                    {headerMode === "back" && (
+                        <BackHeader title={backTitle} onBack={onBack} />
+                    )}
+                </div>
+                <main className='flex-1'>
+                    {children}
+                </main>
+                <CartSidebar open={cartOpen} close={() => setCartOpen(false)} />
+                {showFooter && <Footer />}
+            </div>
         </RouteLayoutContext.Provider >
     )
 }

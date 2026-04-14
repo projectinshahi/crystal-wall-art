@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
+import Container from "@/components/Container/Container";
 
 interface Props {
   title?: string;
@@ -21,7 +22,7 @@ export default function BackHeader({ title, onBack }: Props) {
 
   return (
     <header className="sticky top-0 z-40 bg-primary">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <Container>
         <div className="flex items-center justify-between h-14 sm:h-16">
           <button
             onClick={handleBack}
@@ -36,7 +37,7 @@ export default function BackHeader({ title, onBack }: Props) {
             </h1>
           )}
         </div>
-      </div>
+      </Container>
       <div className="h-[1px] bg-border" />
     </header>
   );
