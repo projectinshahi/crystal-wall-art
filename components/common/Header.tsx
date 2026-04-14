@@ -3,7 +3,7 @@
 import { Heart, Menu, ShoppingCart, User } from 'lucide-react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation';
-import { useState } from 'react'
+import { Suspense, useState } from 'react'
 import { Button } from '../ui/button';
 import MobileDrawerMenus from './MobileDrawerMenus';
 import Container from '../Container/Container';
@@ -114,8 +114,10 @@ const Header = ({ cartOpen, setCartOpen }: any) => {
                 </Container>
             </header>
 
-            {/* Mobile Drawer Menu */}
-            <MobileDrawerMenus open={drawerOpen} close={setDrawerOpen} />
+            <Suspense fallback={null}>
+                {/* Mobile Drawer Menu */}
+                <MobileDrawerMenus open={drawerOpen} close={setDrawerOpen} />
+            </Suspense>
         </>
     )
 }

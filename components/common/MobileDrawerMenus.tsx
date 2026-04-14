@@ -205,39 +205,39 @@ const MobileDrawerMenus = ({ open, close }: { open: boolean; close: (open: boole
      *                                  match "/store?category=533effe5"
      */
     const isActive = (url: string): boolean => {
-    if (!url || typeof url !== "string") return false
+        if (!url || typeof url !== "string") return false
 
-    const questionIdx = url.indexOf("?")
-    const rawPath = questionIdx === -1 ? url : url.slice(0, questionIdx)
-    const rawQuery = questionIdx === -1 ? "" : url.slice(questionIdx + 1)
+        const questionIdx = url.indexOf("?")
+        const rawPath = questionIdx === -1 ? url : url.slice(0, questionIdx)
+        const rawQuery = questionIdx === -1 ? "" : url.slice(questionIdx + 1)
 
-    const storedPath = normalizePath(rawPath)
-    const livePath = normalizePath(pathname)
+        const storedPath = normalizePath(rawPath)
+        const livePath = normalizePath(pathname)
 
-    if (storedPath !== livePath) return false
+        if (storedPath !== livePath) return false
 
-    // ✅ KEY FIX:
-    // If stored URL has NO query → only match when live URL also has NO query params
-    if (!rawQuery) {
-        return searchParams.toString() === ""
+        // ✅ KEY FIX:
+        // If stored URL has NO query → only match when live URL also has NO query params
+        if (!rawQuery) {
+            return searchParams.toString() === ""
+        }
+
+        // Stored URL has query → check all stored params exist in live URL
+        let storedParams: URLSearchParams
+        try {
+            storedParams = new URLSearchParams(rawQuery)
+        } catch {
+            return false
+        }
+
+        for (const [key, value] of storedParams.entries()) {
+            const liveValue = searchParams.get(key)
+            if (liveValue === null) return false
+            if (decodeURIComponent(liveValue) !== decodeURIComponent(value)) return false
+        }
+
+        return true
     }
-
-    // Stored URL has query → check all stored params exist in live URL
-    let storedParams: URLSearchParams
-    try {
-        storedParams = new URLSearchParams(rawQuery)
-    } catch {
-        return false
-    }
-
-    for (const [key, value] of storedParams.entries()) {
-        const liveValue = searchParams.get(key)
-        if (liveValue === null) return false
-        if (decodeURIComponent(liveValue) !== decodeURIComponent(value)) return false
-    }
-
-    return true
-}
 
     /**
      * isParentActive — for expandable parent items only.
