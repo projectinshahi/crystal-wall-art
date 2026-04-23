@@ -23,6 +23,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip"
 import { PanelLeftIcon } from "lucide-react"
+import { usePathname } from "next/navigation"
 
 const SIDEBAR_COOKIE_NAME = "sidebar_state"
 const SIDEBAR_COOKIE_MAX_AGE = 60 * 60 * 24 * 7
@@ -66,6 +67,7 @@ function SidebarProvider({
   onOpenChange?: (open: boolean) => void
 }) {
   const isMobile = useIsMobile()
+  const pathname = usePathname() 
   const [openMobile, setOpenMobile] = React.useState(false)
 
   // This is the internal state of the sidebar.
@@ -107,6 +109,10 @@ function SidebarProvider({
     window.addEventListener("keydown", handleKeyDown)
     return () => window.removeEventListener("keydown", handleKeyDown)
   }, [toggleSidebar])
+
+  React.useEffect(() => {
+    setOpenMobile(false)
+  }, [pathname])
 
   // We add a state so that we can do data-state="expanded" or "collapsed".
   // This makes it easier to style the sidebar with Tailwind classes.
@@ -198,7 +204,7 @@ function Sidebar({
             <SheetTitle>Sidebar</SheetTitle>
             <SheetDescription>Displays the mobile sidebar.</SheetDescription>
           </SheetHeader>
-          <div className="flex h-full w-full flex-col">{children}</div>
+          <div className="flex h-full w-full flex-col bg-sidebar-background">{children}</div>
         </SheetContent>
       </Sheet>
     )

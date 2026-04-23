@@ -10,6 +10,7 @@ import { usePathname } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { signOut } from "next-auth/react";
 
 import {
   Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent,
@@ -18,27 +19,27 @@ import {
 } from "@/components/ui/sidebar";
 
 const mainItems = [
-  { title: "Dashboard", url: "/admin", icon: LayoutDashboard },
+  // { title: "Dashboard", url: "/admin", icon: LayoutDashboard },
   { title: "Products", url: "/admin/products", icon: Package },
-  { title: "Frames", url: "/admin/frames", icon: Frame },
+  // { title: "Frames", url: "/admin/frames", icon: Frame },
   { title: "Categories", url: "/admin/categories", icon: FolderOpen },
   { title: "Orders", url: "/admin/orders", icon: ShoppingCart },
-  { title: "Inventory", url: "/admin/inventory", icon: Boxes },
-  { title: "Customers", url: "/admin/customers", icon: UserCheck },
+  // { title: "Inventory", url: "/admin/inventory", icon: Boxes },
+  // { title: "Customers", url: "/admin/customers", icon: UserCheck },
 ];
 
 const contentItems = [
   { title: "Content", url: "/admin/content", icon: Image },
-  { title: "Discounts", url: "/admin/discounts", icon: Tag },
-  { title: "Coupons", url: "/admin/coupons", icon: Ticket },
-  { title: "Reports", url: "/admin/reports", icon: BarChart3 },
+  // { title: "Discounts", url: "/admin/discounts", icon: Tag },
+  // { title: "Coupons", url: "/admin/coupons", icon: Ticket },
+  // { title: "Reports", url: "/admin/reports", icon: BarChart3 },
 ];
 
-const systemItems = [
-  { title: "Admin Users", url: "/admin/admin-users", icon: Users },
-  { title: "Shipping", url: "/admin/shipping", icon: Truck },
-  { title: "Settings", url: "/admin/settings", icon: Settings },
-];
+// const systemItems = [
+//   { title: "Admin Users", url: "/admin/admin-users", icon: Users },
+//   { title: "Shipping", url: "/admin/shipping", icon: Truck },
+//   { title: "Settings", url: "/admin/settings", icon: Settings },
+// ];
 
 export function AdminSidebar() {
   const { state } = useSidebar();
@@ -117,10 +118,10 @@ export function AdminSidebar() {
       </SidebarHeader>
 
       {/* Content */}
-      <SidebarContent>
+      <SidebarContent >
         {renderGroup("Main", mainItems)}
         {renderGroup("Content & Marketing", contentItems)}
-        {renderGroup("System", systemItems)}
+        {/* {renderGroup("System", systemItems)} */}
       </SidebarContent>
 
       {/* Footer */}
@@ -144,7 +145,11 @@ export function AdminSidebar() {
           variant="ghost"
           size={collapsed ? "icon" : "default"}
           className="w-full justify-start text-sidebar-foreground hover:text-sidebar-accent-foreground"
-          onClick={() => console.log("logout")}
+          onClick={() =>
+            signOut({
+              callbackUrl: "/admin/login"
+            })
+          }
         >
           <LogOut className="h-4 w-4" />
           {!collapsed && <span className="ml-2">Sign Out</span>}

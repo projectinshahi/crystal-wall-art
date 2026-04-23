@@ -36,7 +36,7 @@ const styles: Record<Variant, string> = {
   body: "text-base font-primary",
   "body-sm": "text-sm font-primary",
 
-  caption: "text-xs text-gray-500",
+  caption: "text-xs text-muted-foreground",
   label: "text-sm font-medium",
   button: "text-sm font-semibold uppercase tracking-wide",
 };

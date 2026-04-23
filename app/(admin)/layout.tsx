@@ -4,6 +4,7 @@ import { cn } from "@/lib/utils";
 import { Metadata } from "next";
 import AdminLayout from "@/components/Admin/AdminLayout";
 import "./globals.css";
+import { NetworkAlert } from "@/components/Admin/NetworkAlert";
 
 const geist = Geist({ subsets: ['latin'], variable: '--font-sans' });
 
@@ -37,6 +38,7 @@ export default function AdminRootLayout({
         <AdminLayout>
           {children}
         </AdminLayout>
+        <NetworkAlert />
       </body>
     </html>
   );
