@@ -1,5 +1,5 @@
 import { uploadToCloudinary } from "@/lib/cloudinary.service";
-import { getAllCategories } from "@/lib/db";
+import { getAllCategories } from "@/lib/db/categories.db";
 import { requireAdmin, requireAuth } from "@/lib/session";
 import { supabaseServer } from "@/lib/supabase/server";
 import { categoryApiSchema, categorySchema } from "@/schema/category.schema";

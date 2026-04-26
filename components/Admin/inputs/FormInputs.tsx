@@ -11,7 +11,7 @@ type FormInputProps<T extends FieldValues> = {
     placeholder?: string;
     type?: string;
     className?: string;
-    value?: string;
+    value?: string | number;
     onChange?: (value: string) => void;
     error?: string;
     required?: boolean
