@@ -84,6 +84,7 @@ type ProductVariant = {
     thickness: string | null;
     price: number;
     discount_price: number | null;
+    orientation: string;
     stock_quantity: number;
 };
 
@@ -142,6 +143,7 @@ export const getProducts = async ({ page, limit }: { page: number, limit: number
         const { data, error, count } = await supabaseServer
             .from('products')
             .select('*', { count: 'exact' })
+            .eq('deleted', false)
             .order('created_at', { ascending: false })
             .range(from, to);
 

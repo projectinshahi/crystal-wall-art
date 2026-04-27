@@ -24,6 +24,12 @@ import { CategoryTypes } from "@/types/Admin/categories.types";
 import { toast } from "sonner";
 import { blobUrlToBase64 } from "@/lib/utils/imageUtils";
 
+export const ORIENTATION = [
+  { value: "portrait", label: "Portrait" },
+  { value: "landscape", label: "Landscape" },
+  { value: "square", label: "Square" }
+]
+
 // ─── Types ────────────────────────────────────────────────────────────────────
 type SubmitState = "idle" | "loading" | "success" | "error";
 
@@ -44,6 +50,7 @@ export type Variant = {
   thickness: string;
   price: number;
   discount_price: number | null;
+  orientation: string;
   stock_quantity: number;
 };
 
@@ -105,7 +112,7 @@ const ProductStepperForm = () => {
   // -- Generate Variants
   const generateVariants = () => {
     if (watchedSizes.length === 0 && watchedThicknesses.length === 0) {
-      setVariants(prev => [...prev, { size: "", thickness: "", price: Number(watchedPrice) || 0, discount_price: null, stock_quantity: 0 }]);
+      setVariants(prev => [...prev, { size: "", thickness: "", price: Number(watchedPrice) || 0, discount_price: null, orientation: '', stock_quantity: 0 }]);
       return;
     }
     const sizes = watchedSizes.length > 0 ? watchedSizes : [""];
@@ -114,7 +121,7 @@ const ProductStepperForm = () => {
     for (const s of sizes) {
       for (const t of thicks) {
         if (!variants.find(v => v.size === s && v.thickness === t)) {
-          newVariants.push({ size: s, thickness: t, price: Number(watchedPrice) || 0, discount_price: null, stock_quantity: 0 });
+          newVariants.push({ size: s, thickness: t, price: Number(watchedPrice) || 0, discount_price: null, orientation: '', stock_quantity: 0 });
         }
       }
     }
@@ -194,20 +201,20 @@ const ProductStepperForm = () => {
             Orientations
           </Typography>
           <div className="flex flex-wrap gap-2">
-            {(["portrait", "landscape", "square"] as const).map((o) => {
-              const selected = selectedOrientations.includes(o);
+            {ORIENTATION.map((o) => {
+              const selected = selectedOrientations.includes(o.value as any);
               return (
                 <Button
-                  key={o}
+                  key={o.value}
                   type="button"
                   variant="ghost"
-                  onClick={() => toggleOrientation(o)}
+                  onClick={() => toggleOrientation(o.value as any)}
                   className={`px-3 py-1.5 rounded-md border text-sm capitalize ${selected
                     ? "bg-primary text-primary-foreground border-primary"
                     : "bg-background border-input hover:bg-accent"
                     }`}
                 >
-                  {o}
+                  {o.label}
                 </Button>
               );
             })}
@@ -244,11 +251,11 @@ const ProductStepperForm = () => {
         </p>
       ) : (
         <div className="space-y-2">
-          <div className="grid grid-cols-[1fr_1fr_100px_100px_80px_32px] gap-2 text-xs font-medium text-muted-foreground px-1">
-            <span>Size</span><span>Thickness</span><span>Price (₹)</span><span>Sale (₹)</span><span>Stock</span><span />
+          <div className="grid grid-cols-[1fr_1fr_100px_100px_200px_80px_32px] gap-2 text-xs font-medium text-muted-foreground px-1">
+            <span>Size</span><span>Thickness</span><span>Price (₹)</span><span>Sale (₹)</span><span>Orientations</span><span>Stock</span><span />
           </div>
           {variants.map((v, i) => (
-            <div key={i} className="grid grid-cols-[1fr_1fr_100px_100px_80px_32px] gap-2 items-center">
+            <div key={i} className="grid grid-cols-[1fr_1fr_100px_100px_200px_80px_32px] gap-2 items-center">
 
               <AdminFormInput
                 value={v.size}
@@ -291,6 +298,18 @@ const ProductStepperForm = () => {
                     ...v,
                     discount_price: val ? Number(val) : null,
                   };
+                  setVariants(u);
+                }}
+              />
+
+              <AdminFormSelect
+                // name="orientation"
+                control={typedControl}
+                required
+                options={ORIENTATION as any}
+                onChange={(val) => {
+                  const u = [...variants];
+                  u[i] = { ...v, orientation: val };
                   setVariants(u);
                 }}
               />

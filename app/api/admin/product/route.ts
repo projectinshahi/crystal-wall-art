@@ -124,6 +124,7 @@ export async function POST(req: Request) {
                 discount_price: v.discount_price
                     ? Number(v.discount_price)
                     : null,
+                orientation: v.orientation,
                 stock_quantity: Number(v.stock_quantity) || 0,
             }));
 
