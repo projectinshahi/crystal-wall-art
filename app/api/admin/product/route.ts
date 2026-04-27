@@ -3,8 +3,10 @@ import {
     addProductImages,
     addProducts,
     addProductVariants,
+    getProducts,
 } from "@/lib/db/product.db";
 import { requireAdmin } from "@/lib/session";
+import { NextRequest } from "next/server";
 
 export async function POST(req: Request) {
     await requireAdmin();
@@ -151,6 +153,43 @@ export async function POST(req: Request) {
                 message: error.message || "Internal server error",
             },
             { status: 500 }
+        );
+    }
+}
+
+export async function GET(req: NextRequest) {
+    try {
+        // ✅ Auth inside try
+        await requireAdmin();
+
+        // ✅ Parse query params
+        const { searchParams } = new URL(req.url);
+        const page = Number(searchParams.get('page') || 1);
+        const limit = Number(searchParams.get('limit') || 10);
+
+        // ✅ Replace with your DB/service
+        const {data, meta} = await getProducts({ page, limit });
+
+        return Response.json({
+            success: true,
+            data: data,
+            meta
+        });
+
+    } catch (error: any) {
+        console.error("❌ PRODUCT FETCH ERROR:", error);
+
+        const status =
+            error.message === "Unauthorized" ? 401 :
+            error.message === "Forbidden" ? 403 :
+            500;
+
+        return Response.json(
+            {
+                success: false,
+                message: error.message || "Internal server error",
+            },
+            { status }
         );
     }
 }

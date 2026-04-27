@@ -12,6 +12,7 @@ export const getAllCategories = async ():Promise<DBResponse<CategoryTypes[]>> =>
         success: false,
         data: null,
         error: error.message,
+        meta: null
       };
     }
 
@@ -19,6 +20,7 @@ export const getAllCategories = async ():Promise<DBResponse<CategoryTypes[]>> =>
       success: true,
       data,
       error: null,
+      meta: null
     };
 
   } catch (error: any) {
@@ -27,6 +29,7 @@ export const getAllCategories = async ():Promise<DBResponse<CategoryTypes[]>> =>
       success: false,
       data: null,
       error: error?.message || "Unknown error",
+      meta: null
     };
   }
 }

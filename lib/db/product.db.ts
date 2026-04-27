@@ -3,7 +3,7 @@ import { supabaseServer } from "../supabase/server";
 import { DBResponse } from "@/types/dbResponse.types";
 
 export const addProducts = async (productData: ProductFormValues) => {
-    
+
     try {
         const { data, error } = await supabaseServer.from('products').insert(productData)
             .select('id').maybeSingle();
@@ -40,6 +40,7 @@ export const addProductImages = async ({ productId, imageUrls }: { productId: st
                 success: false,
                 data: null,
                 error: "No images provided",
+                meta: null,
             };
         }
 
@@ -57,6 +58,7 @@ export const addProductImages = async ({ productId, imageUrls }: { productId: st
                 success: false,
                 data: null,
                 error: error.message,
+                meta: null,
             };
         }
 
@@ -64,12 +66,14 @@ export const addProductImages = async ({ productId, imageUrls }: { productId: st
             success: true,
             data: null,
             error: null,
+            meta: null,
         };
     } catch (error: any) {
         return {
             success: false,
             data: null,
             error: error?.message || "Unknown error",
+            meta: null,
         };
     }
 };
@@ -90,6 +94,7 @@ export const addProductVariants = async (variants: ProductVariant[]): Promise<DB
                 success: true,
                 data: null,
                 error: null,
+                meta: null
             };
         }
 
@@ -102,6 +107,7 @@ export const addProductVariants = async (variants: ProductVariant[]): Promise<DB
                 success: false,
                 data: null,
                 error: error.message,
+                meta: null
             };
         }
 
@@ -109,12 +115,63 @@ export const addProductVariants = async (variants: ProductVariant[]): Promise<DB
             success: true,
             data: null,
             error: null,
+            meta: null
         };
     } catch (error: any) {
         return {
             success: false,
             data: null,
             error: error?.message || "Unknown error",
+            meta: null
         };
     }
 };
+
+export type PaginationMeta = {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+};
+
+export const getProducts = async ({ page, limit }: { page: number, limit: number }): Promise<DBResponse<any[], PaginationMeta>> => {
+    try {
+        const from = (page - 1) * limit;
+        const to = from + limit - 1;
+
+        const { data, error, count } = await supabaseServer
+            .from('products')
+            .select('*', { count: 'exact' })
+            .order('created_at', { ascending: false })
+            .range(from, to);
+
+        if (error) {
+            return {
+                success: false,
+                data: null,
+                error: error.message,
+                meta: null,
+            };
+        }
+
+        return {
+            success: true,
+            data: data || [],
+            error: null,
+            meta: {
+                page,
+                limit,
+                total: count || 0,
+                totalPages: count ? Math.ceil(count / limit) : 0,
+            },
+        };
+
+    } catch (error: any) {
+        return {
+            success: false,
+            data: null,
+            error: error?.message || "Unknown error",
+            meta: null
+        };
+    }
+}

@@ -11,6 +11,7 @@ export const getAdminRole = async () => {
         success: false,
         data: null,
         error: error.message,
+        meta: null
       };
     }
 
@@ -18,6 +19,7 @@ export const getAdminRole = async () => {
       success: true,
       data,
       error: null,
+      meta: null
     };
   } catch (error: any) {
     console.error("Unexpected error:", error);
@@ -26,6 +28,7 @@ export const getAdminRole = async () => {
       success: false,
       data: null,
       error: error?.message || "Unknown error",
+      meta: null
     };
   }
 }
