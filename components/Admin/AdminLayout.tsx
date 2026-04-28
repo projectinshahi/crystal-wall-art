@@ -1,3 +1,5 @@
+"use server"
+
 import React from 'react'
 import { SidebarProvider, SidebarTrigger } from '../ui/sidebar'
 import { AdminSidebar } from './AdminSidebar'
