@@ -33,7 +33,7 @@ export const addProducts = async (productData: ProductFormValues) => {
     }
 }
 
-export const addProductImages = async ({ productId, imageUrls }: { productId: string; imageUrls: string[]; }): Promise<DBResponse<null>> => {
+export const addProductImages = async ({ productId, imageUrls }: { productId: string; imageUrls: any[]; }): Promise<DBResponse<null>> => {
     try {
         if (!imageUrls.length) {
             return {
