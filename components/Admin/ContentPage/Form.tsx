@@ -9,7 +9,7 @@ import { Loader2 } from 'lucide-react'
 import { Control, UseFormHandleSubmit, UseFormSetError } from 'react-hook-form'
 import { CONTENT_TYPES } from '@/lib/constants/content.constants'
 import { toast } from 'sonner'
-import { ContentFormInput } from '@/types/Admin/content.types'
+import { ContentFormInput, ContentFormOutput } from '@/types/Admin/content.types'
 
 interface Props {
     control: Control<ContentFormInput>
@@ -18,6 +18,7 @@ interface Props {
     closeDialog: () => void;
     setError: UseFormSetError<ContentFormInput>;
     editContent?: string | null;
+    setContentsData: any;
 }
 
 const ContectForm = ({
@@ -26,14 +27,15 @@ const ContectForm = ({
     formSubmit,
     closeDialog,
     setError,
-    editContent
+    editContent,
+    setContentsData
 }: Props) => {
     return (
         <AppDialog
             open={dialogOpen}
             title={editContent ? 'Edit Content' : 'Add Content'}
             content={
-                <Form control={control} formSubmit={formSubmit} setError={setError} editContentId={editContent && editContent} closeDialog={closeDialog} />
+                <Form control={control} formSubmit={formSubmit} setError={setError} editContentId={editContent && editContent} closeDialog={closeDialog} setContentsData={setContentsData} />
             }
             disableOutsideClose
             onOpenChange={closeDialog}
@@ -43,12 +45,13 @@ const ContectForm = ({
 
 export default ContectForm
 
-const Form = ({ control, formSubmit, setError, editContentId, closeDialog }: {
+const Form = ({ control, formSubmit, setError, editContentId, closeDialog, setContentsData }: {
     control: Control<ContentFormInput>;
     formSubmit: UseFormHandleSubmit<ContentFormInput>;
     setError: UseFormSetError<ContentFormInput>;
     editContentId?: string | null;
     closeDialog: () => void;
+    setContentsData: any;
 }) => {
 
     const [isSaving, setIsSaving] = useState<boolean>(false);
@@ -109,7 +112,11 @@ const Form = ({ control, formSubmit, setError, editContentId, closeDialog }: {
 
             // Update UI
             if (editContentId) {
+                // setContentsData((prev: ContentFormOutput[]) =>
+                //     prev.map((c) => (c.id === editCon.id ? result.data : c))
+                // );
             } else {
+                setContentsData((prev:ContentFormOutput[]) => [result.data, ...prev]);
             }
 
             toast.success(editContentId ? "Updated successfully" : "Created successfully");
@@ -136,7 +143,7 @@ const Form = ({ control, formSubmit, setError, editContentId, closeDialog }: {
                 {isSaving && (
                     <Loader2 className='h-4 w-4 animate-spin mr-2' />
                 )}
-                {isSaving ? "Update" : "Create"}
+                {isSaving ? "Creating..." : "Create"}
             </Button>
         </form>
     )
