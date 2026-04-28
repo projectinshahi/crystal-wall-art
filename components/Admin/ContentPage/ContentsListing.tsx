@@ -113,7 +113,7 @@ const ContentsListing = ({ contentsData, setContentsData }: Props) => {
                     const typeOf = CONTENT_TYPES.find((content) => content.value === c.type)?.label || "";
 
                     return (
-                        <Card>
+                        <Card key={c.id}>
                             <CardContent className="p-4 flex items-center gap-4">
                                 {(image && image.url) && <img src={image.url} alt="" className="h-16 w-24 object-cover rounded shrink-0" />}
                                 <div className="flex-1 min-w-0">
