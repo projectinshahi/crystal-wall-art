@@ -11,7 +11,7 @@ export default function Home() {
     <>
       <HeroSection />
       <AboutSection />
-      <FrameSelection />
+      {/* <FrameSelection /> */}
       <CategoriesSection />
       <PremiumPhotos />
       <ShopLookSection image="/images/arcylic2.jpg"/>

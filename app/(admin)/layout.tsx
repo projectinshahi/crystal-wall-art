@@ -5,6 +5,7 @@ import { Metadata } from "next";
 import AdminLayout from "@/components/Admin/AdminLayout";
 import "./globals.css";
 import { NetworkAlert } from "@/components/Admin/NetworkAlert";
+import Providers from "@/components/Admin/providers";
 
 const geist = Geist({ subsets: ['latin'], variable: '--font-sans' });
 
@@ -35,10 +36,12 @@ export default function AdminRootLayout({
         className={`antialiased ${inter.variable} ${poppins.variable}`}
       >
         <Toaster />
-        <AdminLayout>
-          {children}
-        </AdminLayout>
-        <NetworkAlert />
+        <Providers>
+          <AdminLayout>
+            {children}
+          </AdminLayout>
+          <NetworkAlert />
+        </Providers>
       </body>
     </html>
   );

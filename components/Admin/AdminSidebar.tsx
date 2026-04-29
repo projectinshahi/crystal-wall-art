@@ -10,7 +10,7 @@ import { usePathname } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { signOut } from "next-auth/react";
+import { signOut, useSession } from "next-auth/react";
 
 import {
   Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent,
@@ -43,6 +43,11 @@ const contentItems = [
 
 export function AdminSidebar() {
   const { state } = useSidebar();
+
+  const { data: session, status } = useSession();
+  console.log("session",session);
+  
+
   const collapsed = state === "collapsed";
 
   const pathname = usePathname();
@@ -128,15 +133,20 @@ export function AdminSidebar() {
       <SidebarFooter className="p-3">
         {!collapsed && (
           <div className="mb-2 px-1 space-y-1">
+            {session?.user.profile?.fullName && (
+              <p className="text-sm text-sidebar-foreground truncate font-bold">
+              {session?.user.profile?.fullName}
+            </p>
+            )}
             <p className="text-xs text-sidebar-foreground truncate">
-              admin@demo.com
+              {session?.user.email}
             </p>
 
             <Badge
               variant="outline"
               className="text-[10px] bg-primary/10 text-primary border-primary/30"
             >
-              admin
+              {session?.user.role.name}
             </Badge>
           </div>
         )}
