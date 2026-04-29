@@ -4,6 +4,7 @@ import { imageFieldSchema, uploadedImageSchema } from "./category.schema";
 export const contentSchema = z.object({
     type: z.enum([
         "banner",
+        "hero_section",
         "featured_category",
         "featured_product",
         "section"
