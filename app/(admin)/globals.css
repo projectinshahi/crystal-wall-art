@@ -1,0 +1,146 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+
+@custom-variant dark (&:is(.dark *));
+
+/* ================= ROOT VARIABLES ================= */
+
+:root {
+  --background: 220 25% 8%;
+  --foreground: 220 15% 90%;
+
+  --card: 220 25% 10%;
+  --card-foreground: 220 15% 90%;
+
+  --popover: 220 25% 10%;
+  --popover-foreground: 220 15% 90%;
+
+  --primary: 185 80% 45%;
+  --primary-foreground: 0 0% 100%;
+
+  --secondary: 220 20% 16%;
+  --secondary-foreground: 220 15% 85%;
+
+  --muted: 220 20% 14%;
+  --muted-foreground: 220 10% 60%;
+
+  --accent: 262 30% 20%;
+  --accent-foreground: 262 80% 80%;
+
+  --destructive: 0 65% 55%;
+  --destructive-foreground: 0 0% 100%;
+
+  --border: 220 20% 18%;
+  --input: 220 20% 18%;
+  --ring: 262 70% 65%;
+
+  /* Sidebar */
+  --sidebar-background: 220 25% 6%;
+  --sidebar-foreground: 220 10% 70%;
+  --sidebar-primary: 262 70% 65%;
+  --sidebar-primary-foreground: 0 0% 100%;
+  --sidebar-accent: 220 20% 12%;
+  --sidebar-accent-foreground: 0 0% 95%;
+  --sidebar-border: 220 20% 14%;
+  --sidebar-ring: 262 70% 65%;
+
+  /* Charts */
+  --chart-1: 262 70% 65%;
+  --chart-2: 190 70% 50%;
+  --chart-3: 340 65% 60%;
+  --chart-4: 45 80% 60%;
+  --chart-5: 150 50% 50%;
+
+  /* Status */
+  --success: 150 50% 50%;
+  --success-foreground: 0 0% 100%;
+  --warning: 45 80% 60%;
+  --warning-foreground: 45 100% 10%;
+
+  --lightGray: 220 20% 14%;
+}
+
+/* ================= THEME (Tailwind v4) ================= */
+
+@theme {
+  --color-background: hsl(var(--background));
+  --color-foreground: hsl(var(--foreground));
+
+  --color-card: hsl(var(--card));
+  --color-card-foreground: hsl(var(--card-foreground));
+
+  --color-popover: hsl(var(--popover));
+  --color-popover-foreground: hsl(var(--popover-foreground));
+
+  --color-primary: hsl(var(--primary));
+  --color-primary-foreground: hsl(var(--primary-foreground));
+
+  --color-secondary: hsl(var(--secondary));
+  --color-secondary-foreground: hsl(var(--secondary-foreground));
+
+  --color-muted: hsl(var(--muted));
+  --color-muted-foreground: hsl(var(--muted-foreground));
+
+  --color-accent: hsl(var(--accent));
+  --color-accent-foreground: hsl(var(--accent-foreground));
+
+  --color-destructive: hsl(var(--destructive));
+  --color-destructive-foreground: hsl(var(--destructive-foreground));
+
+  --color-border: hsl(var(--border));
+  --color-input: hsl(var(--input));
+  --color-ring: hsl(var(--ring));
+
+  --color-sidebar-background: hsl(var(--sidebar-background));
+  --color-sidebar-foreground: hsl(var(--sidebar-foreground));
+  --color-sidebar-primary: hsl(var(--sidebar-primary));
+  --color-sidebar-primary-foreground: hsl(var(--sidebar-primary-foreground));
+  --color-sidebar-accent: hsl(var(--sidebar-accent));
+  --color-sidebar-accent-foreground: hsl(var(--sidebar-accent-foreground));
+  --color-sidebar-border: hsl(var(--sidebar-border));
+  --color-sidebar-ring: hsl(var(--sidebar-ring));
+
+  --color-success: hsl(var(--success));
+  --color-success-foreground: hsl(var(--success-foreground));
+  --color-warning: hsl(var(--warning));
+  --color-warning-foreground: hsl(var(--warning-foreground));
+
+  /* Fonts */
+  --font-sans: Inter, ui-sans-serif, system-ui;
+  --font-heading: Poppins, ui-sans-serif, system-ui;
+}
+
+/* ================= BASE ================= */
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  @apply bg-background text-foreground antialiased;
+}
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: hsl(var(--primary)) hsl(var(--lightGray));
+  @apply border-border;
+}
+
+/* Chrome scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: hsl(var(--lightGray));
+}
+
+::-webkit-scrollbar-thumb {
+  background: hsl(var(--primary));
+  border-radius: 9999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: hsl(var(--primary) / 0.8);
+}

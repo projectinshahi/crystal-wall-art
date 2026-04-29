@@ -33,8 +33,6 @@ const CartSidebar = ({ open, close }: { open?: boolean, close?: any }) => {
     const [couponCode, setCouponCode] = useState<string>('')
     const [visible, setVisible] = useState(open);
 
-    const setOpen = (value: boolean) => { }
-
     const getItemCount: any = () => {
         return 10
     }
@@ -44,6 +42,20 @@ const CartSidebar = ({ open, close }: { open?: boolean, close?: any }) => {
     const removeItem = (index: any) => { }
 
     const clearCart = () => { }
+
+    // 🔒 Lock scroll when modal opens
+    useEffect(() => {
+        if (open) {
+            document.body.style.overflow = "hidden";
+        } else {
+            document.body.style.overflow = "";
+        }
+
+        // Cleanup (important)
+        return () => {
+            document.body.style.overflow = "";
+        };
+    }, [open]);
 
     useEffect(() => {
         if (open) {
@@ -74,7 +86,7 @@ const CartSidebar = ({ open, close }: { open?: boolean, close?: any }) => {
                         <Typography variant='body-lg' className='font-bold'>Your cart</Typography>
                         <Badge variant="secondary" className="text-xs">{getItemCount()}</Badge>
                     </div>
-                    <Button variant="ghost" size="icon" onClick={() => setOpen(false)}>
+                    <Button variant="ghost" size="icon" onClick={close}>
                         <X className="h-5 w-5" />
                     </Button>
                 </div>
@@ -85,15 +97,15 @@ const CartSidebar = ({ open, close }: { open?: boolean, close?: any }) => {
                         <div className="flex flex-col items-center justify-center h-full text-center gap-3">
                             <ShoppingBag className="h-12 w-12 text-muted-foreground/20" />
                             <Typography variant='body-sm' className='text-muted-foreground'>Your cart is empty</Typography>
-                            <Button variant="outline" size="sm" onClick={() => setOpen(false)}>
+                            <Button variant="outline" size="sm" onClick={close}>
                                 Continue Shopping
                             </Button>
                         </div>
                     ) : (
                         items.map((item, index) => (
-                            <div key={index} className="flex gap-3 p-3 rounded-[25px] border border-lightBackground bg-muted/20 overflow-hidden">
+                            <div key={index} className="flex gap-3 p-2 rounded-[25px] border border-lightBackground bg-muted/20 overflow-hidden items-center">
                                 {/* Image */}
-                                <div className="h-30 w-30 rounded-[15px] overflow-hidden border border-lightBackground bg-muted shrink-0">
+                                <div className="h-16 w-16 md:h-30 md:w-30 rounded-[15px] overflow-hidden border border-lightBackground bg-muted shrink-0">
                                     {item.image ? (
                                         <img src={item.image} alt={item.title} className="h-full w-full object-cover" />
                                     ) : (
@@ -104,12 +116,14 @@ const CartSidebar = ({ open, close }: { open?: boolean, close?: any }) => {
                                 </div>
 
                                 {/* Info */}
-                                <div className="flex flex-col flex-1 min-w-0 space-y-2">
-                                    <div className='relative flex justify-end'>
+                                <div className="relative min-w-0">
+                                    <div className='absolute top-0 right-0 flex justify-end'>
                                         <Button variant="ghost" size="icon" className="h-6 w-6 text-destructive" onClick={() => removeItem(index)}>
                                             <Trash2 className="h-3 w-3" />
                                         </Button>
                                     </div>
+                                    <div className='w-full flex flex-col space-y-1 md:space-y-2 pr-6'>
+
                                     <p className="text-sm lg:text-base font-semibold truncate">{item.title}</p>
                                     <div className='flex items-center gap-2'>
                                         <span className="text-base lg:text-xl font-bold text-primary">₹{(item.offerPrice * item.quantity).toLocaleString("en-IN")}</span>
@@ -124,6 +138,7 @@ const CartSidebar = ({ open, close }: { open?: boolean, close?: any }) => {
                                             <Plus className="h-3 w-3" />
                                         </Button>
                                     </div>
+                                    </div>
                                 </div>
                             </div>
                         ))
@@ -132,7 +147,7 @@ const CartSidebar = ({ open, close }: { open?: boolean, close?: any }) => {
 
                 {/* Footer */}
                 {items.length > 0 && (
-                    <div className="p-6 border-t bg-lightGray border-lightBackground space-y-6">
+                    <div className="px-6 py-2 md:px-6 md:py-6 border-t bg-lightGray border-lightBackground space-y-2 md:space-y-6">
 
                         <div className='w-full flex flex-row gap-2.5 items-center'>
                             <Input
