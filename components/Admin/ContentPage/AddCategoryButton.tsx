@@ -3,13 +3,13 @@
 import { Button } from '@/components/ui/button'
 import { Plus } from 'lucide-react';
 
-const AddCategoryButton = ({handleAction}: {handleAction: any}) => {
+const AddContentButton = ({handleAction}: {handleAction: any}) => {
 
     return (
         <Button className="w-full sm:w-auto" onClick={handleAction}>
-            <Plus className="h-4 w-4 mr-2" />Add Category
+            <Plus className="h-4 w-4 mr-2" />Add Section
         </Button>
     )
 }
 
-export default AddCategoryButton
+export default AddContentButton

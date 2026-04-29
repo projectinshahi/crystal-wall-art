@@ -2,18 +2,18 @@ import { z } from "zod";
 
 // ── image shapes ──────────────────────────────────────────────
 
-const uploadedImageSchema = z.object({
+export const uploadedImageSchema = z.object({
   url: z.string().url("Invalid image URL"),
   public_id: z.string().min(1, "Invalid image"),
 });
 
-const pendingImageSchema = z.object({
+export const pendingImageSchema = z.object({
   __pendingFile: z.custom<File>((v) => v instanceof File, "Invalid file"),
   __folder: z.string(),
   previewUrl: z.string().startsWith("blob:", "Invalid preview URL"),
 });
 
-const imageFieldSchema = z.union([uploadedImageSchema, pendingImageSchema]);
+export const imageFieldSchema = z.union([uploadedImageSchema, pendingImageSchema]);
 
 // ── category schema ───────────────────────────────────────────
 

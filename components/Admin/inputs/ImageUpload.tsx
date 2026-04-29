@@ -28,6 +28,7 @@ type Props<T extends FieldValues> = {
   folder?: string;
   required?: boolean;
   multiple?: boolean;
+  hideUploadedImages?: boolean
 };
 
 // ── type guards ──────────────────────────────────────────────
@@ -52,6 +53,7 @@ const AdminImageUpload = <T extends FieldValues>({
   folder = "general",
   required = false,
   multiple = false,
+  hideUploadedImages=false
 }: Props<T>) => {
   const {
     field: { value, onChange },
@@ -149,7 +151,7 @@ const AdminImageUpload = <T extends FieldValues>({
         )}
 
         {/* Grid preview */}
-        {items.length > 0 && (
+        {!hideUploadedImages && items.length > 0 && (
           <div className="grid grid-cols-3 gap-2">
             {items.map((item) => (
               <div key={getId(item)} className="relative group aspect-square">

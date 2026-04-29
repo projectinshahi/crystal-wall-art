@@ -100,6 +100,7 @@ export const authOptions: NextAuthOptions = {
       if (user) {
         token.id = user.id;
         token.role = user.role;
+        token.email = user.email;
         token.profile = user.profile;
         token.provider = account?.provider;
       }
@@ -110,6 +111,7 @@ export const authOptions: NextAuthOptions = {
     async session({ session, token }) {
       session.user = {
         id: token.id,
+        email: token.email,
         role: token.role,
         profile: token.profile,
       };
