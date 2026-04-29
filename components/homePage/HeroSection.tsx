@@ -1,13 +1,28 @@
+"use server"
+
 import Carousel from '../ui/carousel'
 import HomeContentWrapper from './HomeContentWrapper'
-import img1 from '@/public/hero/hero1.webp'
-import img2 from '@/public/hero/hero2.png'
-import img3 from '@/public/hero/hero3.webp'
-import img4 from '@/public/hero/hero1.webp'
 
-const HeroSection = () => {
+const HeroSection = async () => {
 
-    const slides = [img1, img2, img3, img4]
+    const res = await fetch(`${process.env.NEXT_PUBLIC_URL}/api/content?type=hero_section&&active=true`);
+
+    const slidesRes = await res.json();
+
+    if (!slidesRes?.success) return null;
+
+    const slides =
+        slidesRes.data
+            ?.sort((a: any, b: any) => a.priority - b.priority) // ✅ sort by priority ASC
+            .map((item: any) => {
+                try {
+                    const img = JSON.parse(item.image);
+                    return img.url; // ✅ extract only URL
+                } catch {
+                    return null;
+                }
+            })
+            .filter(Boolean) || [];
 
     return (
         <HomeContentWrapper containerClassName='px-4 sm:px-6 lg:px-8 py-8 sm:py-14 lg:py-20'>

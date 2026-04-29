@@ -99,7 +99,7 @@ export async function GET(req: NextRequest) {
         });
 
     } catch (error: any) {
-        console.error("❌ PRODUCT FETCH ERROR:", error);
+        console.error("❌ CONTENT FETCH ERROR:", error);
 
         const status =
             error.message === "Unauthorized" ? 401 :

@@ -109,3 +109,18 @@ body {
 ::-webkit-scrollbar-thumb:hover {
   background: #0ea5b7; /* slightly darker primary */
 }
+
+@keyframes pulseScale {
+  0%, 100% {
+    transform: scaleY(1);
+    opacity: 0.6;
+  }
+  50% {
+    transform: scaleY(1.6);
+    opacity: 1;
+  }
+}
+
+.animate-pulse-scale {
+  animation: pulseScale 1.2s infinite ease-in-out;
+}
