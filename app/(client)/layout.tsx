@@ -8,6 +8,7 @@ import { Inter, Poppins } from "next/font/google"
 import LayoutContext from "@/components/common/LayoutContext/LayoutContext";
 
 import { Toaster, toast } from 'sonner';
+import Providers from "@/components/Admin/providers";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -38,9 +39,11 @@ export default function RootLayout({
         className={`antialiased ${inter.variable} ${poppins.variable}`}
       >
         <Toaster />
-        <LayoutContext>
-          {children}
-        </LayoutContext>
+        <Providers>
+          <LayoutContext>
+            {children}
+          </LayoutContext>
+        </Providers>
       </body>
     </html>
   );

@@ -205,3 +205,75 @@ export const getProducts = async ({ page, limit, category, is_active }: { page?:
         };
     }
 }
+
+export const getProductById = async ({ id, is_active }: { id: string, is_active?: boolean }) => {
+    try {
+
+        let query = supabaseServer
+            .from("products")
+            .select("*", { count: "exact" })
+            .eq("deleted", false);
+
+        // ✅ safer checks
+        if (is_active !== undefined) {
+            query = query.eq("status", is_active ? "active" : "inactive");
+        }
+
+        const { data, error } = await query.maybeSingle();
+
+        if (error) {
+            return {
+                success: false,
+                data: null,
+                error: error.message,
+                meta: null,
+            };
+        }
+
+        return {
+            success: true,
+            data: data || null,
+            error: null,
+            meta: null,
+        };
+    } catch (error: any) {
+        return {
+            success: false,
+            data: null,
+            error: error?.message || "Unknown error",
+            meta: null,
+        };
+    }
+}
+
+export const getVariantsByProducts = async ({ id }: { id: string }) => {
+    try {
+        const { data, error } = await supabaseServer
+            .from("product_variants")
+            .select("*")
+            .eq("product_id", id);
+
+        if (error) {
+            return {
+                success: false,
+                data: null,
+                error: error.message,
+                meta: null,
+            };
+        }
+
+        return {
+            success: true,
+            data: data || null,
+            error: null,
+            meta: null,
+        };
+    } catch (error: any) {
+        return {
+            success: false,
+            data: null,
+            error: error?.message || "Unknown error",
+            meta: null,
+        };
+    }
+}
