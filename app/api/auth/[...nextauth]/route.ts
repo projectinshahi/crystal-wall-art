@@ -63,31 +63,42 @@ export const authOptions: NextAuthOptions = {
       async authorize(credentials) {
         if (!credentials?.mobile || !credentials?.otp) return null;
 
-        const user = await fetch(
-          `${process.env.NEXT_PUBLIC_URL}/api/client/verify-otp`,
-          {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              mobile: credentials.mobile,
-              otp: credentials.otp,
-            }),
-          }
-        ).then((r) => r.json());
+        try {
+          const res = await fetch(
+            `${process.env.NEXT_PUBLIC_URL}/api/client/verify-otp`,
+            {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                mobile: credentials.mobile,
+                otp: credentials.otp,
+              }),
+            }
+          );
 
-        console.log("user",user);
-        if (!user?.success) return null;
+          if (!res.ok) return null;
 
-        return {
-          id: user.data.id,
-          email: user.data.email,
-          role: {
-            id: user.data.role_id,
-            name: user.data.name,
-          },
-        };
+          const user = await res.json();
+          if (!user?.success) return null;
+
+          return {
+            id: user.data.id,
+            email: user.data.email,
+            role: {
+              id: user.data.role_id,
+              name: user.data.role_name as "admin" | "user",
+            },
+            profile: {
+              fullName: user.data.full_name ?? null,
+              avatarUrl: user.data.avatar_url ?? null,
+            },
+          };
+        } catch (err) {
+          console.error("OTP login error:", err);
+          return null;
+        }
       },
-    }),
+    })
   ],
 
   session: {
