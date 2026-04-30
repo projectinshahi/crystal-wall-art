@@ -135,17 +135,91 @@ export type PaginationMeta = {
     totalPages: number;
 };
 
-export const getProducts = async ({ page, limit }: { page: number, limit: number }): Promise<DBResponse<any[], PaginationMeta>> => {
+export const getProducts = async ({ page, limit, category, is_active }: { page?: number, limit?: number, category?: string, is_active?: boolean }): Promise<DBResponse<any[], PaginationMeta>> => {
     try {
-        const from = (page - 1) * limit;
-        const to = from + limit - 1;
+        let query = supabaseServer
+            .from("products")
+            .select("*", { count: "exact" })
+            .eq("deleted", false);
 
-        const { data, error, count } = await supabaseServer
-            .from('products')
-            .select('*', { count: 'exact' })
-            .eq('deleted', false)
-            .order('created_at', { ascending: false })
-            .range(from, to);
+        // ✅ safer checks
+        if (is_active !== undefined) {
+            query = query.eq("status", is_active ? "active" : "inactive");
+        }
+
+        if (category && category.trim() !== "") {
+            query = query.eq("category_id", category);
+        }
+
+        query = query.order("created_at", { ascending: false });
+
+        let meta = null;
+
+        if (page && limit) {
+            const safePage = Math.max(page, 1);
+            const safeLimit = Math.min(Math.max(limit, 1), 50);
+
+            const from = (safePage - 1) * safeLimit;
+            const to = from + safeLimit - 1;
+
+            query = query.range(from, to);
+
+            meta = {
+                page: safePage,
+                limit: safeLimit,
+                total: 0,
+                totalPages: 0,
+            };
+        }
+
+        const { data, error, count } = await query;
+
+        if (error) {
+            return {
+                success: false,
+                data: null,
+                error: error.message,
+                meta: null,
+            };
+        }
+
+        if (meta) {
+            meta.total = count ?? 0;
+            meta.totalPages = count
+                ? Math.ceil(count / meta.limit)
+                : 0;
+        }
+
+        return {
+            success: true,
+            data: data ?? [],
+            error: null,
+            meta,
+        };
+    } catch (error: any) {
+        return {
+            success: false,
+            data: null,
+            error: error?.message || "Unknown error",
+            meta: null,
+        };
+    }
+}
+
+export const getProductById = async ({ id, is_active }: { id: string, is_active?: boolean }) => {
+    try {
+
+        let query = supabaseServer
+            .from("products")
+            .select("*", { count: "exact" })
+            .eq("deleted", false);
+
+        // ✅ safer checks
+        if (is_active !== undefined) {
+            query = query.eq("status", is_active ? "active" : "inactive");
+        }
+
+        const { data, error } = await query.maybeSingle();
 
         if (error) {
             return {
@@ -158,22 +232,48 @@ export const getProducts = async ({ page, limit }: { page: number, limit: number
 
         return {
             success: true,
-            data: data || [],
+            data: data || null,
             error: null,
-            meta: {
-                page,
-                limit,
-                total: count || 0,
-                totalPages: count ? Math.ceil(count / limit) : 0,
-            },
+            meta: null,
         };
-
     } catch (error: any) {
         return {
             success: false,
             data: null,
             error: error?.message || "Unknown error",
-            meta: null
+            meta: null,
+        };
+    }
+}
+
+export const getVariantsByProducts = async ({ id }: { id: string }) => {
+    try {
+        const { data, error } = await supabaseServer
+            .from("product_variants")
+            .select("*")
+            .eq("product_id", id);
+
+        if (error) {
+            return {
+                success: false,
+                data: null,
+                error: error.message,
+                meta: null,
+            };
+        }
+
+        return {
+            success: true,
+            data: data || null,
+            error: null,
+            meta: null,
+        };
+    } catch (error: any) {
+        return {
+            success: false,
+            data: null,
+            error: error?.message || "Unknown error",
+            meta: null,
         };
     }
 }

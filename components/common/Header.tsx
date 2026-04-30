@@ -7,6 +7,7 @@ import { Suspense, useState } from 'react'
 import { Button } from '../ui/button';
 import MobileDrawerMenus from './MobileDrawerMenus';
 import Container from '../Container/Container';
+import { useCartStore } from '@/store/cartStore';
 
 const DESKTOP_NAV = [
     { to: "/", label: "Shop" },
@@ -19,8 +20,7 @@ const Header = ({ cartOpen, setCartOpen }: any) => {
 
 
     const [drawerOpen, setDrawerOpen] = useState(false);
-
-    const cartItemCount = 10;
+    const { items, isOpen, setOpen, updateQuantity, removeItem, getTotal, getItemCount, getItemKey, clearCart } = useCartStore();
 
     const pathname = usePathname();
 
@@ -94,12 +94,12 @@ const Header = ({ cartOpen, setCartOpen }: any) => {
                                 variant="ghost"
                                 size="icon"
                                 className="relative h-9 w-9 cursor-pointer"
-                                onClick={() => setCartOpen(true)}
+                                onClick={() => setOpen(true)}
                             >
                                 <ShoppingCart className="h-5 w-5 text-primary" />
-                                {cartItemCount > 0 && (
+                                {getItemCount() > 0 && (
                                     <span className="absolute -top-0.5 -right-0.5 h-4.5 w-4.5 min-w-4.5 rounded-full bg-primary text-white text-[10px] font-bold flex items-center justify-center">
-                                        {cartItemCount}
+                                        {getItemCount()}
                                     </span>
                                 )}
                             </Button>

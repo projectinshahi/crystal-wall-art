@@ -1,20 +1,21 @@
 "use client"
 
+import { ProductTypes } from '@/types/Admin/products.types';
 import Image from 'next/image'
 import { useRouter } from 'next/navigation'
 
-const ProductCard = ({ product }: { product: any }) => {
+const ProductCard = ({ product }: { product: ProductTypes }) => {
 
     const router = useRouter();
 
     return (
         <div
-            key={product.key}
+            key={product.id}
             className="flex flex-col items-center"
         >
 
             <button
-                onClick={() => router.push(`/product/${product.key}`)}
+                onClick={() => router.push(`/product/${product.id}`)}
                 className="group w-full rounded-[28px] border-2 border-lightBackground hover:border-primary/40 hover:shadow-lg transition-all cursor-pointer overflow-hidden"
             >
 
@@ -23,8 +24,8 @@ const ProductCard = ({ product }: { product: any }) => {
                     <div className="relative w-full aspect-square overflow-hidden rounded-xl bg-muted">
 
                         <Image
-                            src={product.image}
-                            alt={product.label}
+                            src={product.thumbnail}
+                            alt={product.title}
                             fill
                             sizes="(max-width:640px) 140px, (max-width:1024px) 170px, 200px"
                             className="object-cover group-hover:scale-105 transition-transform duration-500"
@@ -37,7 +38,7 @@ const ProductCard = ({ product }: { product: any }) => {
             </button>
 
             <span className="mt-3 text-sm sm:text-base font-medium text-foreground text-center">
-                {product.label}
+                {product.title}
             </span>
 
         </div>

@@ -8,44 +8,19 @@ import Link from 'next/link'
 import { Input } from './ui/input'
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { useCartStore } from '@/store/cartStore'
 
-const items = [
-    {
-        image: 'https://ikiru.in/cdn/shop/products/buy-wall-decor-two-pods-abstract-wall-art-painting-frame-for-living-room-bedroom-and-home-decor-by-the-atrang-on-ikiru-online-store-4.jpg?v=1739196886&width=1946',
-        title: 'Two Pods Abstract Wall Art Painting Frame For Living Room Bedroom and Home Decor',
-        quantity: 10,
-        actualPrice: 3374,
-        offerPrice: 2618
-    },
-    {
-        image: 'https://ikiru.in/cdn/shop/files/buy-wall-accents-selective-edition-luna-wall-art-decor-by-la-dimora-selections-on-ikiru-online-store-1.jpg?v=1739221325&width=1946',
-        title: 'Luna Wall Art Decor | Sculptures for Living Room Decor',
-        quantity: 10,
-        actualPrice: 19999,
-        offerPrice: 18199
-    }
-]
-
-const CartSidebar = ({ open, close }: { open?: boolean, close?: any }) => {
+const CartSidebar = () => {
 
     const router = useRouter();
 
+    const { items, isOpen, setOpen, updateQuantity, removeItem, getTotal, getItemCount, getItemKey, clearCart } = useCartStore();
+
     const [couponCode, setCouponCode] = useState<string>('')
-    const [visible, setVisible] = useState(open);
-
-    const getItemCount: any = () => {
-        return 10
-    }
-
-    const updateQuantity = (key: any, qty: any) => { }
-
-    const removeItem = (index: any) => { }
-
-    const clearCart = () => { }
 
     // 🔒 Lock scroll when modal opens
     useEffect(() => {
-        if (open) {
+        if (isOpen) {
             document.body.style.overflow = "hidden";
         } else {
             document.body.style.overflow = "";
@@ -55,29 +30,29 @@ const CartSidebar = ({ open, close }: { open?: boolean, close?: any }) => {
         return () => {
             document.body.style.overflow = "";
         };
-    }, [open]);
+    }, [isOpen]);
 
     useEffect(() => {
-        if (open) {
-            setVisible(true);
+        if (isOpen) {
+            setOpen(true);
         } else {
-            setTimeout(() => setVisible(false), 300);
+            setTimeout(() => setOpen(false), 300);
         }
     }, [open]);
 
-    if (!visible) return null;
+    if (!isOpen) return null;
 
     return (
         <>
             {/* Backdrop */}
             <div
-                className={`fixed inset-0 z-50 bg-black/40 backdrop-blur-sm transition-opacity duration-300 ${open ? "opacity-100" : "opacity-0"}`}
-                onClick={close}
+                className={`fixed inset-0 z-50 bg-black/40 backdrop-blur-sm transition-opacity duration-300 ${isOpen ? "opacity-100" : "opacity-0"}`}
+                onClick={() => setOpen(false)}
             />
 
             {/* Sidebar */}
             <div
-                className={`fixed right-0 top-0 bottom-0 z-50 w-full max-w-md bg-white shadow-2xl flex flex-col transition-transform duration-300 ${open ? "translate-x-0" : "translate-x-full"}`}
+                className={`fixed right-0 top-0 bottom-0 z-50 w-full max-w-md bg-white shadow-2xl flex flex-col transition-transform duration-300 ${isOpen ? "translate-x-0" : "translate-x-full"}`}
             >
                 {/* Header */}
                 <div className="flex items-center justify-between p-6 py-4 border-b border-lightBackground">
@@ -86,7 +61,7 @@ const CartSidebar = ({ open, close }: { open?: boolean, close?: any }) => {
                         <Typography variant='body-lg' className='font-bold'>Your cart</Typography>
                         <Badge variant="secondary" className="text-xs">{getItemCount()}</Badge>
                     </div>
-                    <Button variant="ghost" size="icon" onClick={close}>
+                    <Button variant="ghost" size="icon" onClick={() => setOpen(false)}>
                         <X className="h-5 w-5" />
                     </Button>
                 </div>
@@ -102,46 +77,49 @@ const CartSidebar = ({ open, close }: { open?: boolean, close?: any }) => {
                             </Button>
                         </div>
                     ) : (
-                        items.map((item, index) => (
-                            <div key={index} className="flex gap-3 p-2 rounded-[25px] border border-lightBackground bg-muted/20 overflow-hidden items-center">
-                                {/* Image */}
-                                <div className="h-16 w-16 md:h-30 md:w-30 rounded-[15px] overflow-hidden border border-lightBackground bg-muted shrink-0">
-                                    {item.image ? (
-                                        <img src={item.image} alt={item.title} className="h-full w-full object-cover" />
-                                    ) : (
-                                        <div className="h-full w-full flex items-center justify-center">
-                                            <ShoppingBag className="h-6 w-6 text-muted-foreground/30" />
+                        items.map((item, index) => {
+                            const key = getItemKey(item);
+                            return (
+                                <div key={index} className="flex gap-3 p-2 rounded-[25px] border border-lightBackground bg-muted/20 overflow-hidden items-center">
+                                    {/* Image */}
+                                    <div className="h-16 w-16 md:h-30 md:w-30 rounded-[15px] overflow-hidden border border-lightBackground bg-muted shrink-0">
+                                        {item.image ? (
+                                            <img src={item.image} alt={item.title} className="h-full w-full object-cover" />
+                                        ) : (
+                                            <div className="h-full w-full flex items-center justify-center">
+                                                <ShoppingBag className="h-6 w-6 text-muted-foreground/30" />
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    {/* Info */}
+                                    <div className="relative min-w-0">
+                                        <div className='absolute top-0 right-0 flex justify-end'>
+                                            <Button variant="ghost" size="icon" className="h-6 w-6 text-destructive" onClick={() => removeItem(key)}>
+                                                <Trash2 className="h-3 w-3" />
+                                            </Button>
                                         </div>
-                                    )}
-                                </div>
+                                        <div className='w-full flex flex-col space-y-1 md:space-y-2 pr-6'>
 
-                                {/* Info */}
-                                <div className="relative min-w-0">
-                                    <div className='absolute top-0 right-0 flex justify-end'>
-                                        <Button variant="ghost" size="icon" className="h-6 w-6 text-destructive" onClick={() => removeItem(index)}>
-                                            <Trash2 className="h-3 w-3" />
-                                        </Button>
-                                    </div>
-                                    <div className='w-full flex flex-col space-y-1 md:space-y-2 pr-6'>
-
-                                    <p className="text-sm lg:text-base font-semibold truncate">{item.title}</p>
-                                    <div className='flex items-center gap-2'>
-                                        <span className="text-base lg:text-xl font-bold text-primary">₹{(item.offerPrice * item.quantity).toLocaleString("en-IN")}</span>
-                                        <span className="text-xs lg:text-base font-bold text-darkGray/37 line-through">₹{(item.actualPrice * item.quantity).toLocaleString("en-IN")}</span>
-                                    </div>
-                                    <div className="flex items-center gap-1">
-                                        <Button variant="outline" size="icon" className="h-6 w-6 border-lightBackground" onClick={() => updateQuantity(index, item.quantity - 1)}>
-                                            <Minus className="h-3 w-3" />
-                                        </Button>
-                                        <Typography variant='caption' className='font-semibold text-center'>{item.quantity}</Typography>
-                                        <Button variant="outline" size="icon" className="h-6 w-6 border-lightBackground" onClick={() => updateQuantity(index, item.quantity + 1)}>
-                                            <Plus className="h-3 w-3" />
-                                        </Button>
-                                    </div>
+                                            <p className="text-sm lg:text-base font-semibold truncate">{item.title}</p>
+                                            <div className='flex items-center gap-2'>
+                                                <span className="text-base lg:text-xl font-bold text-primary">₹{(Number(item.price) * Number(item.quantity)).toLocaleString("en-IN")}</span>
+                                                <span className="text-xs lg:text-base font-bold text-darkGray/37 line-through">₹{(Number(item.price) * Number(item.quantity)).toLocaleString("en-IN")}</span>
+                                            </div>
+                                            <div className="flex items-center gap-1">
+                                                <Button variant="outline" size="icon" className="h-6 w-6 border-lightBackground" onClick={() => updateQuantity(item.productId, Number(item.quantity) - 1)}>
+                                                    <Minus className="h-3 w-3" />
+                                                </Button>
+                                                <Typography variant='caption' className='font-semibold text-center'>{item.quantity}</Typography>
+                                                <Button variant="outline" size="icon" className="h-6 w-6 border-lightBackground" onClick={() => updateQuantity(item.productId, Number(item.quantity) + 1)}>
+                                                    <Plus className="h-3 w-3" />
+                                                </Button>
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
-                            </div>
-                        ))
+                            )
+                        })
                     )}
                 </div>
 
