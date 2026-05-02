@@ -45,8 +45,6 @@ export function AdminSidebar() {
   const { state } = useSidebar();
 
   const { data: session, status } = useSession();
-  console.log("session",session);
-  
 
   const collapsed = state === "collapsed";
 

@@ -1,105 +1,186 @@
+import { ApiError } from "@/lib/api/errors";
+import { err, ok, okList, withHandler } from "@/lib/api/handler";
 import { uploadToCloudinary } from "@/lib/cloudinary.service";
-import { getAllCategories } from "@/lib/db/categories.db";
-import { requireAdmin, requireAuth } from "@/lib/session";
-import { supabaseServer } from "@/lib/supabase/server";
-import { categoryApiSchema, categorySchema } from "@/schema/category.schema";
+import { withTransaction } from "@/lib/db";
+import { AdminCategoryDTO } from "@/lib/db/dto/category.dto";
+import { createCategory, getAdminCategories } from "@/lib/db/repositories/admin/category.admin.repository";
+import { sanitizeString } from "@/lib/validation";
+import { categoryApiSchema } from "@/schema/category.schema";
+import { NextResponse } from "next/server";
 
-export async function POST(req: Request) {
-  try {
-    await requireAdmin();
+const MAX_FILE_SIZE = 5 * 1024 * 1024;
 
-    const formData = await req.formData();
+const ALLOWED_IMAGE_TYPES = [
+  "image/jpeg",
+  "image/png",
+  "image/webp",
+];
 
-    const title = formData.get("title") as string;
-    const description = formData.get("description") as string;
-    const priority = Number(formData.get("priority"));
-    const is_active = formData.get("is_active") === "true";
+export const POST =
+  withHandler(
+    async ({
+      req,
+    }): Promise<NextResponse> => {
+      const contentLength = Number(req.headers.get("content-length") || 0);
 
-    const file = formData.get("file") as File | null;
-    const folder = (formData.get("folder") as string) || "categories";
+      if (contentLength > 6 * 1024 * 1024) {
+        return err(
+          "Payload too large",
+          413
+        );
+      }
 
-    let finalImage: { url: string; public_id: string } | null = null;
+      const contentType = req.headers.get("content-type") || "";
 
-    // ✅ Upload image directly (NO API CALL)
-    if (file && file.size > 0) {
-      const uploaded = await uploadToCloudinary(file, folder);
-      finalImage = uploaded;
-    }
+      if (!contentType.includes("multipart/form-data")) {
+        return err("Invalid content type",415);
+      }
 
-    if (!finalImage?.url) {
-      return Response.json(
-        { success: false, message: "Category image is required" },
-        { status: 400 }
-      );
-    }
+      const formData =await req.formData();
 
-    // ✅ Validate
-    const parsed = categoryApiSchema.safeParse({
-      title,
-      description,
-      priority,
-      is_active,
-      image_url: finalImage,
-    });
+      const title =sanitizeString(String(formData.get("title") || ""),120);
 
-    if (!parsed.success) {
-      return Response.json(
+      const description =sanitizeString(String(formData.get("description") || ""),1000);
+
+      const priority =Number(formData.get("priority") || 0);
+
+      const is_active =formData.get("is_active") === "true";
+
+      const folder =sanitizeString(String(formData.get("folder") ||"categories"),50);
+
+      const file =formData.get("file") as File | null;
+
+      // IMAGE REQUIRED
+      if (!file ||file.size <= 0) {
+        return err(
+          "Category image required",
+          400
+        );
+      }
+
+      // FILE SIZE
+      if (file.size >MAX_FILE_SIZE) {
+        return err(
+          "Image too large",
+          400
+        );
+      }
+
+      // MIME VALIDATION
+      if (!ALLOWED_IMAGE_TYPES.includes(file.type)) {
+        return err(
+          "Invalid image type",
+          400
+        );
+      } 
+
+      // UPLOAD IMAGE
+      let uploadedImage: {
+        url: string;
+        public_id: string;
+      };
+
+      try {
+        uploadedImage =await uploadToCloudinary(file,folder);
+      } catch (
+        uploadError
+      ) {
+        console.error("[CATEGORY_IMAGE_UPLOAD_ERROR]",uploadError);
+
+        throw new ApiError(
+          "Image upload failed",
+          500
+        );
+      }
+
+      // VALIDATION
+      const parsed =categoryApiSchema.safeParse(
+          {
+            title,
+            description,
+            priority,
+            is_active,
+            image_url: uploadedImage
+          }
+        );
+
+        if (parsed.success ===false) {
+        return err(
+          "Validation failed",
+          400
+        );
+      }
+
+      // TRANSACTION
+      const category =
+        await withTransaction(
+          async (
+            client
+          ): Promise<AdminCategoryDTO> => {
+            // DUPLICATE CHECK
+            const existing =
+              await getAdminCategories(
+                {
+                  title:
+                    parsed.data
+                      .title,
+                }
+              );
+
+            if (existing.length > 0 && existing[0].title === parsed.data.title) {
+              throw new ApiError(
+                "Category already exists",
+                409
+              );
+            }
+
+            // INSERT
+            return createCategory(client,parsed.data);
+          }
+        );
+
+      const response = ok(
         {
-          success: false,
-          message: "Validation failed",
-          errors: parsed.error.flatten(),
+          message:
+            "Category created successfully",
+
+          data: category,
         },
-        { status: 400 }
+        201
       );
-    }
 
-    // ✅ Insert
-    const { data, error } = await supabaseServer
-      .from("categories")
-      .insert([parsed.data])
-      .select()
-      .single();
-
-    if (error) {
-      return Response.json(
-        {
-          success: false,
-          message: "Insert failed",
-          error: error.message,
-        },
-        { status: 500 }
+      response.headers.set(
+        "Cache-Control",
+        "private, no-store"
       );
+
+      return response;
+    },
+    {
+      access: "admin",
     }
+  );
 
-    return Response.json({
-      success: true,
-      message: "Category created successfully",
-      data,
-    });
+export const GET =
+  withHandler(
+    async (): Promise<NextResponse> => {
+      const categories =
+        await getAdminCategories();
 
-  } catch (err: any) {
-    console.error("POST /categories error:", err);
+      const response =
+        okList(
+          categories,
+          {}
+        );
 
-    return Response.json(
-      {
-        success: false,
-        message: err?.message || "Internal server error",
-      },
-      { status: 500 }
-    );
-  }
-}
+      response.headers.set(
+        "Cache-Control",
+        "private, no-store"
+      );
 
-export async function GET() {
-  try {
-    await requireAuth();
-
-    const { data, error } = await getAllCategories();
-
-    if (error) throw new Error();
-
-    return Response.json({ data });
-  } catch {
-    return Response.json({ message: "Unauthorized" }, { status: 401 });
-  }
-}
+      return response;
+    },
+    {
+      access: "admin",
+    }
+  );

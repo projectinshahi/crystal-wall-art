@@ -1,48 +1,59 @@
-import "next-auth";
-import "next-auth/jwt";
+// types/next-auth.d.ts
+
+import { DefaultSession } from "next-auth";
 
 declare module "next-auth" {
-  interface User {
-    id: string;
-    email: string;
-    role: {
-      id: string;
-      name: "admin" | "user";
-    };
-    profile?: {
-      fullName: string | null;
-      avatarUrl: string | null;
-    } | null;
-  }
-
   interface Session {
     user: {
       id: string;
-      email: string;
+
       role: {
         id: string;
-        name: "admin" | "user";
+        name: string;
       };
-      profile?: {
+
+      profile: {
         fullName: string | null;
         avatarUrl: string | null;
-      } | null;
+      };
+
+      email: string;
+    } & DefaultSession["user"];
+  }
+
+  interface User {
+    id: string;
+
+    role: {
+      id: string;
+      name: string;
     };
+
+    profile: {
+      fullName: string | null;
+      avatarUrl: string | null;
+    };
+
+    email: string;
   }
 }
 
 declare module "next-auth/jwt" {
   interface JWT {
     id: string;
-    email: string;
+
     role: {
       id: string;
-      name: "admin" | "user";
+      name: string;
     };
-    profile?: {
+
+    profile: {
       fullName: string | null;
       avatarUrl: string | null;
-    } | null;
+    };
+
+    email: string;
+
     provider?: string;
   }
 }
