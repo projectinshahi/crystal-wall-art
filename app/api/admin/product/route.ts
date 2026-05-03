@@ -129,10 +129,20 @@ export const POST = withHandler(
 )
 
 export const GET = withHandler(
-    async (): Promise<NextResponse> => {
-        const products = await getAdminProducts({ page: 1, limit: 20 });
-        console.log("products",products);
-        
+    async ({ req }): Promise<NextResponse> => {
+
+        // ─────────────────────────────────────
+        // QUERY PARAMS
+        // ─────────────────────────────────────
+        const searchParams = req.nextUrl.searchParams;
+
+        const page = Math.max(1, Number(searchParams.get("page")) || 1);
+
+        const limit = Math.min(100, Math.max(1, Number(searchParams.get("limit")) || 20));
+
+        const products = await getAdminProducts({ page: page || 1, limit: limit || 20 });
+        console.log("req", req);
+
 
         const response = okList(
             products.data,
