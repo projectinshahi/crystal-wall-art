@@ -33,25 +33,25 @@ export const POST =
       const contentType = req.headers.get("content-type") || "";
 
       if (!contentType.includes("multipart/form-data")) {
-        return err("Invalid content type",415);
+        return err("Invalid content type", 415);
       }
 
-      const formData =await req.formData();
+      const formData = await req.formData();
 
-      const title =sanitizeString(String(formData.get("title") || ""),120);
+      const title = sanitizeString(String(formData.get("title") || ""), 120);
 
-      const description =sanitizeString(String(formData.get("description") || ""),1000);
+      const description = sanitizeString(String(formData.get("description") || ""), 1000);
 
-      const priority =Number(formData.get("priority") || 0);
+      const priority = Number(formData.get("priority") || 0);
 
-      const is_active =formData.get("is_active") === "true";
+      const is_active = formData.get("is_active") === "true";
 
-      const folder =sanitizeString(String(formData.get("folder") ||"categories"),50);
+      const folder = sanitizeString(String(formData.get("folder") || "categories"), 50);
 
-      const file =formData.get("file") as File | null;
+      const file = formData.get("file") as File | null;
 
       // IMAGE REQUIRED
-      if (!file ||file.size <= 0) {
+      if (!file || file.size <= 0) {
         return err(
           "Category image required",
           400
@@ -59,7 +59,7 @@ export const POST =
       }
 
       // FILE SIZE
-      if (file.size >MAX_FILE_SIZE) {
+      if (file.size > MAX_FILE_SIZE) {
         return err(
           "Image too large",
           400
@@ -72,7 +72,7 @@ export const POST =
           "Invalid image type",
           400
         );
-      } 
+      }
 
       // UPLOAD IMAGE
       let uploadedImage: {
@@ -81,11 +81,11 @@ export const POST =
       };
 
       try {
-        uploadedImage =await uploadToCloudinary(file,folder);
+        uploadedImage = await uploadToCloudinary(file, folder);
       } catch (
-        uploadError
+      uploadError
       ) {
-        console.error("[CATEGORY_IMAGE_UPLOAD_ERROR]",uploadError);
+        console.error("[CATEGORY_IMAGE_UPLOAD_ERROR]", uploadError);
 
         throw new ApiError(
           "Image upload failed",
@@ -94,17 +94,17 @@ export const POST =
       }
 
       // VALIDATION
-      const parsed =categoryApiSchema.safeParse(
-          {
-            title,
-            description,
-            priority,
-            is_active,
-            image_url: uploadedImage
-          }
-        );
+      const parsed = categoryApiSchema.safeParse(
+        {
+          title,
+          description,
+          priority,
+          is_active,
+          image_url: uploadedImage
+        }
+      );
 
-        if (parsed.success ===false) {
+      if (parsed.success === false) {
         return err(
           "Validation failed",
           400
@@ -135,7 +135,7 @@ export const POST =
             }
 
             // INSERT
-            return createCategory(client,parsed.data);
+            return createCategory(client, parsed.data);
           }
         );
 
