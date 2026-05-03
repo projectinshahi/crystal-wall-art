@@ -15,12 +15,6 @@ const ALLOWED_IMAGE_TYPES = [
   "image/webp",
 ];
 
-interface Params {
-  params: {
-    id: string;
-  };
-}
-
 export const PUT = withHandler(
   async ({
     req,
@@ -43,16 +37,9 @@ export const PUT = withHandler(
     }
 
     // VALIDATE CONTENT TYPE
-    const contentType =
-      req.headers.get(
-        "content-type"
-      ) || "";
+    const contentType = req.headers.get("content-type") || "";
 
-    if (
-      !contentType.includes(
-        "multipart/form-data"
-      )
-    ) {
+    if (!contentType.includes("multipart/form-data")) {
       return err(
         "Invalid content type",
         415
@@ -60,59 +47,23 @@ export const PUT = withHandler(
     }
 
     // PARSE FORM DATA
-    const formData =
-      await req.formData();
+    const formData = await req.formData();
 
     // SANITIZE INPUTS
-    const title =
-      sanitizeString(
-        String(
-          formData.get("title") ||
-          ""
-        ),
-        120
-      );
+    const title = sanitizeString(String(formData.get("title") || ""), 120);
 
-    const description =
-      sanitizeString(
-        String(
-          formData.get(
-            "description"
-          ) || ""
-        ),
-        1000
-      );
+    const description = sanitizeString(String(formData.get("description") || ""), 1000);
 
-    const priority =
-      Number(
-        formData.get(
-          "priority"
-        ) || 0
-      );
+    const priority = Number(formData.get("priority") || 0);
 
-    const is_active =
-      formData.get(
-        "is_active"
-      ) === "true";
+    const is_active = formData.get("is_active") === "true";
 
-    const folder =
-      sanitizeString(
-        String(
-          formData.get(
-            "folder"
-          ) || "categories"
-        ),
-        50
-      );
+    const folder = sanitizeString(String(formData.get("folder") || "categories"), 50);
 
-    const file =
-      formData.get(
-        "file"
-      ) as File | null;
+    const file = formData.get("file") as File | null;
 
     // GET EXISTING CATEGORY
-    const existing:any =
-      await getAdminCategories({ id: categoryId });
+    const existing: any = await getAdminCategories({ id: categoryId });
 
     if (!existing) {
       return err(
@@ -122,9 +73,7 @@ export const PUT = withHandler(
     }
 
     // BLOCK DELETED CATEGORY
-    if (
-      existing.deleted === true
-    ) {
+    if (existing.deleted === true) {
       return err(
         "Deleted category cannot be updated",
         409
@@ -132,20 +81,13 @@ export const PUT = withHandler(
     }
 
     // DEFAULT TO EXISTING IMAGE
-    let image_url =
-      existing.image_url;
+    let image_url = existing.image_url;
 
     // NEW IMAGE UPLOAD
-    if (
-      file &&
-      file.size > 0
-    ) {
+    if (file && file.size > 0) {
 
       // FILE SIZE VALIDATION
-      if (
-        file.size >
-        MAX_FILE_SIZE
-      ) {
+      if (file.size > MAX_FILE_SIZE) {
         return err(
           "Image size exceeds 5MB limit",
           400
@@ -153,11 +95,7 @@ export const PUT = withHandler(
       }
 
       // MIME TYPE VALIDATION
-      if (
-        !ALLOWED_IMAGE_TYPES.includes(
-          file.type
-        )
-      ) {
+      if (!ALLOWED_IMAGE_TYPES.includes(file.type)) {
         return err(
           "Invalid image type",
           400
@@ -167,50 +105,32 @@ export const PUT = withHandler(
       try {
 
         // UPLOAD NEW IMAGE
-        const uploaded =
-          await uploadToCloudinary(
-            file,
-            folder
-          );
+        const uploaded = await uploadToCloudinary(file, folder);
 
         image_url = {
           url: uploaded.url,
-          public_id:
-            uploaded.public_id,
+          public_id: uploaded.public_id,
         };
 
         // DELETE OLD IMAGE
         try {
 
-          const oldImage =
-            typeof existing.image_url ===
-              "string"
-              ? JSON.parse(
-                existing.image_url
-              )
-              : existing.image_url;
+          const oldImage = typeof existing.image_url === "string"
+            ? JSON.parse(existing.image_url)
+            : existing.image_url;
 
-          if (
-            oldImage?.public_id
-          ) {
-            await deleteFromCloudinary(
-              oldImage.public_id
-            );
+          if (oldImage?.public_id) {
+            await deleteFromCloudinary(oldImage.public_id);
           }
 
-        } catch (
-        cloudinaryDeleteError
-        ) {
+        } catch (cloudinaryDeleteError) {
           console.warn(
             "[CLOUDINARY_DELETE_FAILED]",
             cloudinaryDeleteError
           );
         }
 
-      } catch (
-      uploadError
-      ) {
-
+      } catch (uploadError) {
         console.error(
           "[CATEGORY_UPLOAD_ERROR]",
           uploadError
@@ -224,18 +144,15 @@ export const PUT = withHandler(
     }
 
     // VALIDATE PAYLOAD
-    const parsed =
-      categoryApiSchema.safeParse({
-        title,
-        description,
-        priority,
-        is_active,
-        image_url,
-      });
+    const parsed = categoryApiSchema.safeParse({
+      title,
+      description,
+      priority,
+      is_active,
+      image_url,
+    });
 
-    if (
-      parsed.success === false
-    ) {
+    if (parsed.success === false) {
       return err(
         "Validation failed",
         400
@@ -243,20 +160,15 @@ export const PUT = withHandler(
     }
 
     // UPDATE CATEGORY
-    const updatedCategory =
-      await updateCategory(
-        categoryId,
-        parsed.data as CategoryApiInput
-      );
-
-    const response = ok(
-      {
-        message:
-          "Category updated successfully",
-
-        data: updatedCategory,
-      }
+    const updatedCategory = await updateCategory(
+      categoryId,
+      parsed.data as CategoryApiInput
     );
+
+    const response = ok({
+      message: "Category updated successfully",
+      data: updatedCategory,
+    });
 
     // NEVER CACHE ADMIN APIs
     response.headers.set(
@@ -268,7 +180,6 @@ export const PUT = withHandler(
   },
   {
     access: "admin",
-
     rateLimit: {
       max: 20,
       windowMs: 60 * 1000,
@@ -276,131 +187,8 @@ export const PUT = withHandler(
   }
 );
 
-// export async function PUT(req: Request, { params }: Params) {
-//   try {
-//     await requireAdmin();
-
-//     const { id } = await params;
-
-//     if (!id) {
-//       return Response.json(
-//         { success: false, message: "Category ID is required" },
-//         { status: 400 }
-//       );
-//     }
-
-//     // ✅ Use formData to support file upload
-//     const formData = await req.formData();
-
-//     const title = formData.get("title") as string;
-//     const description = formData.get("description") as string;
-//     const priority = Number(formData.get("priority"));
-//     const is_active = formData.get("is_active") === "true";
-
-//     const file = formData.get("file") as File | null;
-//     const folder = (formData.get("folder") as string) || "categories";
-
-//     let image_url: any = null;
-
-//     // 🔍 Get existing category
-//     const { data: existing, error: fetchError } = await supabaseServer
-//       .from("categories")
-//       .select("image_url")
-//       .eq("id", id)
-//       .single();
-
-//     if (fetchError || !existing) {
-//       return Response.json(
-//         { success: false, message: "Category not found" },
-//         { status: 404 }
-//       );
-//     }
-
-//     // ✅ Case 1: New file uploaded
-//     if (file && file.size > 0) {
-//       const uploaded = await uploadToCloudinary(file, folder);
-
-//       image_url = {
-//         url: uploaded.url,
-//         public_id: uploaded.public_id,
-//       };
-
-//       // 🧹 Delete old image
-//       if (existing.image_url?.public_id) {
-//         try {
-//           await deleteFromCloudinary(existing.image_url.public_id);
-//         } catch (err) {
-//           console.warn("Old image delete failed:", err);
-//         }
-//       }
-//     } else {
-//       // ✅ Keep existing image
-//       image_url = existing.image_url;
-//     }
-
-//     // ✅ Validate
-//     const parsed = categorySchema.safeParse({
-//       title,
-//       description,
-//       priority,
-//       is_active,
-//       image_url,
-//     });
-
-//     if (!parsed.success) {
-//       return Response.json(
-//         {
-//           success: false,
-//           message: "Validation failed",
-//           errors: parsed.error.flatten(),
-//         },
-//         { status: 400 }
-//       );
-//     }
-
-//     // ✅ Update DB
-//     const { data, error } = await supabaseServer
-//       .from("categories")
-//       .update(parsed.data)
-//       .eq("id", id)
-//       .select()
-//       .single();
-
-//     if (error) {
-//       return Response.json(
-//         {
-//           success: false,
-//           message: "Update failed",
-//           error: error.message,
-//         },
-//         { status: 500 }
-//       );
-//     }
-
-//     return Response.json({
-//       success: true,
-//       message: "Category updated successfully",
-//       data,
-//     });
-
-//   } catch (err: any) {
-//     console.error("PUT /category error:", err);
-
-//     return Response.json(
-//       {
-//         success: false,
-//         message: err?.message || "Internal server error",
-//       },
-//       { status: 500 }
-//     );
-//   }
-// }
-
 export const PATCH = withHandler(
-  async ({
-    req,
-    params,
-  }): Promise<NextResponse> => {
+  async ({ req, params }): Promise<NextResponse> => {
 
     const routeParams = await params;
 
@@ -413,17 +201,11 @@ export const PATCH = withHandler(
       );
     }
 
-    const body =
-      await req.json();
+    const body = await req.json();
 
-    const {
-      is_active,
-    } = body;
+    const { is_active } = body;
 
-    if (
-      typeof is_active !==
-      "boolean"
-    ) {
+    if (typeof is_active !== "boolean") {
       return err(
         "is_active must be boolean",
         400
@@ -431,8 +213,7 @@ export const PATCH = withHandler(
     }
 
     // CHECK EXISTS
-    const existing =
-      await getAdminCategories({ id: categoryId });
+    const existing = await getAdminCategories({ id: categoryId });
 
     if (!existing) {
       return err(
@@ -442,16 +223,12 @@ export const PATCH = withHandler(
     }
 
     // UPDATE
-    const updated =
-      await updateCategoryStatus(
-        categoryId,
-        is_active
-      );
+    const updated = await updateCategoryStatus(categoryId, is_active);
 
     return ok({
       message: `Category ${is_active
-          ? "activated"
-          : "deactivated"
+        ? "activated"
+        : "deactivated"
         } successfully`,
 
       data: updated,

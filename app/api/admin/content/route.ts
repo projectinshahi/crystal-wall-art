@@ -1,117 +1,155 @@
+import { ApiError } from "@/lib/api/errors";
+import { err, ok, okList, withHandler } from "@/lib/api/handler";
 import { uploadToCloudinary } from "@/lib/cloudinary.service";
+import { withTransaction } from "@/lib/db";
 import { addContent, getContents } from "@/lib/db/content.db";
+import { AdminContentDTO, toAdminContentDTO } from "@/lib/db/dto/contents.dto";
+import { createContent, getAdminContents } from "@/lib/db/repositories/admin/content.admin.repository";
 import { requireAdmin } from "@/lib/session";
+import { sanitizeString } from "@/lib/validation";
 import { contentApiSchema } from "@/schema/content.schema";
-import { NextRequest } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 
-export async function POST(req: Request) {
-    try {
-        await requireAdmin();
+const MAX_FILE_SIZE = 5 * 1024 * 1024;
+
+const ALLOWED_IMAGE_TYPES = [
+    "image/jpeg",
+    "image/png",
+    "image/webp",
+];
+
+export const POST = withHandler(
+    async ({ req }): Promise<NextResponse> => {
+        const contentLength = Number(req.headers.get("content-length") || 0);
+
+        if (contentLength > 6 * 1024 * 1024) {
+            return err(
+                "Payload too large",
+                413
+            );
+        }
+
+        const contentType = req.headers.get("content-type") || "";
+
+        if (!contentType.includes("multipart/form-data")) {
+            return err("Invalid content type", 415);
+        }
 
         const formData = await req.formData();
 
-        const type = formData.get("type") as string;
-        const title = formData.get("title") as string;
-        const description = formData.get("description") as string;
-        const link_url = formData.get("link_url") as string;
-        const priority = Number(formData.get("priority"));
-
+        const type = sanitizeString(String(formData.get("type") || ""), 120);
+        const title = sanitizeString(String(formData.get("title") || ""), 120);
+        const description = sanitizeString(String(formData.get("description") || ""), 1000);
+        const link_url = sanitizeString(String(formData.get("link_url") || ""), 200);
+        const priority = Number(formData.get("priority") || 0);
+        const folder = sanitizeString(String(formData.get("folder") || "categories"), 50);
         const file = formData.get("file") as File | null;
-        const folder = (formData.get("folder") as string) || "content";
 
-        let finalImage: { url: string; public_id: string } | null = null;
-
-        // ✅ Upload image directly (NO API CALL)
-        if (file && file.size > 0) {
-            const uploaded = await uploadToCloudinary(file, folder);
-            finalImage = uploaded;
-        }
-
-        // Data Validation
-        const parsed = contentApiSchema.safeParse({
-            type,
-            title,
-            description,
-            link_url,
-            image: finalImage,
-            priority,
-        });
-
-        if (!parsed.success) {
-            return Response.json(
-                {
-                    success: false,
-                    message: "Validation failed",
-                    errors: parsed.error.flatten(),
-                },
-                { status: 400 }
+        // IMAGE REQUIRED
+        if (!file || file.size <= 0) {
+            return err(
+                "Category image required",
+                400
             );
         }
 
-        const dbRes = await addContent(parsed.data)
-
-        if (!dbRes.success) {
-            return Response.json(
-                {
-                    success: false,
-                    message: "Insert failed"
-                },
-                { status: 500 }
+        // FILE SIZE
+        if (file.size > MAX_FILE_SIZE) {
+            return err(
+                "Image too large",
+                400
             );
         }
 
-        return Response.json({
-            success: true,
+        // MIME VALIDATION
+        if (!ALLOWED_IMAGE_TYPES.includes(file.type)) {
+            return err(
+                "Invalid image type",
+                400
+            );
+        }
+
+        // UPLOAD IMAGE
+        let uploadedImage: {
+            url: string;
+            public_id: string;
+        };
+
+        try {
+            uploadedImage = await uploadToCloudinary(file, folder);
+        } catch (uploadError) {
+            console.error("[CATEGORY_IMAGE_UPLOAD_ERROR]", uploadError);
+
+            throw new ApiError(
+                "Image upload failed",
+                500
+            );
+        }
+
+        // VALIDATION
+        const parsed = contentApiSchema.safeParse(
+            {
+                type,
+                title,
+                description,
+                link_url,
+                image: uploadedImage,
+                priority,
+            }
+        );
+
+        if (parsed.success === false) {
+            return err(
+                "Validation failed",
+                400
+            );
+        }
+
+        // TRANSACTION
+        const content = await withTransaction(
+            async (client): Promise<AdminContentDTO> => {
+                // DUPLICATE CHECK
+                const existing = await getAdminContents({ title: parsed.data.title, type: parsed.data.type });
+
+                if (existing.length > 0 && existing[0].title === parsed.data.title) {
+                    throw new ApiError(
+                        "Content already exists",
+                        409
+                    );
+                }
+
+                // INSERT
+                return createContent(client, parsed.data);
+
+            }
+        )
+
+        const response = ok({
             message: "Content created successfully",
-            data: dbRes.data,
-        });
+            data: content
+        }, 201)
 
-    } catch (error: any) {
-        console.error("POST /categories error:", error);
+        response.headers.set(
+        "Cache-Control",
+        "private, no-store"
+      );
 
-        return Response.json(
-            {
-                success: false,
-                message: error?.message || "Internal server error",
-            },
-            { status: 500 }
+      return response;
+
+    }, { access: "admin" }
+)
+
+export const GET = withHandler(
+    async (): Promise<NextResponse> => {
+        const contents = await getAdminContents();
+
+        const response = okList(contents, {});
+
+        response.headers.set(
+            "Cache-Control",
+            "private, no-store"
         );
-    }
-}
 
-export async function GET(req: NextRequest) {
-    try {
-        // ✅ Auth inside try
-        await requireAdmin();
-
-        // ✅ Parse query params
-        const { searchParams } = new URL(req.url);
-        const page = Number(searchParams.get('page') || 1);
-        const limit = Number(searchParams.get('limit') || 10);
-
-        // ✅ Replace with your DB/service
-        const {data, meta} = await getContents({ page, limit });
-
-        return Response.json({
-            success: true,
-            data: data,
-            meta
-        });
-
-    } catch (error: any) {
-        console.error("❌ CONTENT FETCH ERROR:", error);
-
-        const status =
-            error.message === "Unauthorized" ? 401 :
-            error.message === "Forbidden" ? 403 :
-            500;
-
-        return Response.json(
-            {
-                success: false,
-                message: error.message || "Internal server error",
-            },
-            { status }
-        );
-    }
-}
+        return response;
+    }, { access: "admin" }
+)

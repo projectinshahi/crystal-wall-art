@@ -1,118 +1,272 @@
-import { deleteContent, toogleContentStatus } from "@/lib/db/content.db";
+import { ApiError } from "@/lib/api/errors";
+import { err, ok, withHandler } from "@/lib/api/handler";
+import { deleteFromCloudinary, uploadToCloudinary } from "@/lib/cloudinary.service";
+import { withTransaction } from "@/lib/db";
+import { toogleContentStatus } from "@/lib/db/content.db";
+import { getAdminContents, softDeleteContent, updateContent, updateContentStatus } from "@/lib/db/repositories/admin/content.admin.repository";
 import { requireAdmin } from "@/lib/session";
+import { sanitizeString } from "@/lib/validation";
+import { contentApiSchema } from "@/schema/content.schema";
+import { ContentFormInput } from "@/types/Admin/content.types";
+import { NextResponse } from "next/server";
 
-interface Params {
-    params: {
-        id: string;
-    };
-}
+const MAX_FILE_SIZE = 5 * 1024 * 1024;
 
-export async function PATCH(req: Request, { params }: Params) {
-    try {
-        await requireAdmin();
+const ALLOWED_IMAGE_TYPES = [
+    "image/jpeg",
+    "image/png",
+    "image/webp",
+];
 
-        const { id } = await params;
+export const PUT = withHandler(
+    async ({ req, params }): Promise<NextResponse> => {
+        const routeParams = await params;
 
-        if (!id) {
-            return Response.json(
-                { success: false, message: "Category ID is required" },
-                { status: 400 }
+        const contentId = routeParams?.id;
+
+        if (!contentId) {
+            return err(
+                "Content ID is required",
+                400
+            );
+        }
+
+        // Validate content type
+        const contentType = req.headers.get("content-type") || "";
+
+        if (!contentType.includes("multipart/form-data")) {
+            return err(
+                "Invalid content type",
+                415
+            );
+        }
+
+        const formData = await req.formData();
+
+        // Sanitize inputs
+        const type = sanitizeString(String(formData.get("type") || ""), 120);
+        const title = sanitizeString(String(formData.get("title") || ""), 120);
+        const description = sanitizeString(String(formData.get("description") || ""), 1000);
+        const link_url = sanitizeString(String(formData.get("link_url") || ""), 200);
+        const priority = Number(formData.get("priority") || 0);
+        const folder = sanitizeString(String(formData.get("folder") || "categories"), 50);
+        const file = formData.get("file") as File | null;
+
+        const existing: any = await getAdminContents({ id: contentId });
+
+        if (!existing) {
+            return err(
+                "Content not found",
+                404
+            );
+        }
+
+        if (existing.deleted === true) {
+            return err(
+                "Deleted category cannot be updated",
+                409
+            );
+        }
+
+        // DEFAULT TO EXISTING IMAGE
+        let image_url = existing.image;
+
+        // NEW IMAGE UPLOAD
+        if (file && file.size > 0) {
+            if (file.size > MAX_FILE_SIZE) {
+                return err(
+                    "Image size exceeds 5MB limit",
+                    400
+                );
+            }
+
+            // MIME TYPE VALIDATION
+            if (!ALLOWED_IMAGE_TYPES.includes(file.type)) {
+                return err(
+                    "Invalid image type",
+                    400
+                );
+            }
+
+            try {
+
+                // UPLOAD NEW IMAGE
+                const uploaded = await uploadToCloudinary(file, folder);
+
+                image_url = {
+                    url: uploaded.url,
+                    public_id: uploaded.public_id,
+                };
+
+                // DELETE OLD IMAGE
+                try {
+
+                    const oldImage = typeof existing.image_url === "string"
+                        ? JSON.parse(existing.image_url)
+                        : existing.image_url;
+
+                    if (oldImage?.public_id) {
+                        await deleteFromCloudinary(oldImage.public_id);
+                    }
+
+                } catch (cloudinaryDeleteError) {
+                    console.warn(
+                        "[CLOUDINARY_DELETE_FAILED]",
+                        cloudinaryDeleteError
+                    );
+                }
+
+            } catch (uploadError) {
+                console.error(
+                    "[CATEGORY_UPLOAD_ERROR]",
+                    uploadError
+                );
+
+                throw new ApiError(
+                    "Image upload failed",
+                    500
+                );
+            }
+        }
+
+        // VALIDATION
+        const parsed = contentApiSchema.safeParse(
+            {
+                type,
+                title,
+                description,
+                link_url,
+                image: image_url,
+                priority,
+            }
+        );
+
+        if (parsed.success === false) {
+            return err(
+                "Validation failed",
+                400
+            );
+        }
+
+        // UPDATE CONTENT
+        const updatedContent = await updateContent(
+            contentId,
+            parsed.data as ContentFormInput
+        )
+
+        const response = ok({
+            message: "Content updated successfully",
+            data: updatedContent
+        })
+
+        // Never Cache Admin APIs
+        response.headers.set(
+            "Cache-Control",
+            "private, no-store"
+        );
+
+        return response;
+
+    }
+)
+
+export const PATCH = withHandler(
+    async ({ req, params }): Promise<NextResponse> => {
+        const routeParams = await params;
+
+        const contentId = routeParams?.id;
+
+        if (!contentId) {
+            return err(
+                "Content ID is required",
+                400
             );
         }
 
         const body = await req.json();
+
         const { is_active } = body;
 
-
-
-        // ✅ Validate input
         if (typeof is_active !== "boolean") {
-            return Response.json(
-                {
-                    success: false,
-                    message: "is_active must be boolean",
-                },
-                { status: 400 }
+            return err(
+                "is_active must be boolean",
+                400
             );
         }
 
-        // ✅ Update only status
-        const updateStatus = await toogleContentStatus({ id, is_active })
+        // CHECK EXISTS
+        const existing = await getAdminContents({ id: contentId });
 
-        if (!updateStatus.success) {
-            return Response.json(
-                {
-                    success: false,
-                    message: "Status update failed",
-                    error: updateStatus.error,
-                },
-                { status: 500 }
+        if (!existing) {
+            return err(
+                "Content not found",
+                404
             );
         }
 
-        return Response.json({
-            success: true,
+        // UPDATE
+        const updated = await updateContentStatus(contentId, is_active);
+
+        return ok({
             message: `Content ${is_active ? "activated" : "deactivated"
                 } successfully`,
-        });
+            data: updated,
+        })
 
-    } catch (err: any) {
-        console.error("PATCH /content status error:", err);
-
-        return Response.json(
-            {
-                success: false,
-                message: err?.message || "Internal server error",
-            },
-            { status: 500 }
-        );
     }
-}
+)
 
-export async function DELETE(
-    req: Request,
-    { params }: { params: { id: string } }
-) {
-    try {
-        await requireAdmin();
+export const DELETE = withHandler(
+    async ({ params }): Promise<NextResponse> => {
+        const routeParams = await params;
 
-        const { id } = await params;
+        // GET ID
+        const contentId = routeParams?.id;
 
-        if (!id) {
-            return Response.json(
-                { success: false, message: "Content ID is required" },
-                { status: 400 }
+        if (!contentId) {
+            return err(
+                "Content ID is required",
+                400
             );
         }
 
-        const deleteData = await deleteContent({ id })
+        // TRANSACTION
+        const deleteContent = await withTransaction(
+            async (client) => {
+                // CHECK CATEGORY EXISTS
+                const existing: any = await getAdminContents({ id: contentId });
 
+                if (!existing) {
+                    throw new ApiError(
+                        "Content not found",
+                        404
+                    );
+                }
 
-        if (!deleteData.success) {
-            return Response.json(
-                {
-                    success: false,
-                    message: "Delete failed",
-                    error: deleteData.error,
-                },
-                { status: 500 }
-            );
-        }
+                // ALREADY DELETED
+                if (existing.deleted === true) {
+                    throw new ApiError(
+                        "Content already deleted",
+                        409
+                    );
+                }
 
-        return Response.json({
-            success: true,
-            message: `Content moved to trash`,
-        });
+                // SOFT DELETE
+                return softDeleteContent(client, contentId);
+            }
+        )
 
-    } catch (err: any) {
-        console.error("DELETE (soft) /category error:", err);
+        const response = ok({
+            message: `Content moved to trash successfully`,
+            data: deleteContent,
+        })
 
-        return Response.json(
-            {
-                success: false,
-                message: err?.message || "Internal server error",
-            },
-            { status: 500 }
+        response.headers.set(
+            "Cache-Control",
+            "private, no-store"
         );
+
+        return response;
+
     }
-}
+)

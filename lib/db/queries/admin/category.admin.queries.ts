@@ -36,8 +36,7 @@ export const CategoryAdminQueries = {
     UPDATE categories
     SET
       deleted = TRUE,
-      is_active = FALSE,
-      updated_at = NOW()
+      is_active = FALSE
     WHERE id = $1
     RETURNING
       id,
