@@ -38,7 +38,7 @@ const CartSidebar = () => {
         } else {
             setTimeout(() => setOpen(false), 300);
         }
-    }, [open]);
+    }, [isOpen]);
 
     if (!isOpen) return null;
 
@@ -168,7 +168,7 @@ const CartSidebar = () => {
                                 size="lg"
                                 onClick={() => {
                                     router.push('/checkout');
-                                    close();
+                                    setOpen(false);
                                 }}
                             >
                                 Checkout

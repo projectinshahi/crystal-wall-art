@@ -13,7 +13,7 @@ declare module "next-auth" {
       };
 
       profile: {
-        fullName: string | null;
+        user_name: string | null;
         avatarUrl: string | null;
       };
 
@@ -30,7 +30,7 @@ declare module "next-auth" {
     };
 
     profile: {
-      fullName: string | null;
+      user_name: string | null;
       avatarUrl: string | null;
     };
 
@@ -48,7 +48,7 @@ declare module "next-auth/jwt" {
     };
 
     profile: {
-      fullName: string | null;
+      user_name: string | null;
       avatarUrl: string | null;
     };
 

@@ -54,6 +54,7 @@ function getDefaultMode(pathname: string): { headerMode: HeaderMode; backTitle?:
     if (pathname === "/about") return { headerMode: "full", showSearch: false };
     if (pathname === "/contact") return { headerMode: "full", showSearch: false };
     if (pathname === "/account") return { headerMode: "full", showSearch: false };
+    if (pathname.startsWith("/auth/login")) return { headerMode: "full", showFooter: false };
 
     // Fallback
     return { headerMode: "full", showSearch: false };

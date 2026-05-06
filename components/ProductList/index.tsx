@@ -22,12 +22,12 @@ const ProductList = ({
       setLoading(true);
 
       const query = new URLSearchParams({
-        ...(categoryId && { category: categoryId }),
+        // ...(categoryId && { category: categoryId }),
         active: "true",
       });
 
       const res = await fetch(
-        `${process.env.NEXT_PUBLIC_URL}/api/products?${query}`
+        `${process.env.NEXT_PUBLIC_URL}/api/products/${categoryId}/category?${query}`
       );
 
       const prodRes = await res.json();

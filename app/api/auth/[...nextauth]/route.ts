@@ -4,6 +4,7 @@ import bcrypt from "bcrypt";
 
 import { readQuery } from "@/lib/db";
 import { validateEmail, validatePassword } from "@/lib/validation";
+import { AuthUserRow } from "@/types/AuthUserRow.types";
 
 export const authOptions: NextAuthOptions = {
   providers: [
@@ -34,11 +35,13 @@ export const authOptions: NextAuthOptions = {
     u.id,
     u.email,
     u.password_hash,
-    u.status,
+    u.is_active,
 
     json_build_object(
-      'fullName', up.full_name,
-      'avatarUrl', up.avatar_url
+      'user_name', up.user_name,
+      'avatarUrl', up.avatar_url,
+      'first_name', up.first_name,
+      'last_name', up.last_name
     ) AS profile,
 
     json_build_object(
@@ -69,7 +72,7 @@ export const authOptions: NextAuthOptions = {
           if (
             !user ||
             !passwordValid ||
-            user.status !== "active"
+            user.is_active !== true
           ) {
             return null;
           }
@@ -84,7 +87,7 @@ export const authOptions: NextAuthOptions = {
             },
 
             profile: {
-              fullName: user.profile?.fullName,
+              user_name: user.profile?.user_name,
               avatarUrl: user.profile?.avatarUrl,
             },
           };
@@ -99,54 +102,68 @@ export const authOptions: NextAuthOptions = {
     // CLIENT OTP LOGIN
     // =========================================================
     CredentialsProvider({
-      id: "client-otp",
+      id: "client-login",
       name: "Client OTP",
 
       credentials: {
-        mobile: { type: "text" },
-        otp: { type: "text" },
+        email: { label: "Email", type: "email" },
+        password: { label: "Password", type: "password" },
       },
 
       async authorize(credentials) {
         try {
-          if (!credentials?.mobile || !credentials?.otp) {
+          if (!credentials?.email || !credentials?.password) {
             return null;
           }
 
+          const cleanEmail = validateEmail(credentials.email);
+          const cleanPass = validatePassword(credentials.password);
+
           const [user] = await readQuery<AuthUserRow>(
             `
-            SELECT
-              u.id,
-              u.email,
+  SELECT
+    u.id,
+    u.email,
+    u.password_hash,
+    u.is_active,
 
-              json_build_object(
-                'fullName', up.full_name,
-                'avatarUrl', up.avatar_url
-              ) AS profile,
+    json_build_object(
+      'user_name', up.user_name,
+      'avatarUrl', up.avatar_url,
+      'first_name', up.first_name,
+      'last_name', up.last_name
+    ) AS profile,
 
-              json_build_object(
-                'id', r.id,
-                'name', r.name
-              ) AS role
+    json_build_object(
+      'id', r.id,
+      'name', r.name
+    ) AS role
 
-            FROM public.auth_users u
-            JOIN public.user_profiles up
-              ON up.user_id = u.id
-            JOIN public.roles r
-              ON r.id = up.role_id
+  FROM public.auth_users u
+  JOIN public.user_profiles up
+    ON up.user_id = u.id
+  JOIN public.roles r
+    ON r.id = up.role_id
 
-            WHERE u.mobile = $1
-              AND u.otp_code = $2
-              AND u.status = 'active'
-            LIMIT 1
-            `,
-            [
-              credentials.mobile,
-              credentials.otp,
-            ]
+  WHERE u.email = $1
+  LIMIT 1
+  `,
+            [cleanEmail]
           );
 
-          if (!user) {
+          // timing attack prevention
+          const hash = user?.password_hash;
+
+          const passwordValid = await bcrypt.compare(
+            cleanPass,
+            hash
+          );
+
+          if (
+            !user ||
+            !passwordValid ||
+            user.is_active !== true
+          ) {
             return null;
           }
 
@@ -160,7 +177,7 @@ export const authOptions: NextAuthOptions = {
             },
 
             profile: {
-              fullName: user.profile?.fullName,
+              user_name: user.profile?.user_name,
               avatarUrl: user.profile?.avatarUrl,
             },
           };

@@ -12,6 +12,14 @@ export type AdminCategoryDTO = {
   updated_at: string;
 };
 
+export type PublicCategoryDTO = {
+  id: string;
+  title: string;
+  description: string | null;
+  image_url: string | null;
+  priority: number;
+};
+
 export function toAdminCategoryDTO(
   row: CategoryTypes
 ): AdminCategoryDTO {
@@ -25,5 +33,17 @@ export function toAdminCategoryDTO(
     deleted: row.deleted,
     created_at: row.created_at,
     updated_at: row.updated_at,
+  };
+}
+
+export function toPublicCategoryDTO(
+  row: CategoryTypes
+): PublicCategoryDTO {
+  return {
+    id: row.id,
+    title: row.title,
+    description: row.description,
+    image_url: row.image_url,
+    priority: row.priority
   };
 }

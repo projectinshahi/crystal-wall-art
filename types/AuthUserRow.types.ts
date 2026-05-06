@@ -2,16 +2,18 @@ export type AuthUserRow = {
   id: string;
   email: string;
   password_hash: string;
-  status: string;
-
+  is_active: boolean;
+  phone: string;
   role: {
     id: string;
     name: string;
   };
 
   profile: {
-    fullName: string | null;
+    user_name: string | null;
     avatarUrl: string | null;
+    first_name: string | null;
+    last_name:  string | null;
   };
 };
 

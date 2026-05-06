@@ -1,45 +1,21 @@
-import { getAllCategories, getCategoryById } from "@/lib/db/categories.db";
-import { NextRequest } from "next/server";
+import { ok, withHandler } from "@/lib/api/handler";
+import { getPublicCategoryById } from "@/lib/db/repositories/public/category.public.repository";
+import { NextResponse } from "next/server";
 
-interface Params {
-  params: {
-    id: string;
-  };
-}
+export const GET = withHandler(
+    async ({ params }): Promise<NextResponse> => {
+        const routeParams = await params;
 
-export async function GET(req: NextRequest, { params }: Params) {
-    try {
+        const categoryId = routeParams?.id;
+        const categoryData = await getPublicCategoryById(categoryId as string)
 
-        const { id } = await params;
+        const response = ok({ data: categoryData });
 
-        // Parse query params
-        const { searchParams } = new URL(req.url);
-        const activeParam = searchParams.get('active');
-        const is_active = activeParam === null ? undefined : activeParam === 'true';
-
-        // Replace with your DB/service
-        const { data, meta } = await getCategoryById({ id, is_active });
-
-        return Response.json({
-            success: true,
-            data: data,
-            meta
-        });
-
-    } catch (error: any) {
-        console.error("❌ CATEGORIES FETCH ERROR:", error);
-
-        const status =
-            error.message === "Unauthorized" ? 401 :
-                error.message === "Forbidden" ? 403 :
-                    500;
-
-        return Response.json(
-            {
-                success: false,
-                message: error.message || "Internal server error",
-            },
-            { status }
+        response.headers.set(
+            "Cache-Control",
+            "public, max-age=300, s-maxage=600"
         );
+
+        return response;
     }
-}
+)
