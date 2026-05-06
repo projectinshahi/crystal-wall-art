@@ -107,11 +107,11 @@ const CartSidebar = () => {
                                                 <span className="text-xs lg:text-base font-bold text-darkGray/37 line-through">₹{(Number(item.price) * Number(item.quantity)).toLocaleString("en-IN")}</span>
                                             </div>
                                             <div className="flex items-center gap-1">
-                                                <Button variant="outline" size="icon" className="h-6 w-6 border-lightBackground" onClick={() => updateQuantity(item.productId, Number(item.quantity) - 1)}>
+                                                <Button variant="outline" size="icon" className="h-6 w-6 border-lightBackground" onClick={() => updateQuantity(item.product_id, Number(item.quantity) - 1)}>
                                                     <Minus className="h-3 w-3" />
                                                 </Button>
                                                 <Typography variant='caption' className='font-semibold text-center'>{item.quantity}</Typography>
-                                                <Button variant="outline" size="icon" className="h-6 w-6 border-lightBackground" onClick={() => updateQuantity(item.productId, Number(item.quantity) + 1)}>
+                                                <Button variant="outline" size="icon" className="h-6 w-6 border-lightBackground" onClick={() => updateQuantity(item.product_id, Number(item.quantity) + 1)}>
                                                     <Plus className="h-3 w-3" />
                                                 </Button>
                                             </div>
