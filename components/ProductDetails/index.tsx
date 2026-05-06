@@ -13,7 +13,6 @@ import { useNavbarHeight } from '@/hooks/useNavbarHeight'
 import { Button } from '../ui/button'
 import { ProductTypes } from '@/types/Admin/products.types'
 import { Variant } from '../Admin/AddProducts/ProductStepperForm'
-import { ChipOption } from '../inputs/ChipSelector'
 import { useCartStore } from '@/store/cartStore'
 import { toast } from 'sonner'
 
@@ -22,10 +21,6 @@ const ProductDetails = ({ title, data }: { title: string, data: ProductTypes }) 
     const addItem = useCartStore(s => s.addItem);
 
     const [loading, setLoading] = useState<boolean>(true);
-    const [selectedSize, setSelectedSize] = useState<string>("");
-    const [selectedThickness, setSelectedThickness] = useState<string>("");
-    const [selectedMounting, setSelectedMounting] = useState<string>("");
-    const [selectedOrientation, setSelectedOrientation] = useState<string>("");
     const [variants, setVariants] = useState<Variant[]>([]);
 
     const [sizes, setSizes] = useState<ChipsOptionsSelector>()
@@ -182,9 +177,9 @@ const ProductDetails = ({ title, data }: { title: string, data: ProductTypes }) 
         if (!data) return;
 
         addItem({
-            productId: data.id, title: data.title, image: data.thumbnail || null,
-            size: selectedSize, thickness: selectedThickness, mountingMethod: selectedMounting,
-            orientation: selectedOrientation, price: effectivePrice, quantity: 1,
+            productId: data.id, title: data.title, image: JSON.parse(data.thumbnail).url || null,
+            size: sizes?.selected || '', thickness: thicknesses?.selected || '', mountingMethod: mounting_methods?.selected || '',
+            orientation: orientations?.selected || '', price: effectivePrice, quantity: 1,
             variantId: activeVariant?.id
         });
         toast.success("Added to cart!");
@@ -229,8 +224,6 @@ const ProductDetails = ({ title, data }: { title: string, data: ProductTypes }) 
                             Add to Cart
                         </Button>
                     </div>
-                </div>
-                <div className='flex flex-col'>
                 </div>
             </Container>
         </>

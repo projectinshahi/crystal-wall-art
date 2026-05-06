@@ -1,5 +1,6 @@
-import { getProductById, getVariantsByProducts } from "@/lib/db/product.db";
-import { NextRequest } from "next/server";
+import { ok, okList, withHandler } from "@/lib/api/handler";
+import { getPublicProductVariants } from "@/lib/db/repositories/public/product.public.repository";
+import { NextResponse } from "next/server";
 
 interface Params {
     params: {
@@ -7,40 +8,59 @@ interface Params {
     };
 }
 
-export async function GET(req: NextRequest, { params }: Params) {
-    try {
+export const GET = withHandler(
+    async ({ params }): Promise<NextResponse> => {
+        const routeParams = await params;
 
-        const { id } = await params;
+        const productId = routeParams?.id;
 
-        const { success, error, data, meta } = await getVariantsByProducts({ id });
+        const variants = await getPublicProductVariants(productId as string);
 
-        if (!success) {
-            return Response.json({
-                success: false,
-                data: null,
-                error: error
-            });
-        }
+        const response = okList(variants, {});
 
-        return Response.json({
-            success: true,
-            data: data,
-            meta
-        });
-    } catch (error: any) {
-        console.error("❌ PRODUCT VARIANTS FETCH ERROR:", error);
-
-        const status =
-            error.message === "Unauthorized" ? 401 :
-                error.message === "Forbidden" ? 403 :
-                    500;
-
-        return Response.json(
-            {
-                success: false,
-                message: error.message || "Internal server error",
-            },
-            { status }
+        response.headers.set(
+            "Cache-Control",
+            "public, max-age=300, s-maxage=600"
         );
-    }
-}
+
+        return response
+    }, { access: "public" }
+)
+
+// export async function GET(req: NextRequest, { params }: Params) {
+//     try {
+
+//         const { id } = await params;
+
+//         const { success, error, data, meta } = await getVariantsByProducts({ id });
+
+//         if (!success) {
+//             return Response.json({
+//                 success: false,
+//                 data: null,
+//                 error: error
+//             });
+//         }
+
+//         return Response.json({
+//             success: true,
+//             data: data,
+//             meta
+//         });
+//     } catch (error: any) {
+//         console.error("❌ PRODUCT VARIANTS FETCH ERROR:", error);
+
+//         const status =
+//             error.message === "Unauthorized" ? 401 :
+//                 error.message === "Forbidden" ? 403 :
+//                     500;
+
+//         return Response.json(
+//             {
+//                 success: false,
+//                 message: error.message || "Internal server error",
+//             },
+//             { status }
+//         );
+//     }
+// }

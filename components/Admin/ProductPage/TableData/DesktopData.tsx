@@ -55,6 +55,8 @@ const DesktopData = ({ products, meta, categories }: Props) => {
                         <tbody>
                             {products.map((p: ProductTypes) => {
                                 const cat = categories.find(c => c.id === p.category_id);
+                                const image = p.thumbnail ? JSON.parse(p.thumbnail).url : null;
+                                
                                 return (
                                     <tr key={p.id}>
                                         <td className="p-3">
@@ -63,8 +65,8 @@ const DesktopData = ({ products, meta, categories }: Props) => {
                                         <td className="p-3">
                                             <div className="flex items-center gap-3">
                                                 <div className="h-10 w-10 rounded bg-muted flex items-center justify-center shrink-0 overflow-hidden">
-                                                    {p.thumbnail ? (
-                                                        <img src={p.thumbnail} alt={p.title} className="h-full w-full object-cover" />
+                                                    {image ? (
+                                                        <img src={image} alt={p.title} className="h-full w-full object-cover" />
                                                     ) : <ImageOff className="h-4 w-4 text-muted-foreground" />}
                                                 </div>
                                                 <div>

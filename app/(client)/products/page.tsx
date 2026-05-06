@@ -15,7 +15,7 @@ export default async function Page({
 
   const categoryRes = await res.json();
 
-  if (!categoryRes.success || !categoryRes.data.is_active) return null
+  if (!categoryRes.success ) return null
 
   return (
     <Suspense fallback={<div>Loading...</div>}>

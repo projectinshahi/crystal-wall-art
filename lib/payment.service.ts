@@ -1,4 +1,4 @@
-import { FormInputProps } from "@/components/Checkout"
+import { FormInputProps } from "@/components/Checkout/CheckoutPage"
 import { toast } from "sonner";
 
 interface Props {

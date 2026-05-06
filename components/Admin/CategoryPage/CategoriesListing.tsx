@@ -39,6 +39,9 @@ const CategoriesListing = ({
   const [deleteOpen, setDeleteOpen] = useState<boolean>(false);
   const [deleting, setDeleting] = useState(false);
 
+  const [selectedDeleteId, setSelectedDeleteId] =
+    useState<string | null>(null);
+
   // ✅ DB → Form mapper
   const mapDbToForm = (c: CategoryTypes): CategoryFormInput => {
     let image: any | undefined = undefined;
@@ -153,12 +156,12 @@ const CategoriesListing = ({
   return (
     <>
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-        {data.map((c: CategoryTypes) => {
+        {data.map((c: CategoryTypes, index: number) => {
           let image: { url: string; public_id: string } | null = null;
           image = c.image_url ? JSON.parse(c.image_url) : null;
 
           return (
-            <Card key={c.id} className="border-border/50">
+            <Card key={index} className="border-border/50">
               <CardContent className="p-4">
 
                 {/* Image */}
@@ -217,8 +220,16 @@ const CategoriesListing = ({
 
                     {/* Button for Delete and Alery Dialog Box */}
                     <AppDialog
-                      open={deleteOpen}
-                      onOpenChange={setDeleteOpen}
+                      key={index}
+                      open={selectedDeleteId === c.id}
+
+                      onOpenChange={(open) => {
+                        if (open) {
+                          setSelectedDeleteId(c.id);
+                        } else {
+                          setSelectedDeleteId(null);
+                        }
+                      }}
                       trigger={
                         <Button
                           size="icon"

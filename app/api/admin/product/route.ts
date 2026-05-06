@@ -1,25 +1,16 @@
+import { err, ok, okList, withHandler } from "@/lib/api/handler";
 import { uploadBase64ToCloudinary } from "@/lib/cloudinary.service";
-import {
-    addProductImages,
-    addProducts,
-    addProductVariants,
-    getProducts,
-} from "@/lib/db/product.db";
-import { requireAdmin } from "@/lib/session";
-import { NextRequest } from "next/server";
+import { withTransaction } from "@/lib/db";
+import { AdminProductDTO } from "@/lib/db/dto/products.dto";
+import { createProduct, getAdminProducts, insertProductImages, insertProductVariants } from "@/lib/db/repositories/admin/products.admin.repository";
+import { NextResponse } from "next/server";
 
-export async function POST(req: Request) {
-    await requireAdmin();
+export const POST = withHandler(
+    async ({ req }): Promise<NextResponse> => {
 
-    try {
         const { product_details, product_variants } = await req.json();
 
-        if (!product_details) {
-            return Response.json(
-                { success: false, error: "Invalid payload" },
-                { status: 400 }
-            );
-        }
+        if (!product_details) return err("Invalid payload", 400);
 
         // ── 1. Basic validation ─────────────────────────────────────
         const requiredFields = ["title", "category", "price", "stock_quantity", "status"];
@@ -30,21 +21,14 @@ export async function POST(req: Request) {
                 product_details[field] === null ||
                 product_details[field] === ""
             ) {
-                return Response.json(
-                    { success: false, error: `Missing required field: ${field}` },
-                    { status: 400 }
-                );
+                return err(`Missing required field: ${field}`, 400);
             }
         }
 
         if (!Array.isArray(product_details.images) || product_details.images.length === 0) {
-            return Response.json(
-                { success: false, error: "At least one product image is required." },
-                { status: 400 }
-            );
+            return err(`At least one product image is required.`, 400);
         }
 
-        // ── 2. Upload images ───────────────────────────────────────
         const uploadedImages = await Promise.all(
             product_details.images.map(async (img: any, index: number) => {
                 try {
@@ -54,13 +38,13 @@ export async function POST(req: Request) {
                         img,
                         "product_images"
                     );
-                } catch (err) {
-                    throw new Error(`Image ${index + 1} upload failed: ${(err as Error).message}`);
+                } catch (error) {
+                    return err(`Image ${index + 1} upload failed: ${(error as Error).message}`, 400);
                 }
             })
         );
 
-        const imageUrls: string[] = uploadedImages.map((img) => img.url);
+        const imageUrls: string[] = uploadedImages.map((img) => img);
 
         // ── 3. Resolve thumbnail ───────────────────────────────────
         let thumbnailUrl = imageUrls[0]; // fallback
@@ -82,7 +66,7 @@ export async function POST(req: Request) {
 
         const productPayload = {
             ...rest,
-            category_id: category,
+            category: category,
             price: Number(rest.price),
             discount_price: rest.discount_price
                 ? Number(rest.discount_price)
@@ -91,106 +75,87 @@ export async function POST(req: Request) {
             thumbnail: thumbnailUrl,
         };
 
-        // ── 5. Insert product ──────────────────────────────────────
-        const { data: productData, error: productError } = await addProducts(productPayload);
+        const product = await withTransaction(
+            async (client): Promise<AdminProductDTO> => {
 
-        if (productError || !productData) {
-            throw new Error(productError?.message || "Product creation failed");
-        }
+                const insertedProduct = await createProduct(client, productPayload);
 
-        // 🔥 Handle both object and array return
-        const productId: string = Array.isArray(productData)
-            ? productData[0]?.id
-            : productData.id;
+                if (!insertedProduct || !insertedProduct.id) {
+                    throw new Error("Product creation failed");
+                }
 
-        if (!productId) {
-            throw new Error("Invalid product ID returned");
-        }
+                const productId = insertedProduct.id;
 
-        // ── 6. Insert images ───────────────────────────────────────
-        const { error: imageError } = await addProductImages({ productId, imageUrls });
+                await insertProductImages(client, productId, uploadedImages);
 
-        if (imageError) {
-            throw new Error(imageError || "Image insert failed")
-        }
+                if (Array.isArray(product_variants) && product_variants.length > 0) {
+                    const cleanVariants = product_variants.map((v: any) => ({
+                        product_id: productId,
+                        size: v.size || null,
+                        thickness: v.thickness || null,
+                        price: Number(v.price),
+                        discount_price: v.discount_price
+                            ? Number(v.discount_price)
+                            : null,
+                        orientation: v.orientation,
+                        stock_quantity: Number(v.stock_quantity) || 0,
+                    }));
 
-        // ── 7. Insert variants ─────────────────────────────────────
-        if (Array.isArray(product_variants) && product_variants.length > 0) {
-            const cleanVariants = product_variants.map((v: any) => ({
-                product_id: productId,
-                size: v.size || null,
-                thickness: v.thickness || null,
-                price: Number(v.price),
-                discount_price: v.discount_price
-                    ? Number(v.discount_price)
-                    : null,
-                orientation: v.orientation,
-                stock_quantity: Number(v.stock_quantity) || 0,
-            }));
+                    await insertProductVariants(client, cleanVariants);
+                }
 
-            const { error: variantError } = await addProductVariants(cleanVariants);
-
-            if (variantError) {
-                throw new Error(variantError || "Variant insert failed")
+                return insertedProduct;
             }
-        }
+        )
 
-        // ── 8. Success response ────────────────────────────────────
-        return Response.json({
-            success: true,
+        const response = ok({
+            message: "Product created successfully",
             data: {
-                productId,
+                productId: product.id,
                 images: imageUrls,
                 thumbnail: thumbnailUrl,
-            },
-        });
+            }
+        }, 201)
 
-    } catch (error: any) {
-        console.error("❌ PRODUCT CREATE ERROR:", error);
-
-        return Response.json(
-            {
-                success: false,
-                message: error.message || "Internal server error",
-            },
-            { status: 500 }
+        response.headers.set(
+            "Cache-Control",
+            "private, no-store"
         );
-    }
-}
 
-export async function GET(req: NextRequest) {
-    try {
-        // ✅ Auth inside try
-        await requireAdmin();
+        return response;
 
-        // ✅ Parse query params
-        const { searchParams } = new URL(req.url);
-        const page = Number(searchParams.get('page') || 1);
-        const limit = Number(searchParams.get('limit') || 10);
 
-        // ✅ Replace with your DB/service
-        const {data, meta} = await getProducts({ page, limit });
+    }, { access: "admin" }
+)
 
-        return Response.json({
-            success: true,
-            data: data,
-            meta
-        });
+export const GET = withHandler(
+    async ({ req }): Promise<NextResponse> => {
 
-    } catch (error: any) {
-        console.error("❌ PRODUCT FETCH ERROR:", error);
+        // ─────────────────────────────────────
+        // QUERY PARAMS
+        // ─────────────────────────────────────
+        const searchParams = req.nextUrl.searchParams;
 
-        const status =
-            error.message === "Unauthorized" ? 401 :
-            error.message === "Forbidden" ? 403 :
-            500;
+        const page = Math.max(1, Number(searchParams.get("page")) || 1);
 
-        return Response.json(
+        const limit = Math.min(100, Math.max(1, Number(searchParams.get("limit")) || 20));
+
+        const products = await getAdminProducts({ page: page || 1, limit: limit || 20 });
+        console.log("req", req);
+
+
+        const response = okList(
+            products.data,
             {
-                success: false,
-                message: error.message || "Internal server error",
-            },
-            { status }
+                pagination: products.pagination,
+            }
         );
-    }
-}
+
+        response.headers.set(
+            "Cache-Control",
+            "private, no-store"
+        );
+
+        return response;
+    }, { access: "admin" }
+)

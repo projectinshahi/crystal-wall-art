@@ -1,37 +1,19 @@
+import { okList, withHandler } from "@/lib/api/handler";
 import { getAllCategories } from "@/lib/db/categories.db";
-import { NextRequest } from "next/server";
+import { getPublicCategories } from "@/lib/db/repositories/public/category.public.repository";
+import { NextRequest, NextResponse } from "next/server";
 
-export async function GET(req: NextRequest) {
-    try {
+export const GET = withHandler(
+    async (): Promise<NextResponse> => {
+        const categories = await getPublicCategories()
 
-        // Parse query params
-        const { searchParams } = new URL(req.url);
-        const activeParam = searchParams.get('active');
-        const is_active = activeParam === null ? undefined : activeParam === 'true';
-
-        // Replace with your DB/service
-        const { data, meta } = await getAllCategories({ is_active });
-
-        return Response.json({
-            success: true,
-            data: data,
-            meta
-        });
-
-    } catch (error: any) {
-        console.error("❌ CATEGORIES FETCH ERROR:", error);
-
-        const status =
-            error.message === "Unauthorized" ? 401 :
-                error.message === "Forbidden" ? 403 :
-                    500;
-
-        return Response.json(
-            {
-                success: false,
-                message: error.message || "Internal server error",
-            },
-            { status }
+        const response = okList(categories, {});
+        
+        response.headers.set(
+            "Cache-Control",
+            "public, max-age=300, s-maxage=600"
         );
-    }
-}
+
+        return response;
+    },{access: "public"}
+)

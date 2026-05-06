@@ -8,6 +8,8 @@ const ProductCard = ({ product }: { product: ProductTypes }) => {
 
     const router = useRouter();
 
+    const image = product.thumbnail ? JSON.parse(product.thumbnail).url : "";
+
     return (
         <div
             key={product.id}
@@ -24,7 +26,7 @@ const ProductCard = ({ product }: { product: ProductTypes }) => {
                     <div className="relative w-full aspect-square overflow-hidden rounded-xl bg-muted">
 
                         <Image
-                            src={product.thumbnail}
+                            src={image}
                             alt={product.title}
                             fill
                             sizes="(max-width:640px) 140px, (max-width:1024px) 170px, 200px"

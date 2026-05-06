@@ -11,7 +11,7 @@ const ProductPage = async ({
 
     const productRes = await res.json();
 
-    if (!productRes.success || productRes.data.status !== "active") {
+    if (!productRes.success) {
         return null;
     }
 
