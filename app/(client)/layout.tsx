@@ -9,6 +9,7 @@ import LayoutContext from "@/components/common/LayoutContext/LayoutContext";
 
 import { Toaster, toast } from 'sonner';
 import Providers from "@/components/Admin/providers";
+import Script from "next/script";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -38,6 +39,10 @@ export default function RootLayout({
       <body
         className={`antialiased ${inter.variable} ${poppins.variable}`}
       >
+        <Script
+          src="https://checkout.razorpay.com/v1/checkout.js"
+          strategy="beforeInteractive"
+        />
         <Toaster />
         <Providers>
           <LayoutContext>

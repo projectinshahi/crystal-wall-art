@@ -16,9 +16,24 @@ export interface CartItem {
 }
 
 function cartItemKey(
-  item: Pick<CartItem, 'product_id' | 'size' | 'thickness' | 'mounting_method' | 'orientation' | 'price' | 'quantity' | 'variant_id'>
+  item: Pick<CartItem, 'product_id' | 'size' | 'thickness' | 'mounting_method' | 'orientation' | 'variant_id'>
 ) {
-  return `${item.product_id}|${item.size}|${item.thickness}|${item.mounting_method}|${item.orientation}|${item.price}|${item.quantity}|${item.variant_id ?? ''}`;
+  return `${item.product_id}|${item.size}|${item.thickness}|${item.mounting_method}|${item.orientation}|${item.variant_id ?? ''}`;
+}
+
+function deduplicateItems(items: CartItem[]): CartItem[] {
+  const map = new Map<string, CartItem>();
+
+  for (const item of items) {
+    const key = cartItemKey(item);
+    if (map.has(key)) {
+      map.get(key)!.quantity += item.quantity;
+    } else {
+      map.set(key, { ...item });
+    }
+  }
+
+  return Array.from(map.values());
 }
 
 interface CartStore {
@@ -43,7 +58,8 @@ export const useCartStore = create<CartStore>()(
       isOpen: false,
 
       addItem: (item) => {
-        // ✅ Normalize data once
+        console.log("item is ", item);
+        
         const normalizedItem: CartItem = {
           ...item,
           price: Number(item.price),
@@ -52,16 +68,24 @@ export const useCartStore = create<CartStore>()(
 
         console.log("normalizedItem",normalizedItem);
         
-
         const key = cartItemKey(normalizedItem);
         const items = get().items;
-
-        const existing = items.find(i => cartItemKey(i) === key);
-
-        console.log("existing",existing);
+        console.log("items",items);
         
+        console.log("key",key);
+        
+        const existing = items.find(i => {
+          console.log("cartItemKey(i)",cartItemKey(i));
+          return cartItemKey(i) === key
+      });
 
         if (existing) {
+          console.log("existing data",items.map(i =>
+              cartItemKey(i) === key
+                ? { ...i, quantity: i.quantity + normalizedItem.quantity }
+                : i
+            ));
+          
           set({
             items: items.map(i =>
               cartItemKey(i) === key
@@ -71,6 +95,8 @@ export const useCartStore = create<CartStore>()(
             isOpen: true,
           });
         } else {
+          console.log("new data",[...items, normalizedItem]);
+          
           set({
             items: [...items, normalizedItem],
             isOpen: true,
@@ -79,29 +105,14 @@ export const useCartStore = create<CartStore>()(
       },
 
       updateQuantity: (key, quantity) => {
-        console.log("key", key);
-        console.log("quantity", quantity);
-
         if (quantity <= 0) {
           get().removeItem(key);
           return;
         }
-        const res = get().items.map(i => {
-          console.log("cartitem", cartItemKey(i));
-
-
-          cartItemKey(i) === key
-            ? { ...i, quantity }
-            : i
-        })
-        console.log("updated", res);
-
 
         set({
           items: get().items.map(i =>
-            cartItemKey(i) === key
-              ? { ...i, quantity }
-              : i
+            cartItemKey(i) === key ? { ...i, quantity } : i
           ),
         });
       },
@@ -117,16 +128,10 @@ export const useCartStore = create<CartStore>()(
       setOpen: (open) => set({ isOpen: open }),
 
       getTotal: () =>
-        get().items.reduce(
-          (sum, i) => sum + i.price * i.quantity,
-          0
-        ),
+        get().items.reduce((sum, i) => sum + i.price * i.quantity, 0),
 
       getItemCount: () =>
-        get().items.reduce(
-          (sum, i) => sum + i.quantity,
-          0
-        ),
+        get().items.reduce((sum, i) => sum + i.quantity, 0),
 
       getItemKey: (item) => cartItemKey(item),
     }),
@@ -134,28 +139,36 @@ export const useCartStore = create<CartStore>()(
       name: 'crystal-cart',
       storage: createJSONStorage(() => localStorage),
 
-      // ✅ Only persist what matters
       partialize: (state) => ({
         items: state.items,
       }),
 
-      // ✅ Future-proofing
-      version: 1,
-      migrate: (persistedState: any, version) => {
+      version: 3, // ✅ bumped again to force migration on all clients
+
+      migrate: (persistedState: any) => {
         if (!persistedState) return { items: [] };
 
-        // Fix old string-based carts
-        if (version === 0) {
-          return {
-            items: persistedState.items.map((i: any) => ({
-              ...i,
-              price: Number(i.price),
-              quantity: Number(i.quantity),
-            })),
-          };
-        }
+        const items = (persistedState.items ?? []).map((i: any) => ({
+          ...i,
+          price: Number(i.price),
+          quantity: Number(i.quantity),
+        }));
 
-        return persistedState;
+        return { items: deduplicateItems(items) };
+      },
+
+      // ✅ Deduplicate on every hydration from localStorage
+      // This runs even when version matches — catches any future corruption
+      merge: (persistedState: any, currentState) => {
+        const items = deduplicateItems(
+          (persistedState?.items ?? []).map((i: any) => ({
+            ...i,
+            price: Number(i.price),
+            quantity: Number(i.quantity),
+          }))
+        );
+
+        return { ...currentState, items };
       },
     }
   )

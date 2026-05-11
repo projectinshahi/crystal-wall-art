@@ -56,9 +56,9 @@ const PaymentSummaryCard = () => {
                                                 • {item.thickness}
                                             </Typography>
                                         )}
-                                        {item.mountingMethod && (
+                                        {item.mounting_method && (
                                             <Typography variant="caption">
-                                                • {item.mountingMethod}
+                                                • {item.mounting_method}
                                             </Typography>
                                         )}
                                     </div>
@@ -67,7 +67,7 @@ const PaymentSummaryCard = () => {
                                 {/* Right price */}
                                 <div className="text-right shrink-0">
                                     <Typography className="font-semibold" variant="body">
-                                        ₹{(parseInt(item.price as string) * parseInt(item.quantity as string)).toLocaleString("en-IN")}
+                                        ₹{(item.price * item.quantity).toLocaleString("en-IN")}
                                     </Typography>
 
                                     <Typography className="font-semibold" variant="caption">

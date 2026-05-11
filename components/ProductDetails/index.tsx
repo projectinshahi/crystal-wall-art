@@ -175,7 +175,6 @@ const ProductDetails = ({ title, data }: { title: string, data: ProductTypes }) 
 
     const handleAddToCart = ()=>{
         if (!data) return;
-
         addItem({
             product_id: data.id, title: data.title, image: JSON.parse(data.thumbnail).url || null,
             size: sizes?.selected || '', thickness: thicknesses?.selected || '', mounting_method: mounting_methods?.selected || '',

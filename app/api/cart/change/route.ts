@@ -1,5 +1,5 @@
 import { ok, withHandler } from "@/lib/api/handler";
-import { CartRepository } from "@/lib/db/repositories/user/cart.public.repository";
+import { CartRepository } from "@/lib/db/repositories/user/cart.user.repository";
 
 export const POST = withHandler(
   async ({ req, user }) => {

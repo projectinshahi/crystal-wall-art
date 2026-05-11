@@ -1,5 +1,5 @@
 import { readQuery } from "@/lib/db";
-import { CartUserQueries } from "../../queries/user/user.public.queries";
+import { CartUserQueries } from "../../queries/user/cart.user.queries";
 
 export const CartRepository = {
   getAll: (userId: string) =>

@@ -28,6 +28,8 @@ const CheckoutPage = () => {
 
     const router = useRouter();
 
+    const { getTotal, clearCart, getItemKey } = useCartStore();
+
     const [errors, setErrors] = useState<Partial<Record<keyof FormInputProps, string>>>({});
     const [form, setForm] = useState<FormInputProps>({
         type: "Home",
@@ -48,6 +50,8 @@ const CheckoutPage = () => {
     const handleProccedCheckout = () => {
         const result = checkoutSchema.safeParse(form);
 
+        const total = getTotal();
+
         if (!result.success) {
             const fieldErrors: any = {};
 
@@ -63,8 +67,8 @@ const CheckoutPage = () => {
         setErrors({});
 
         form.paymentMethod === "cod"
-            ? handleCODSubmit({ form, cartItems: items, setSubmitting, router })
-            : handleRazorpaySubmit({ form, cartItems: items, setSubmitting, router });
+            ? handleCODSubmit({ form, cartItems: items, subtotal: getTotal(), tax: 0, shipping: 0, total: 0, appliedCoupon: null, setSubmitting, router })
+            : handleRazorpaySubmit({ form, cartItems: items, subtotal: getTotal(), tax: 0, shipping: 0, total: total, appliedCoupon: null, setSubmitting, router });
     };
 
     return (
@@ -102,7 +106,7 @@ const CheckoutPage = () => {
                             }))
                         }
                     />
-                    <Button className='w-full text-white font-bold py-5' onClick={handleProccedCheckout}>
+                    <Button className='w-full text-white font-bold py-5' onClick={handleProccedCheckout} disabled={submitting}>
                         {submitting
                             ? <><Loader2 className="h-4 w-4 animate-spin mr-2" />Processing...</>
                             : 'Place Order'}
