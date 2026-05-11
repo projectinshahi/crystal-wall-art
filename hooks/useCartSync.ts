@@ -1,170 +1,122 @@
 import { useEffect, useRef } from "react";
 import { useSession } from "next-auth/react";
 import { CartItem, useCartStore } from "@/store/cartStore";
-import { supabaseServer } from "@/lib/supabase/server";
-import { supabaseBrowser } from "@/lib/supabase/client";
+
+let debounceTimer: NodeJS.Timeout | null = null;
 
 export function useCartSync() {
   const { data: session, status } = useSession();
-
   const isSyncing = useRef(false);
-  const userId = useRef<string | null>(null);
+  const userId = (session?.user as any)?.id ?? null;
 
-  /**
-   * 🔐 AUTH + INITIAL SYNC
-   */
+  // 🔐 INITIAL SYNC ON LOGIN
   useEffect(() => {
     if (status === "loading") return;
+    if (!userId) return;
 
-    const newUserId = (session?.user as any)?.id ?? null;
-    const prevUserId = userId.current;
+    mergeAndLoad(isSyncing);
+  }, [userId, status]);
 
-    userId.current = newUserId;
-
-    // ✅ LOGIN FLOW
-    if (newUserId && newUserId !== prevUserId) {
-      mergeAndLoad(newUserId, isSyncing);
-    }
-
-    // ✅ LOGOUT FLOW (optional)
-    if (!newUserId) {
-      userId.current = null;
-    }
-  }, [session, status]);
-
-  /**
-   * 🔁 CART → DB SYNC
-   */
+  // 🔁 LOCAL → DB SYNC (debounced)
   useEffect(() => {
-    const unsub = useCartStore.subscribe((state, prevState) => {
+    const unsub = useCartStore.subscribe((state, prev) => {
       if (isSyncing.current) return;
+      if (!userId) return;
 
-      if (state.items !== prevState.items && userId.current) {
-        persistToDb(userId.current, state.items, isSyncing);
+      if (state.items !== prev.items) {
+        if (debounceTimer) clearTimeout(debounceTimer);
+
+        debounceTimer = setTimeout(() => {
+          persistToDb(state.items, isSyncing);
+        }, 800);
       }
     });
 
     return () => unsub();
-  }, []);
+  }, [userId]);
 }
 
-/**
- * 🔄 Merge local cart into DB and load DB cart
- */
-async function mergeAndLoad(
-  uid: string,
-  isSyncing: React.MutableRefObject<boolean>
-) {
-  const localItems = useCartStore.getState().items;
-
+// 🔄 Merge local cart into DB, then load DB cart into store
+async function mergeAndLoad(isSyncing: React.MutableRefObject<boolean>) {
   isSyncing.current = true;
 
   try {
-    // 1️⃣ Push local → DB
-    if (localItems.length > 0) {
-      const rows = localItems.map((item) => toDbRow(uid, item));
+    const localItems = useCartStore.getState().items;
+    console.log("[useCartSync] localItems:", localItems);
 
-      const { error } = await supabaseBrowser.from("cart_items").upsert(rows, {
-        onConflict:
-          "user_id,product_id,size,thickness,mounting_method,orientation",
+    // 1️⃣ Merge local → DB
+    if (localItems.length > 0) {
+      const mergeRes = await fetch("/api/cart/merge", {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ items: localItems }),
       });
 
-      if (error) {
-        console.error("Cart upsert error:", error);
+      if (!mergeRes.ok) {
+        console.error("[useCartSync] Merge failed:", await mergeRes.text());
       }
     }
 
-    // 2️⃣ Pull DB → local
-    const { data, error } = await supabaseBrowser
-      .from("cart_items")
-      .select("*")
-      .eq("user_id", uid);
+    // 2️⃣ Load DB → local
+    const res = await fetch("/api/cart", {
+      method: "GET",
+      credentials: "include",
+    });
 
-    if (error) {
-      console.error("Cart fetch error:", error);
-      return;
-    }
+    const json = await res.json();
+    console.log("[useCartSync] DB cart loaded:", json);
 
-    const items: CartItem[] = (data || []).map(fromDbRow);
-
-    // Replace local store
+    const items: CartItem[] = (json.data || []).map(fromDbRow);
     useCartStore.setState({ items });
+
+  } catch (err) {
+    console.error("[useCartSync] Cart sync error:", err);
   } finally {
     isSyncing.current = false;
   }
 }
 
-/**
- * 💾 Persist full cart to DB
- */
+// 💾 Persist full cart to DB
 async function persistToDb(
-  uid: string,
   items: CartItem[],
   isSyncing: React.MutableRefObject<boolean>
 ) {
   isSyncing.current = true;
 
   try {
-    // 🔥 Simple strategy (replace all)
-    const { error: deleteError } = await supabaseBrowser
-      .from("cart_items")
-      .delete()
-      .eq("user_id", uid);
+    console.log("[useCartSync] Persisting to DB:", items);
 
-    if (deleteError) {
-      console.error("Cart delete error:", deleteError);
-      return;
+    const res = await fetch("/api/cart/sync", {
+      method: "POST",
+      credentials: "include",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ items }),
+    });
+
+    if (!res.ok) {
+      console.error("[useCartSync] Persist failed:", await res.text());
     }
-
-    if (items.length > 0) {
-      const rows = items.map((item) => toDbRow(uid, item));
-
-      const { error: insertError } = await supabaseBrowser
-        .from("cart_items")
-        .insert(rows);
-
-      if (insertError) {
-        console.error("Cart insert error:", insertError);
-      }
-    }
+  } catch (err) {
+    console.error("[useCartSync] Cart persist error:", err);
   } finally {
     isSyncing.current = false;
   }
 }
 
-/**
- * 🔄 Transform Zustand → DB
- */
-function toDbRow(uid: string, item: CartItem) {
-  return {
-    user_id: uid,
-    product_id: item.productId,
-    title: item.title,
-    image: item.image,
-    size: item.size,
-    thickness: item.thickness,
-    mounting_method: item.mountingMethod,
-    orientation: item.orientation,
-    price: item.price,
-    quantity: item.quantity,
-    variant_id: item.variantId ?? null,
-  };
-}
-
-/**
- * 🔄 Transform DB → Zustand
- */
+// 🔄 Transform DB row → Zustand CartItem
 function fromDbRow(row: any): CartItem {
   return {
-    productId: row.product_id,
+    id: row.id,
+    product_id: row.product_id,
     title: row.title,
     image: row.image,
     size: row.size,
     thickness: row.thickness,
-    mountingMethod: row.mounting_method,
+    mounting_method: row.mounting_method,
     orientation: row.orientation,
     price: Number(row.price),
     quantity: Number(row.quantity),
-    variantId: row.variant_id ?? undefined
+    variant_id: row.variant_id ?? undefined,
   };
 }

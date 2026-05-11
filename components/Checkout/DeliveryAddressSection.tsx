@@ -80,15 +80,43 @@ const DeliveryAddressSection = ({ setFormAddress }: Props) => {
     });
 
     useEffect(() => {
-        if (addresses && addresses.length > 0) {
-            setSavedAddresses(addresses as SavedAddress[]);
-            const def = addresses.find((a: any) => a.is_default) || addresses[0];
-            setSelectedAddressId(def.id);
-            fillFormFromAddress(def as AddressFormValues);
-        } else {
-            setShowAddressForm(true);
-        }
-    }, [])
+        const loadAddresses = async () => {
+            try {
+                const res = await fetch("/api/user/address", {
+                    method: "GET",
+                    credentials: "include",
+                    headers: {
+                        "Content-Type": "application/json",
+                    },
+                });
+
+                if (!res.ok) {
+                    throw new Error("Failed to fetch addresses");
+                }
+
+                const addresses = await res.json();
+
+                if (addresses && addresses.data.length > 0) {
+                    setSavedAddresses(addresses.data as SavedAddress[]);
+
+                    const def =
+                        addresses.data.find((a: any) => a.is_default) ||
+                        addresses.data[0];
+
+                    setSelectedAddressId(def.id);
+
+                    fillFormFromAddress(def as AddressFormValues);
+                } else {
+                    setShowAddressForm(true);
+                }
+            } catch (err) {
+                console.error("Error loading addresses:", err);
+                setShowAddressForm(true);
+            }
+        };
+
+        loadAddresses();
+    }, []);
 
     const startEditAddress = (addr: SavedAddress) => {
         setEditingAddressId(addr.id);
@@ -148,8 +176,26 @@ const DeliveryAddressSection = ({ setFormAddress }: Props) => {
         });
     };
 
-    const onSubmit = (data: AddressFormValues) => {
-        console.log(data);
+    const onSubmit = async (data: AddressFormValues) => {
+        const insertedData = await fetch('/api/user/address', {
+            method: 'POST',
+            credentials: "include",
+            headers: {
+                "Content-Type": "application/json",
+            },
+            body: JSON.stringify(data)
+        })
+
+        const address = await insertedData.json()
+        console.log("address",address);
+        
+
+        if (address || address.success) {
+            setSavedAddresses([...savedAddresses, address.data])
+            setShowAddressForm(false)
+        } else {
+            setSavedAddresses([])
+        }
     };
 
     const selectedAddr = savedAddresses.find(a => a.id === selectedAddressId);

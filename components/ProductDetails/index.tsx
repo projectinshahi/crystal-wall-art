@@ -175,12 +175,11 @@ const ProductDetails = ({ title, data }: { title: string, data: ProductTypes }) 
 
     const handleAddToCart = ()=>{
         if (!data) return;
-
         addItem({
-            productId: data.id, title: data.title, image: JSON.parse(data.thumbnail).url || null,
-            size: sizes?.selected || '', thickness: thicknesses?.selected || '', mountingMethod: mounting_methods?.selected || '',
+            product_id: data.id, title: data.title, image: JSON.parse(data.thumbnail).url || null,
+            size: sizes?.selected || '', thickness: thicknesses?.selected || '', mounting_method: mounting_methods?.selected || '',
             orientation: orientations?.selected || '', price: effectivePrice, quantity: 1,
-            variantId: activeVariant?.id
+            variant_id: activeVariant?.id
         });
         toast.success("Added to cart!");
     }
