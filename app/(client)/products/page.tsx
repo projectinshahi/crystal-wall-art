@@ -14,7 +14,6 @@ export default async function Page({
   const res = await fetch(`${process.env.NEXT_PUBLIC_URL}/api/category/${category}`);
 
   const categoryRes = await res.json();
-
   if (!categoryRes.success ) return null
 
   return (
