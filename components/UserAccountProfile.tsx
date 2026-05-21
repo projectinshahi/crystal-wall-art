@@ -168,18 +168,26 @@ const UserAccountProfile = () => {
           ) : (
             <div className="space-y-3">
               {ordersList.map((order) => (
-                <div
-                  key={order.id}
-                  className="border rounded-lg p-4"
-                >
-                  <p className="font-medium">
-                    Order #{order.order_number}
-                  </p>
-
-                  <Badge className={`text-sm w-fit ${statusColor(order.status)} `} variant={"outline"}>
-                    Status: {order.status}
-                  </Badge>
-                </div>
+                <Link
+                    key={order.id}
+                    href={`/order/${order.id}`}
+                    className="flex items-center justify-between p-3 rounded-xl border hover:bg-muted/50 transition-colors"
+                  >
+                    <div>
+                      <p className="text-sm font-medium">{order.order_number}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {new Date(order.created_at).toLocaleDateString()}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-semibold">
+                        ₹{Number(order.total).toLocaleString("en-IN")}
+                      </span>
+                      <Badge className={statusColor(order.status)} variant="outline">
+                        {order.status}
+                      </Badge>
+                    </div>
+                  </Link>
               ))}
             </div>
           )}
