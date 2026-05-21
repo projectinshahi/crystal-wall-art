@@ -13,6 +13,8 @@
   --muted-foreground: 220 10% 46%;
 
   --destructive: 0 65% 55%;
+
+  --warning: 45 90% 55%;
 }
 
 @theme {
@@ -40,6 +42,8 @@
   --color-muted-foreground: hsl(var(--muted-foreground));
 
   --color-destructive: hsl(var(--destructive));
+
+  --color-warning: hsl(var(--warning));
 
   /* FONTS */
 
