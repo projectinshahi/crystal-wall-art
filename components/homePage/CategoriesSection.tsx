@@ -22,6 +22,7 @@ const CategoriesSection = async () => {
     const res = await fetch(`${process.env.NEXT_PUBLIC_URL}/api/category?active=true`);
 
     const catRes = await res.json();
+    console.log("catRes",catRes);
 
     if (!catRes?.success) return null;
 
