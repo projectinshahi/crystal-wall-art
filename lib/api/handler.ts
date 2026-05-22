@@ -37,7 +37,7 @@ export function withHandler(
     return async (
         req: NextRequest,
         ctx?: {
-            params?: Record<string, string>;
+            params?: Promise<Record<string, string>> | Record<string, string>;
         }
     ) => {
         const access = options.access ?? 'public';
@@ -101,11 +101,13 @@ export function withHandler(
                 user = await requireAdmin(req);
             }
 
+            const resolvedParams = ctx?.params ? await ctx.params : undefined;
+
             // Handler
             const response = await handler({
                 req,
                 user,
-                params: ctx?.params,
+                params: resolvedParams,
             });
 
             Object.entries(corsHeaders).forEach(([key, value]) => {
