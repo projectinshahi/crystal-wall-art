@@ -1,4 +1,4 @@
-"use client"
+"use server"
 
 import HomeContentWrapper from './HomeContentWrapper'
 import { Typography } from '../ui/Typography'
@@ -18,6 +18,7 @@ type CategoryWithImage = CategoryFormOutput & {
 };
 
 const CategoriesSection = async () => {
+    console.log("url",process.env.NEXT_PUBLIC_URL);
 
     const res = await fetch(`${process.env.NEXT_PUBLIC_URL}/api/category?active=true`);
 
