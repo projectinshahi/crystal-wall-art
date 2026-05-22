@@ -5,26 +5,54 @@ import { CategoryTypes } from "@/types/Admin/categories.types";
 
 export async function getPublicCategories(): Promise<PublicCategoryDTO[]> {
 
-    const conditions: string[] = [];
+    try {
 
-    conditions.push(` deleted = FALSE AND is_active = TRUE `);
+        console.log("[getPublicCategories] Fetch started");
 
-    const whereClause = `
-        WHERE ${conditions.join(" AND ")}
-    `;
+        const conditions: string[] = [];
 
-    const query = `
-    ${CategoryPublicQueries.getAll}
-    
-    ${whereClause}
-    
-    ORDER BY priority ASC, created_at DESC`;
+        conditions.push(`deleted = FALSE`);
+        conditions.push(`is_active = TRUE`);
 
-    const rows = await readQuery<CategoryTypes>(query)
+        const whereClause = `
+            WHERE ${conditions.join(" AND ")}
+        `;
 
-    return rows.map(
-        toPublicCategoryDTO
-    )
+        const query = `
+            ${CategoryPublicQueries.getAll}
+
+            ${whereClause}
+
+            ORDER BY priority ASC, created_at DESC
+        `;
+
+        console.log("[getPublicCategories] Executing query:", query);
+
+        const rows = await readQuery<CategoryTypes>(query);
+
+        console.log(
+            "[getPublicCategories] Rows fetched:",
+            rows?.length || 0
+        );
+
+        const categories = rows.map(toPublicCategoryDTO);
+
+        console.log(
+            "[getPublicCategories] DTO mapped:",
+            categories?.length || 0
+        );
+
+        return categories;
+
+    } catch (err: any) {
+
+        console.error(
+            "[getPublicCategories] Error:",
+            err?.message || err
+        );
+
+        throw err;
+    }
 }
 
 export async function getPublicCategoryById(id: string): Promise<PublicCategoryDTO> {
