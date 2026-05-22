@@ -9,15 +9,19 @@ const HeroSection = async () => {
 
     const slidesRes = await res.json();
 
-    if (!slidesRes?.success) return null;
+    if (!slidesRes?.success || !slidesRes.data) return null;
+
+    console.log("slidesRes", slidesRes.data);
+
+    const slidesData = slidesRes?.data?.data || [];
 
     const slides =
-        slidesRes.data
+        slidesData
             ?.sort((a: any, b: any) => a.priority - b.priority) // ✅ sort by priority ASC
             .map((item: any) => {
                 try {
                     const img = JSON.parse(item.image);
-                    return img.url; // ✅ extract only URL
+                    return img.url;
                 } catch {
                     return null;
                 }
