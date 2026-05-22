@@ -1,5 +1,5 @@
 import { Toaster } from "sonner";
-import { Geist, Inter, Poppins } from "next/font/google";
+import localFont from "next/font/local";
 import { cn } from "@/lib/utils";
 import { Metadata } from "next";
 import AdminLayout from "@/components/Admin/AdminLayout";
@@ -7,18 +7,68 @@ import "./globals.css";
 import { NetworkAlert } from "@/components/Admin/NetworkAlert";
 import Providers from "@/components/Admin/providers";
 
-const geist = Geist({ subsets: ['latin'], variable: '--font-sans' });
-
-const inter = Inter({
-  subsets: ["latin"],
+const geist = localFont({
+  src: [
+    {
+      path: "../../public/fonts/geist/Geist-Regular.woff2",
+      weight: "400",
+      style: "normal",
+    },
+    {
+      path: "../../public/fonts/geist/Geist-Bold.woff2",
+      weight: "700",
+      style: "normal",
+    },
+  ],
   variable: "--font-sans",
-})
+});
 
-const poppins = Poppins({
-  subsets: ["latin"],
-  weight: ["400", "500", "600", "700"],
+const inter = localFont({
+  src: [
+    {
+      path: "../../public/fonts/inter/Inter-Regular.woff2",
+      weight: "400",
+      style: "normal",
+    },
+    {
+      path: "../../public/fonts/inter/Inter-Medium.woff2",
+      weight: "500",
+      style: "normal",
+    },
+    {
+      path: "../../public/fonts/inter/Inter-Bold.woff2",
+      weight: "700",
+      style: "normal",
+    },
+  ],
+  variable: "--font-sans",
+});
+
+const poppins = localFont({
+  src: [
+    {
+      path: "../../public/fonts/poppins/Poppins-Regular.ttf",
+      weight: "400",
+      style: "normal",
+    },
+    {
+      path: "../../public/fonts/poppins/Poppins-Medium.ttf",
+      weight: "500",
+      style: "normal",
+    },
+    {
+      path: "../../public/fonts/poppins/Poppins-SemiBold.ttf",
+      weight: "600",
+      style: "normal",
+    },
+    {
+      path: "../../public/fonts/poppins/Poppins-Bold.ttf",
+      weight: "700",
+      style: "normal",
+    },
+  ],
   variable: "--font-heading",
-})
+});
 
 export const metadata: Metadata = {
   title: "Admin - Crystal Wall Art",
