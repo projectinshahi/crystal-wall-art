@@ -1,4 +1,4 @@
-"use server"
+"use client"
 
 import HomeContentWrapper from './HomeContentWrapper'
 import { Typography } from '../ui/Typography'
