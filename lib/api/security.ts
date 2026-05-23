@@ -25,12 +25,12 @@ export function isAllowedOrigin(origin: string | null) {
         return true;
     }
 
-    // Block empty origin
+    // Allow server-to-server/internal requests
     if (!origin) {
 
-        console.log("[CORS] Blocked → missing origin");
+        console.log("[CORS] No origin header → allowed");
 
-        return false;
+        return true;
     }
 
     const isAllowed = ALLOWED_ORIGINS.has(origin);
