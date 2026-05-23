@@ -9,36 +9,21 @@ const allowedOrigins = (
     .map((origin) => origin.trim())
     .filter(Boolean);
 
-console.log("[CORS] Allowed origins:", allowedOrigins);
-
 const ALLOWED_ORIGINS = new Set(allowedOrigins);
 
 export function isAllowedOrigin(origin: string | null) {
 
-    console.log("[CORS] Incoming origin:", origin);
-
     // Allow all in development
     if (process.env.NODE_ENV === "development") {
-
-        console.log("[CORS] Development mode → allowed");
-
         return true;
     }
 
     // Allow server-to-server/internal requests
     if (!origin) {
-
-        console.log("[CORS] No origin header → allowed");
-
         return true;
     }
 
     const isAllowed = ALLOWED_ORIGINS.has(origin);
-
-    console.log(
-        `[CORS] ${isAllowed ? "Allowed" : "Blocked"} origin:`,
-        origin
-    );
 
     return isAllowed;
 }
