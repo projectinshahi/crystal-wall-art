@@ -1,24 +1,46 @@
 import { NextRequest } from 'next/server';
 
 const allowedOrigins = (
-  process.env.ALLOWED_ORIGINS ?? process.env.NEXT_PUBLIC_URL ?? ''
+    process.env.ALLOWED_ORIGINS ??
+    process.env.NEXT_PUBLIC_URL ??
+    ""
 )
-  .split(',')
-  .map((o) => o.trim())
-  .filter(Boolean);
+    .split(",")
+    .map((origin) => origin.trim())
+    .filter(Boolean);
+
+console.log("[CORS] Allowed origins:", allowedOrigins);
 
 const ALLOWED_ORIGINS = new Set(allowedOrigins);
 
 export function isAllowedOrigin(origin: string | null) {
-  if (process.env.NODE_ENV === 'development') {
-    return true;
-  }
 
-  if (!origin) {
-    return false;
-  }
+    console.log("[CORS] Incoming origin:", origin);
 
-  return ALLOWED_ORIGINS.has(origin);
+    // Allow all in development
+    if (process.env.NODE_ENV === "development") {
+
+        console.log("[CORS] Development mode → allowed");
+
+        return true;
+    }
+
+    // Block empty origin
+    if (!origin) {
+
+        console.log("[CORS] Blocked → missing origin");
+
+        return false;
+    }
+
+    const isAllowed = ALLOWED_ORIGINS.has(origin);
+
+    console.log(
+        `[CORS] ${isAllowed ? "Allowed" : "Blocked"} origin:`,
+        origin
+    );
+
+    return isAllowed;
 }
 
 export function getCorsHeaders(
