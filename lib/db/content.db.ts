@@ -1,8 +1,13 @@
 import { ContentFormInput } from "@/types/Admin/content.types";
-import { supabaseServer } from "../supabase/server";
 import { DBResponse } from "@/types/dbResponse.types";
-import { PaginationMeta } from "./product.db";
 import { readQuery, writeQuery } from "../db";
+
+export type PaginationMeta = {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+};
 
 export const addContent = async (
     formData: ContentFormInput

@@ -4,7 +4,7 @@ import React, { useEffect, useState } from "react";
 import DesktopData from "./DesktopData";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { ProductTypes } from "@/types/Admin/products.types";
-import { PaginationMeta } from "@/lib/db/product.db";
+import { PaginationMeta } from '@/lib/db/content.db';
 import { CategoryTypes } from "@/types/Admin/categories.types";
 
 interface Props {

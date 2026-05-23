@@ -9,7 +9,7 @@ import ContectForm from './Form'
 import { contentSchema } from '@/schema/content.schema'
 import { ContentFormOutput, ContentFormInput } from '@/types/Admin/content.types'
 import ContentsListing from './ContentsListing'
-import { PaginationMeta } from '@/lib/db/product.db'
+import { PaginationMeta } from '@/lib/db/content.db'
 
 interface Props {
     data: ContentFormOutput[];
