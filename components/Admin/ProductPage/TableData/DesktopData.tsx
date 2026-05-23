@@ -1,13 +1,13 @@
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
-import { PaginationMeta } from '@/lib/db/product.db';
 import { CategoryTypes } from '@/types/Admin/categories.types';
 import { ProductTypes } from '@/types/Admin/products.types';
 import { Edit, ImageOff, Trash2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import React from 'react'
 import AdminPagination from './AdminPagination';
+import { PaginationMeta } from '@/lib/db/content.db';
 
 
 interface Props {
