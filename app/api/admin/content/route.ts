@@ -2,12 +2,11 @@ import { ApiError } from "@/lib/api/errors";
 import { err, ok, okList, withHandler } from "@/lib/api/handler";
 import { uploadToCloudinary } from "@/lib/cloudinary.service";
 import { withTransaction } from "@/lib/db";
-import { AdminContentDTO, toAdminContentDTO } from "@/lib/db/dto/contents.dto";
+import { AdminContentDTO } from "@/lib/db/dto/contents.dto";
 import { createContent, getAdminContents } from "@/lib/db/repositories/admin/content.admin.repository";
-import { requireAdmin } from "@/lib/session";
 import { sanitizeString } from "@/lib/validation";
 import { contentApiSchema } from "@/schema/content.schema";
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024;
 

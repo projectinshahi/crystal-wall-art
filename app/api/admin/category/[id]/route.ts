@@ -5,7 +5,7 @@ import { withTransaction } from "@/lib/db";
 import { getAdminCategories, softDeleteCategory, updateCategory, updateCategoryStatus } from "@/lib/db/repositories/admin/category.admin.repository";
 import { sanitizeString } from "@/lib/validation";
 import { CategoryApiInput, categoryApiSchema } from "@/schema/category.schema";
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024;
 
