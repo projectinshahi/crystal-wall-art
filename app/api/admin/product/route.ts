@@ -141,8 +141,6 @@ export const GET = withHandler(
         const limit = Math.min(100, Math.max(1, Number(searchParams.get("limit")) || 20));
 
         const products = await getAdminProducts({ page: page || 1, limit: limit || 20 });
-        console.log("req", req);
-
 
         const response = okList(
             products.data,
