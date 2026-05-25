@@ -17,9 +17,9 @@ const AdminPageHeader = ({ title, subTitle, children, showBackButton = false }: 
                         <ArrowLeft className="h-5 w-5" />
                     </Button>
                 )}
-                <div className='flex flex-col'>
+                <div className='flex flex-col gap-0'>
                     <h1 className="text-2xl sm:text-3xl font-display font-bold">{title}</h1>
-                    <p className="text-muted-foreground text-sm mt-1">{subTitle}</p>
+                    <p className="text-muted-foreground text-sm">{subTitle}</p>
                 </div>
             </div>
             {children}

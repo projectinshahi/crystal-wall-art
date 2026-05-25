@@ -1,3 +1,5 @@
+"use client";
+
 import { useEffect, useState } from "react";
 import Chip from "./Chip";
 
@@ -9,23 +11,32 @@ export type ChipOption = {
 
 type Props = {
   options: ChipOption[];
+  value?: string;
   defaultValue?: string;
   onChange?: (value: string) => void;
 };
 
-const ChipSelector = ({ options, defaultValue, onChange }: Props) => {
+const ChipSelector = ({ options, value, defaultValue, onChange }: Props) => {
+  
   const getInitialValue = () => {
-    // ✅ if default exists → use it
+    if (value) return value;
+
     if (defaultValue) return defaultValue;
 
-    // ✅ else → pick first non-disabled option
     const firstAvailable = options.find((o) => !o.disabled);
     return firstAvailable?.value || "";
   };
 
   const [selected, setSelected] = useState<string>(getInitialValue);
 
-  // 🔥 keep parent synced
+  // ✅ sync when parent value changes
+  useEffect(() => {
+    if (value !== undefined) {
+      setSelected(value);
+    }
+  }, [value]);
+
+  // ✅ notify parent
   useEffect(() => {
     if (selected) {
       onChange?.(selected);
@@ -34,7 +45,7 @@ const ChipSelector = ({ options, defaultValue, onChange }: Props) => {
 
   return (
     <div className="flex flex-wrap gap-2">
-      {options.map((item, index: number) => (
+      {options.map((item, index) => (
         <Chip
           key={index}
           label={item.label}

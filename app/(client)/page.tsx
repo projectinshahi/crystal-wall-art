@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic';
+
 import AboutSection from "@/components/homePage/AboutSection";
 import CategoriesSection from "@/components/homePage/CategoriesSection";
 import Frames3DSlider from "@/components/homePage/Frames3DSlider";
@@ -11,7 +13,7 @@ export default function Home() {
     <>
       <HeroSection />
       <AboutSection />
-      <FrameSelection />
+      {/* <FrameSelection /> */}
       <CategoriesSection />
       <PremiumPhotos />
       <ShopLookSection image="/images/arcylic2.jpg"/>

@@ -1,109 +1,82 @@
-"use client"
+"use server"
 
-import React from 'react'
 import HomeContentWrapper from './HomeContentWrapper'
 import { Typography } from '../ui/Typography'
 import Image from 'next/image'
-import { cn } from '@/lib/utils'
-import { useRouter } from 'next/navigation'
+import Link from 'next/link'
+import { CategoryFormOutput } from '@/schema/category.schema'
 
-const CATEGORIES = [
-    {
-        key: "Premium acrylic photos",
-        label: "Premium acrylic photos",
-        image: "/categories/img1.jpg"
-    },
-    {
-        key: "Spiritual wall art",
-        label: "Spiritual wall art",
-        image: "/categories/img2.jpg"
-    },
-    {
-        key: "Personalized Wall Clock",
-        label: "Personalized Wall Clock",
-        image: "/categories/img3.jpg"
-    },
-    {
-        key: "Wall art",
-        label: "Wall art",
-        image: "/categories/img4.jpg"
-    },
-    {
-        key: "Frame set",
-        label: "Frame set",
-        image: "/categories/img5.jpg"
-    },
-    {
-        key: "Special Gift",
-        label: "Special Gift",
-        image: "/categories/img6.jpg"
-    },
-    {
-        key: "Personalized Shapes",
-        label: "Personalized Shapes",
-        image: "/categories/img7.jpg"
-    },
-    {
-        key: "3D Frames",
-        label: "3D Frames",
-        image: "/categories/img8.jpg"
-    },
-    {
-        key: "Canvas Print",
-        label: "Canvas Print",
-        image: "/categories/img9.jpg"
-    },
-]
+const getImageUrl = (img: any) => {
+    if (!img) return "";
+    if ("previewUrl" in img) return img.previewUrl; // pending
+    if ("url" in img) return img.url; // uploaded
+    return "";
+};
 
-const CategoriesSection = () => {
+type CategoryWithImage = CategoryFormOutput & {
+    image: string;
+};
 
-    const router = useRouter();
+const CategoriesSection = async () => {
+    console.log("url",process.env.NEXT_PUBLIC_URL);
 
-    const handleCategoryClick = (key: any) => {
-        router.push(`/products?category=${encodeURIComponent(key)}`);
-    }
+    const res = await fetch(`${process.env.NEXT_PUBLIC_URL}/api/category?active=true`);
 
+    const catRes = await res.json();
+    console.log("catRes",catRes);
+
+    if (!catRes?.success) return null;
+
+    const categories: CategoryWithImage[] = catRes.data
+        .map((item: CategoryFormOutput) => {
+            let parsed;
+
+            try {
+                parsed =
+                    typeof item.image_url === "string"
+                        ? JSON.parse(item.image_url)
+                        : item.image_url;
+            } catch {
+                parsed = null;
+            }
+
+            return {
+                ...item,
+                image: getImageUrl(parsed),
+            };
+        })
+        .filter((item: CategoryWithImage) => !!item.image);
+        
     return (
         <HomeContentWrapper wrapperClassName="bg-lightGray mt-5">
-
             <Typography className="text-xl sm:text-2xl lg:text-3xl font-display font-medium text-center mb-5">
                 Categories
             </Typography>
 
             <div className="flex justify-center gap-4 sm:gap-10 flex-wrap">
-                {CATEGORIES.map((item) => (
+                {categories.map((item) => (
                     <div
-                        key={item.key}
+                        key={item.id}
                         className="flex flex-col items-center w-[140px] sm:w-[170px] lg:w-[200px]"
                     >
-
-                        <button
-                            onClick={() => handleCategoryClick(item.key)}
-                            className="group w-full rounded-[28px] border-2 border-lightBackground hover:border-primary/40 hover:shadow-lg transition-all cursor-pointer overflow-hidden"
+                        <Link
+                            href={`/products?category=${encodeURIComponent(item.id as string)}`}
+                            className="group w-full rounded-[28px] border-2 border-lightBackground hover:border-primary/40 hover:shadow-lg transition-all overflow-hidden"
                         >
-
-                            <div className="flex items-center justify-center">
-
-                                <div className="relative w-full aspect-square overflow-hidden rounded-xl bg-muted">
-
-                                    <Image
-                                        src={item.image}
-                                        alt={item.label}
-                                        fill
-                                        sizes="(max-width:640px) 140px, (max-width:1024px) 170px, 200px"
-                                        className="object-cover group-hover:scale-105 transition-transform duration-500"
-                                    />
-
-                                </div>
-
+                            <div className="relative w-full aspect-square rounded-xl bg-muted overflow-hidden">
+                                <Image
+                                    src={item.image}
+                                    alt={item.title}
+                                    fill
+                                    sizes="(max-width:640px) 140px, (max-width:1024px) 170px, 200px"
+                                    className="object-cover group-hover:scale-105 transition-transform duration-500"
+                                />
                             </div>
-
-                        </button>
+                        </Link>
 
                         <span className="mt-3 text-sm sm:text-base font-medium text-foreground text-center">
-                            {item.label}
+                            {item.title}
                         </span>
-
                     </div>
                 ))}
             </div>

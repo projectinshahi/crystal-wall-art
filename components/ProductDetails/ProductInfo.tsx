@@ -1,13 +1,13 @@
 import { Typography } from '@/components/ui/Typography'
 import React from 'react'
 
-const ProductInfo = () => {
+const ProductInfo = ({ title, price, finalPrice }: { title: string, price: string, finalPrice: string | 0 | null }) => {
     return (
         <>
-            <Typography variant='body-lg' className='!font-normal'>Premium acrylic photos</Typography>
+            <Typography variant='body-lg' className='!font-bold capitalize'>{title}</Typography>
             <div className='flex items-center gap-2'>
-                <Typography variant='h3_5' className='text-black !font-medium'>999</Typography>
-                <Typography variant='h5' className='text-darkGray/37 !font-medium line-through'>1099</Typography>
+                <Typography variant='h3_5' className='text-black !font-medium'>{price}</Typography>
+                {finalPrice && (<Typography variant='h5' className='text-darkGray/37 !font-medium line-through'>{finalPrice}</Typography>)}
             </div>
         </>
     )

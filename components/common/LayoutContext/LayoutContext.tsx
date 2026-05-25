@@ -54,6 +54,7 @@ function getDefaultMode(pathname: string): { headerMode: HeaderMode; backTitle?:
     if (pathname === "/about") return { headerMode: "full", showSearch: false };
     if (pathname === "/contact") return { headerMode: "full", showSearch: false };
     if (pathname === "/account") return { headerMode: "full", showSearch: false };
+    if (pathname.startsWith("/auth/login")) return { headerMode: "full", showFooter: false };
 
     // Fallback
     return { headerMode: "full", showSearch: false };
@@ -64,7 +65,6 @@ const LayoutContext = ({ children }: { children: React.ReactNode }) => {
     const pathname = usePathname();
 
     const [override, setOverrideState] = useState<LayoutOverride | null>(null);
-    const [cartOpen, setCartOpen] = useState<boolean>(false);
 
     const setOverride = useCallback((o: LayoutOverride | null) => {
         setOverrideState(o);
@@ -83,7 +83,7 @@ const LayoutContext = ({ children }: { children: React.ReactNode }) => {
             <div className='flex flex-col min-h-screen'>
                 <div className='sticky top-0 z-50' id='header-section'>
                     {headerMode === "full" && (
-                        <Header cartOpen={cartOpen} setCartOpen={setCartOpen} />
+                        <Header/>
                     )}
                     {headerMode === "back" && (
                         <BackHeader title={backTitle} onBack={onBack} />
@@ -92,7 +92,7 @@ const LayoutContext = ({ children }: { children: React.ReactNode }) => {
                 <main className='flex-1'>
                     {children}
                 </main>
-                <CartSidebar open={cartOpen} close={() => setCartOpen(false)} />
+                <CartSidebar/>
                 {showFooter && <Footer />}
             </div>
         </RouteLayoutContext.Provider >

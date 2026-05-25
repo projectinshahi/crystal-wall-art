@@ -60,7 +60,7 @@ const ProductStepperForm = () => {
   const [submitState, setSubmitState] = useState<SubmitState>("idle");
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [selectedOrientations, setSelectedOrientations] = useState<
-    ProductFormValues["orientations"]
+    ProductFormValues["orientation"]
   >([]);
   const [variants, setVariants] = useState<Variant[]>([]);
   const [categories, setCategories] = useState<CategoryTypes[]>([]);
@@ -89,22 +89,22 @@ const ProductStepperForm = () => {
 
   // ── Orientation toggle ───────────────────────────────────────────────────────
   const toggleOrientation = (
-    value: ProductFormValues["orientations"][number]
+    value: ProductFormValues["orientation"][number]
   ) => {
-    const updated: ProductFormValues["orientations"] =
+    const updated: ProductFormValues["orientation"] =
       selectedOrientations.includes(value)
         ? selectedOrientations.filter((o) => o !== value)
         : [...selectedOrientations, value];
 
     setSelectedOrientations(updated);
-    setValue("orientations", updated, {
+    setValue("orientation", updated, {
       shouldValidate: true,
       shouldDirty: true,
     });
   };
 
   const watchedSizes = watch("sizes");
-  const watchedThicknesses = watch("thicknesses");
+  const watchedThicknesses = watch("thickness");
   const watchedPrice = watch("price");
   const watchedImages = watch("images") || [];
   const watchedThumbnail = watch("thumbnail");
@@ -183,13 +183,13 @@ const ProductStepperForm = () => {
         placeholder="Type a size and press Enter"
       />
       <AdminFormTagInput
-        name="thicknesses"
+        name="thickness"
         control={typedControl}
         label="Thicknesses (e.g. 3mm, 5mm, 10mm)"
         placeholder="Type a thickness and press Enter"
       />
       <AdminFormTagInput
-        name="mounting_methods"
+        name="mounting_method"
         control={typedControl}
         label="Mounting Methods (e.g. Sticker, Studs, Hanging Hook)"
         placeholder="Type a method and press Enter"
@@ -219,9 +219,9 @@ const ProductStepperForm = () => {
               );
             })}
           </div>
-          {errors.orientations && (
+          {errors.orientation && (
             <p className="text-sm text-destructive mt-1">
-              {errors.orientations.message as string}
+              {errors.orientation.message as string}
             </p>
           )}
         </div>
@@ -504,9 +504,9 @@ const ProductStepperForm = () => {
         discount_price: data.discount_price ?? null,
         stock_quantity: data.stock_quantity,
         sizes: data.sizes,
-        thicknesses: data.thicknesses,
-        mounting_methods: data.mounting_methods,
-        orientations: data.orientations,
+        thickness: data.thickness,
+        mounting_method: data.mounting_method,
+        orientation: data.orientation,
         status: data.status,
         images: convertedImages,
         thumbnail: convertedThumbnail,

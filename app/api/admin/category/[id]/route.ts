@@ -1,78 +1,150 @@
+import { ApiError } from "@/lib/api/errors";
+import { err, ok, withHandler } from "@/lib/api/handler";
 import { deleteFromCloudinary, uploadToCloudinary } from "@/lib/cloudinary.service";
-import { requireAdmin } from "@/lib/session";
-import { supabaseServer } from "@/lib/supabase/server";
-import { categorySchema } from "@/schema/category.schema";
+import { withTransaction } from "@/lib/db";
+import { getAdminCategories, softDeleteCategory, updateCategory, updateCategoryStatus } from "@/lib/db/repositories/admin/category.admin.repository";
+import { sanitizeString } from "@/lib/validation";
+import { CategoryApiInput, categoryApiSchema } from "@/schema/category.schema";
+import { NextResponse } from "next/server";
 
-interface Params {
-  params: {
-    id: string;
-  };
-}
+const MAX_FILE_SIZE = 5 * 1024 * 1024;
 
-export async function PUT(req: Request, { params }: Params) {
-  try {
-    await requireAdmin();
+const ALLOWED_IMAGE_TYPES = [
+  "image/jpeg",
+  "image/png",
+  "image/webp",
+];
 
-    const { id } = await params;
+export const PUT = withHandler(
+  async ({
+    req,
+    params,
+  }): Promise<NextResponse> => {
 
-    if (!id) {
-      return Response.json(
-        { success: false, message: "Category ID is required" },
-        { status: 400 }
+    // RESOLVE PARAMS
+    const routeParams =
+      await params;
+
+    const categoryId =
+      routeParams?.id;
+
+    // VALIDATE ID
+    if (!categoryId) {
+      return err(
+        "Category ID is required",
+        400
       );
     }
 
-    // ✅ Use formData to support file upload
+    // VALIDATE CONTENT TYPE
+    const contentType = req.headers.get("content-type") || "";
+
+    if (!contentType.includes("multipart/form-data")) {
+      return err(
+        "Invalid content type",
+        415
+      );
+    }
+
+    // PARSE FORM DATA
     const formData = await req.formData();
 
-    const title = formData.get("title") as string;
-    const description = formData.get("description") as string;
-    const priority = Number(formData.get("priority"));
+    // SANITIZE INPUTS
+    const title = sanitizeString(String(formData.get("title") || ""), 120);
+
+    const description = sanitizeString(String(formData.get("description") || ""), 1000);
+
+    const priority = Number(formData.get("priority") || 0);
+
     const is_active = formData.get("is_active") === "true";
 
+    const folder = sanitizeString(String(formData.get("folder") || "categories"), 50);
+
     const file = formData.get("file") as File | null;
-    const folder = (formData.get("folder") as string) || "categories";
 
-    let image_url: any = null;
+    // GET EXISTING CATEGORY
+    const existing: any = await getAdminCategories({ id: categoryId });
 
-    // 🔍 Get existing category
-    const { data: existing, error: fetchError } = await supabaseServer
-      .from("categories")
-      .select("image_url")
-      .eq("id", id)
-      .single();
-
-    if (fetchError || !existing) {
-      return Response.json(
-        { success: false, message: "Category not found" },
-        { status: 404 }
+    if (!existing) {
+      return err(
+        "Category not found",
+        404
       );
     }
 
-    // ✅ Case 1: New file uploaded
-    if (file && file.size > 0) {
-      const uploaded = await uploadToCloudinary(file, folder);
-
-      image_url = {
-        url: uploaded.url,
-        public_id: uploaded.public_id,
-      };
-
-      // 🧹 Delete old image
-      if (existing.image_url?.public_id) {
-        try {
-          await deleteFromCloudinary(existing.image_url.public_id);
-        } catch (err) {
-          console.warn("Old image delete failed:", err);
-        }
-      }
-    } else {
-      // ✅ Keep existing image
-      image_url = existing.image_url;
+    // BLOCK DELETED CATEGORY
+    if (existing.deleted === true) {
+      return err(
+        "Deleted category cannot be updated",
+        409
+      );
     }
 
-    // ✅ Validate
-    const parsed = categorySchema.safeParse({
+    // DEFAULT TO EXISTING IMAGE
+    let image_url = existing.image_url;
+
+    // NEW IMAGE UPLOAD
+    if (file && file.size > 0) {
+
+      // FILE SIZE VALIDATION
+      if (file.size > MAX_FILE_SIZE) {
+        return err(
+          "Image size exceeds 5MB limit",
+          400
+        );
+      }
+
+      // MIME TYPE VALIDATION
+      if (!ALLOWED_IMAGE_TYPES.includes(file.type)) {
+        return err(
+          "Invalid image type",
+          400
+        );
+      }
+
+      try {
+
+        // UPLOAD NEW IMAGE
+        const uploaded = await uploadToCloudinary(file, folder);
+
+        image_url = {
+          url: uploaded.url,
+          public_id: uploaded.public_id,
+        };
+
+        // DELETE OLD IMAGE
+        try {
+
+          const oldImage = typeof existing.image_url === "string"
+            ? JSON.parse(existing.image_url)
+            : existing.image_url;
+
+          if (oldImage?.public_id) {
+            await deleteFromCloudinary(oldImage.public_id);
+          }
+
+        } catch (cloudinaryDeleteError) {
+          console.warn(
+            "[CLOUDINARY_DELETE_FAILED]",
+            cloudinaryDeleteError
+          );
+        }
+
+      } catch (uploadError) {
+        console.error(
+          "[CATEGORY_UPLOAD_ERROR]",
+          uploadError
+        );
+
+        throw new ApiError(
+          "Image upload failed",
+          500
+        );
+      }
+    }
+
+    // VALIDATE PAYLOAD
+    const parsed = categoryApiSchema.safeParse({
       title,
       description,
       priority,
@@ -80,174 +152,164 @@ export async function PUT(req: Request, { params }: Params) {
       image_url,
     });
 
-    if (!parsed.success) {
-      return Response.json(
-        {
-          success: false,
-          message: "Validation failed",
-          errors: parsed.error.flatten(),
-        },
-        { status: 400 }
+    if (parsed.success === false) {
+      return err(
+        "Validation failed",
+        400
       );
     }
 
-    // ✅ Update DB
-    const { data, error } = await supabaseServer
-      .from("categories")
-      .update(parsed.data)
-      .eq("id", id)
-      .select()
-      .single();
+    // UPDATE CATEGORY
+    const updatedCategory = await updateCategory(
+      categoryId,
+      parsed.data as CategoryApiInput
+    );
 
-    if (error) {
-      return Response.json(
-        {
-          success: false,
-          message: "Update failed",
-          error: error.message,
-        },
-        { status: 500 }
-      );
-    }
-
-    return Response.json({
-      success: true,
+    const response = ok({
       message: "Category updated successfully",
-      data,
+      data: updatedCategory,
     });
 
-  } catch (err: any) {
-    console.error("PUT /category error:", err);
-
-    return Response.json(
-      {
-        success: false,
-        message: err?.message || "Internal server error",
-      },
-      { status: 500 }
+    // NEVER CACHE ADMIN APIs
+    response.headers.set(
+      "Cache-Control",
+      "private, no-store"
     );
+
+    return response;
+  },
+  {
+    access: "admin",
+    rateLimit: {
+      max: 20,
+      windowMs: 60 * 1000,
+    },
   }
-}
+);
 
-export async function PATCH(req: Request, { params }: Params) {
-    try {
-        await requireAdmin();
+export const PATCH = withHandler(
+  async ({ req, params }): Promise<NextResponse> => {
 
-        const { id } = await params;
+    const routeParams = await params;
 
-        if (!id) {
-            return Response.json(
-                { success: false, message: "Category ID is required" },
-                { status: 400 }
-            );
-        }
+    const categoryId = routeParams?.id;
 
-        const body = await req.json();
-        const { is_active } = body;
-
-        // ✅ Validate input
-        if (typeof is_active !== "boolean") {
-            return Response.json(
-                {
-                    success: false,
-                    message: "is_active must be boolean",
-                },
-                { status: 400 }
-            );
-        }
-
-        // ✅ Update only status
-        const { data, error } = await supabaseServer
-            .from("categories")
-            .update({ is_active })
-            .eq("id", id)
-            .select()
-            .single();
-
-        if (error) {
-            return Response.json(
-                {
-                    success: false,
-                    message: "Status update failed",
-                    error: error.message,
-                },
-                { status: 500 }
-            );
-        }
-
-        return Response.json({
-            success: true,
-            message: `Category ${is_active ? "activated" : "deactivated"
-                } successfully`,
-            data,
-        });
-
-    } catch (err: any) {
-        console.error("PATCH /category status error:", err);
-
-        return Response.json(
-            {
-                success: false,
-                message: err?.message || "Internal server error",
-            },
-            { status: 500 }
-        );
-    }
-}
-
-export async function DELETE(
-  req: Request,
-  { params }: { params: { id: string } }
-) {
-  try {
-    await requireAdmin();
-
-    const { id } = await params;
-
-    if (!id) {
-      return Response.json(
-        { success: false, message: "Category ID is required" },
-        { status: 400 }
+    if (!categoryId) {
+      return err(
+        "Category ID is required",
+        400
       );
     }
 
-    // 🟡 Soft delete (no actual delete)
-    const { data, error } = await supabaseServer
-      .from("categories")
-      .update({
-        deleted: true,
-        is_active: false,
-      })
-      .eq("id", id)
-      .select()
-      .single();
+    const body = await req.json();
 
-    if (error) {
-      return Response.json(
-        {
-          success: false,
-          message: "Delete failed",
-          error: error.message,
-        },
-        { status: 500 }
+    const { is_active } = body;
+
+    if (typeof is_active !== "boolean") {
+      return err(
+        "is_active must be boolean",
+        400
       );
     }
 
-    return Response.json({
-      success: true,
-      message: "Category moved to trash",
-      data,
+    // CHECK EXISTS
+    const existing = await getAdminCategories({ id: categoryId });
+
+    if (!existing) {
+      return err(
+        "Category not found",
+        404
+      );
+    }
+
+    // UPDATE
+    const updated = await updateCategoryStatus(categoryId, is_active);
+
+    return ok({
+      message: `Category ${is_active
+        ? "activated"
+        : "deactivated"
+        } successfully`,
+
+      data: updated,
+    });
+  },
+  {
+    access: "admin",
+  }
+);
+
+export const DELETE = withHandler(
+  async (
+    { params }
+  ): Promise<NextResponse> => {
+
+    const routeParams = await params;
+
+    // GET ID
+    const categoryId = routeParams?.id;
+
+    if (!categoryId) {
+      return err(
+        "Category ID is required",
+        400
+      );
+    }
+
+    // TRANSACTION
+    const deletedCategory =
+      await withTransaction(
+        async (client) => {
+
+          // CHECK CATEGORY EXISTS
+          const existing: any = await getAdminCategories({ id: categoryId });
+
+          if (!existing) {
+            throw new ApiError(
+              "Category not found",
+              404
+            );
+          }
+
+          // ALREADY DELETED
+          if (
+            existing.deleted === true
+          ) {
+            throw new ApiError(
+              "Category already deleted",
+              409
+            );
+          }
+
+          // SOFT DELETE
+          return softDeleteCategory(
+            client,
+            categoryId
+          );
+        }
+      );
+
+    const response = ok({
+      message:
+        "Category moved to trash",
+
+      data: deletedCategory,
     });
 
-  } catch (err: any) {
-    console.error("DELETE (soft) /category error:", err);
-
-    return Response.json(
-      {
-        success: false,
-        message: err?.message || "Internal server error",
-      },
-      { status: 500 }
+    // NEVER CACHE ADMIN APIs
+    response.headers.set(
+      "Cache-Control",
+      "private, no-store"
     );
+
+    return response;
+  },
+  {
+    access: "admin",
+
+    rateLimit: {
+      max: 20,
+      windowMs: 60 * 1000,
+    },
   }
-}
+);

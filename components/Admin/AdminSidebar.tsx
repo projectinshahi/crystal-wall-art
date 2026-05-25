@@ -45,8 +45,6 @@ export function AdminSidebar() {
   const { state } = useSidebar();
 
   const { data: session, status } = useSession();
-  console.log("session",session);
-  
 
   const collapsed = state === "collapsed";
 
@@ -133,9 +131,9 @@ export function AdminSidebar() {
       <SidebarFooter className="p-3">
         {!collapsed && (
           <div className="mb-2 px-1 space-y-1">
-            {session?.user.profile?.fullName && (
+            {session?.user.profile?.user_name && (
               <p className="text-sm text-sidebar-foreground truncate font-bold">
-              {session?.user.profile?.fullName}
+              {session?.user.profile?.user_name}
             </p>
             )}
             <p className="text-xs text-sidebar-foreground truncate">
