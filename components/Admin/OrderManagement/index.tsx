@@ -27,7 +27,7 @@ const OrdersManagement = ({ data, metaData }: Props) => {
 
     const handleView = useCallback(
         (row: AdminOrderDTO) => {
-            router.push(`/orders/${row.id}`);
+            router.push(`/admin/orders/${row.id}`);
         },
         [router]
     );

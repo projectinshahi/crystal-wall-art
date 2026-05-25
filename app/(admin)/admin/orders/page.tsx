@@ -4,7 +4,7 @@ import React from 'react'
 
 const page = async () => {
 
-    const headerList = await headers(); // 👈 FIX
+    const headerList = await headers();
 
     const res = await fetch(
         `${process.env.NEXT_PUBLIC_URL}/api/admin/orders?page=1&limit=10`,
