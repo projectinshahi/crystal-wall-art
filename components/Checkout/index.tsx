@@ -1,116 +1,49 @@
 "use client"
 
-import React, { useState } from 'react'
-import DeliveryAddressSection from './DeliveryAddressSection'
-import ContactSection from './ContactSection'
-import PaymentSummaryCard from './PaymentSummaryCard'
-import PaymentMethod from './PaymentMethod'
-import { Button } from '../ui/button'
-import { handleCODSubmit, handleRazorpaySubmit } from '@/lib/payment.service'
-import { useCartStore } from '@/store/cartStore'
-import { Loader2 } from 'lucide-react'
-import { useRouter } from 'next/navigation'
-import { checkoutSchema } from '@/schema/checkout.schema'
+import Checkout from '@/components/Checkout/CheckoutPage';
+import { useStoreLayout } from '@/components/common/LayoutContext/LayoutContext';
+import Container from '@/components/Container/Container';
+import { Button } from '@/components/ui/button';
+import { useIsMobile } from '@/hooks/use-mobile';
+import { ShoppingBag } from 'lucide-react';
+import Link from 'next/link';
+import React, { useEffect, useState } from 'react'
 
-export type FormInputProps = {
-    type: "Home" | "Work" | "Other";
-    name: string;
-    phone: string;
-    address: string;
-    city: string;
-    state: string;
-    pincode: string
-    email: string;
-    paymentMethod: 'razorpay' | 'cod';
-};
+const items = [{}]
 
-const Checkout = () => {
+const CheckOut = () => {
+    const isMobile = useIsMobile();
+    const { setOverride } = useStoreLayout();
 
-    const router = useRouter();
+    const [loading, setLoading] = useState<boolean>(true);
 
-    const [errors, setErrors] = useState<Partial<Record<keyof FormInputProps, string>>>({});
-    const [form, setForm] = useState<FormInputProps>({
-        type: "Home",
-        name: "",
-        phone: "",
-        address: "",
-        city: "",
-        state: "",
-        pincode: "",
-        email: '',
-        paymentMethod: 'razorpay'
-    });
+    const isMobileCustomizer = isMobile && !loading;
 
-    const [submitting, setSubmitting] = useState(false);
-
-    const { items } = useCartStore();
-
-    const handleProccedCheckout = () => {
-        const result = checkoutSchema.safeParse(form);
-
-        if (!result.success) {
-            const fieldErrors: any = {};
-
-            result.error.issues.forEach((err) => {
-                const field = err.path[0] as keyof FormInputProps;
-                fieldErrors[field] = err.message;
-            });
-
-            setErrors(fieldErrors);
-            return;
+    useEffect(() => {
+        if (isMobileCustomizer) {
+            setOverride({ headerMode: "full", showFooter: false });
         }
+        setLoading(false)
+        return () => setOverride(null);
+    }, [isMobileCustomizer, setOverride]);
 
-        setErrors({});
-
-        form.paymentMethod === "cod"
-            ? handleCODSubmit({ form, cartItems: items, setSubmitting, router })
-            : handleRazorpaySubmit({ form, cartItems: items, setSubmitting, router });
-    };
+    if (items.length === 0) {
+        return (
+            <Container>
+                <div className="max-w-4xl mx-auto px-4 py-16 text-center space-y-4">
+                    <ShoppingBag className="h-16 w-16 text-muted-foreground/20 mx-auto" />
+                    <h2 className="text-xl font-bold">Your cart is empty</h2>
+                    <Link href="/"><Button className='text-white font-semibold px-6 py-4 cursor-pointer'>Browse Products</Button></Link>
+                </div>
+            </Container>
+        )
+    }
 
     return (
-        <div className="max-w-5xl mx-auto py-4 sm:py-8">
-            <div className="grid md:grid-cols-[1fr_400px] gap-6">
-                <div className="space-y-4">
-                    <DeliveryAddressSection
-                        setFormAddress={(address: any) =>
-                            setForm((prev) => ({
-                                ...prev,
-                                ...address,
-                                phone: address.phone ?? "",
-                            }))
-                        }
-                    />
-                    <ContactSection
-                        email={form.email}
-                        error={errors.email}
-                        setEmail={(value: string) =>
-                            setForm((prev) => ({
-                                ...prev,
-                                email: value,
-                            }))
-                        }
-                    />
-                </div>
-                <div className='space-y-4'>
-                    <PaymentSummaryCard />
-                    <PaymentMethod
-                        method={form.paymentMethod}
-                        handlePayment={(method: 'razorpay' | 'cod') =>
-                            setForm((prev) => ({
-                                ...prev,
-                                paymentMethod: method,
-                            }))
-                        }
-                    />
-                    <Button className='w-full text-white font-bold py-5' onClick={handleProccedCheckout}>
-                        {submitting
-                            ? <><Loader2 className="h-4 w-4 animate-spin mr-2" />Processing...</>
-                            : 'Place Order'}
-                    </Button>
-                </div>
-            </div>
-        </div>
+        <Container>
+            <Checkout />
+        </Container>
     )
 }
 
-export default Checkout
+export default CheckOut

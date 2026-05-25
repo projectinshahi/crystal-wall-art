@@ -11,10 +11,12 @@ export interface ContentFormOutput {
     id: string;
     type: string;
     title: string;
-    description?: string;
-    image: string;
-    link_url?: string;
-    deleted: boolean;
+    description: string | null;
+    image: string | null;
+    link_url: string | null;
+    priority: number;
     is_active: boolean;
-    priority?: number;
+    deleted: boolean;
+    created_at: string;
+    updated_at: string;
 }

@@ -1,26 +1,13 @@
 import type { Metadata } from "next";
 import "./globals.css";
 
-import { Geist } from "next/font/google";
 import { cn } from "@/lib/utils";
 
-import { Inter, Poppins } from "next/font/google"
 import LayoutContext from "@/components/common/LayoutContext/LayoutContext";
 
-import { Toaster, toast } from 'sonner';
-
-const inter = Inter({
-  subsets: ["latin"],
-  variable: "--font-sans",
-})
-
-const poppins = Poppins({
-  subsets: ["latin"],
-  weight: ["400", "500", "600", "700"],
-  variable: "--font-heading",
-})
-
-const geist = Geist({ subsets: ['latin'], variable: '--font-sans' });
+import { Toaster } from "sonner";
+import Providers from "@/components/Admin/providers";
+import Script from "next/script";
 
 export const metadata: Metadata = {
   title: "Crystal Wall Art",
@@ -33,14 +20,20 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={cn("font-sans", geist.variable)}>
-      <body
-        className={`antialiased ${inter.variable} ${poppins.variable}`}
-      >
+    <html lang="en" className={cn("font-sans")}>
+      <body className="antialiased">
+        <Script
+          src="https://checkout.razorpay.com/v1/checkout.js"
+          strategy="beforeInteractive"
+        />
+
         <Toaster />
-        <LayoutContext>
-          {children}
-        </LayoutContext>
+
+        <Providers>
+          <LayoutContext>
+            {children}
+          </LayoutContext>
+        </Providers>
       </body>
     </html>
   );

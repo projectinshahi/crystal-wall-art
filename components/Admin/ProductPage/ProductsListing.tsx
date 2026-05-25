@@ -5,8 +5,8 @@ import Filters from "./Filters";
 import Spinner from "../Loader/Spinner";
 import NoProducts from "./NoProducts";
 import TableData from "./TableData";
-import { PaginationMeta } from "@/lib/db/product.db";
 import { ProductTypes } from "@/types/Admin/products.types";
+import { PaginationMeta } from "@/lib/db/content.db";
 
 interface Props {
     products: ProductTypes[];

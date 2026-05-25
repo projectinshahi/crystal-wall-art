@@ -1,67 +1,122 @@
 import { useEffect, useRef } from "react";
+import { useSession } from "next-auth/react";
 import { CartItem, useCartStore } from "@/store/cartStore";
 
-const items = [
-    {
-        id: 'it1',
-        image: 'https://ikiru.in/cdn/shop/products/buy-wall-decor-two-pods-abstract-wall-art-painting-frame-for-living-room-bedroom-and-home-decor-by-the-atrang-on-ikiru-online-store-4.jpg',
-        title: 'Two Pods Abstract Wall Art Painting',
-        size: '24 x 36 inches',
-        thickness: '1.25 inches',
-        mountingMethod: 'Wall Mount (Hook Included)',
-        price: '2618',
-        quantity: '1',
-        orientation: ''
-    },
-    {
-        id: 'it2',
-        image: 'https://ikiru.in/cdn/shop/files/buy-wall-accents-selective-edition-luna-wall-art-decor-by-la-dimora-selections-on-ikiru-online-store-1.jpg',
-        title: 'Luna Wall Art Decor Sculpture',
-        size: '30 x 30 inches',
-        thickness: '2 inches',
-        mountingMethod: 'Wall Mount (Screws Required)',
-        price: '18199',
-        quantity: '1',
-        orientation: ''
-    },
-    {
-        id: 'it3',
-        image: 'https://ikiru.in/cdn/shop/products/buy-modern-metal-wall-art-decor-for-living-room-bedroom-office-home-decoration.jpg',
-        title: 'Modern Metal Wall Art Decor',
-        size: '36 x 18 inches',
-        thickness: '0.5 inches',
-        mountingMethod: 'Wall Mount (Bracket Included)',
-        price: '4999',
-        quantity: '2',
-        orientation: ''
-    }
-];
+let debounceTimer: NodeJS.Timeout | null = null;
 
 export function useCartSync() {
+  const { data: session, status } = useSession();
+  const isSyncing = useRef(false);
+  const userId = (session?.user as any)?.id ?? null;
 
-    useEffect(() => {
-        const loadData = async () => {
-            await mergeAndLoad();
-        }
-        loadData()
-    }, []);
+  // 🔐 INITIAL SYNC ON LOGIN
+  useEffect(() => {
+    if (status === "loading") return;
+    if (!userId) return;
+
+    mergeAndLoad(isSyncing);
+  }, [userId, status]);
+
+  // 🔁 LOCAL → DB SYNC (debounced)
+  useEffect(() => {
+    const unsub = useCartStore.subscribe((state, prev) => {
+      if (isSyncing.current) return;
+      if (!userId) return;
+
+      if (state.items !== prev.items) {
+        if (debounceTimer) clearTimeout(debounceTimer);
+
+        debounceTimer = setTimeout(() => {
+          persistToDb(state.items, isSyncing);
+        }, 800);
+      }
+    });
+
+    return () => unsub();
+  }, [userId]);
 }
 
+// 🔄 Merge local cart into DB, then load DB cart into store
+async function mergeAndLoad(isSyncing: React.MutableRefObject<boolean>) {
+  isSyncing.current = true;
 
-async function mergeAndLoad() {
+  try {
+    const localItems = useCartStore.getState().items;
+    console.log("[useCartSync] localItems:", localItems);
+
+    // 1️⃣ Merge local → DB
+    if (localItems.length > 0) {
+      const mergeRes = await fetch("/api/cart/merge", {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ items: localItems }),
+      });
+
+      if (!mergeRes.ok) {
+        console.error("[useCartSync] Merge failed:", await mergeRes.text());
+      }
+    }
+
+    // 2️⃣ Load DB → local
+    const res = await fetch("/api/cart", {
+      method: "GET",
+      credentials: "include",
+    });
+
+    const json = await res.json();
+    console.log("[useCartSync] DB cart loaded:", json);
+
+    const items: CartItem[] = (json.data || []).map(fromDbRow);
     useCartStore.setState({ items });
+
+  } catch (err) {
+    console.error("[useCartSync] Cart sync error:", err);
+  } finally {
+    isSyncing.current = false;
+  }
 }
 
+// 💾 Persist full cart to DB
+async function persistToDb(
+  items: CartItem[],
+  isSyncing: React.MutableRefObject<boolean>
+) {
+  isSyncing.current = true;
+
+  try {
+    console.log("[useCartSync] Persisting to DB:", items);
+
+    const res = await fetch("/api/cart/sync", {
+      method: "POST",
+      credentials: "include",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ items }),
+    });
+
+    if (!res.ok) {
+      console.error("[useCartSync] Persist failed:", await res.text());
+    }
+  } catch (err) {
+    console.error("[useCartSync] Cart persist error:", err);
+  } finally {
+    isSyncing.current = false;
+  }
+}
+
+// 🔄 Transform DB row → Zustand CartItem
 function fromDbRow(row: any): CartItem {
-    return {
-        id: row.product_id,
-        title: row.title,
-        image: row.image,
-        size: row.size,
-        thickness: row.thickness,
-        mountingMethod: row.mounting_method,
-        orientation: row.orientation,
-        price: Number(row.price),
-        quantity: row.quantity,
-    };
+  return {
+    id: row.id,
+    product_id: row.product_id,
+    title: row.title,
+    image: row.image,
+    size: row.size,
+    thickness: row.thickness,
+    mounting_method: row.mounting_method,
+    orientation: row.orientation,
+    price: Number(row.price),
+    quantity: Number(row.quantity),
+    variant_id: row.variant_id ?? undefined,
+  };
 }

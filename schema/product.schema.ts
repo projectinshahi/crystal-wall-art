@@ -94,9 +94,9 @@ export type ProductFormValues = {
   discount_price?: number;
   stock_quantity: number;
   sizes: string[];
-  thicknesses: string[];
-  mounting_methods: string[];
-  orientations: ("portrait" | "landscape" | "square")[];
+  thickness: string[];
+  mounting_method: string[];
+  orientation: ("portrait" | "landscape" | "square")[];
   status: "draft" | "active" | "inactive";
   images?: ImageValue[];
   thumbnail: string;
@@ -112,9 +112,9 @@ export const productDefaultValues: ProductFormValues = {
   discount_price: undefined,
   stock_quantity: 0,
   sizes: [],
-  thicknesses: [],
-  mounting_methods: [],
-  orientations: [],
+  thickness: [],
+  mounting_method: [],
+  orientation: [],
   status: "draft",
   images: [],
   thumbnail: ""
@@ -126,8 +126,8 @@ export const productStepFields: Record<string, (keyof ProductFormValues)[]> = {
   details: [
     "title", "description", "category",
     "price", "discount_price", "stock_quantity",
-    "sizes", "thicknesses", "mounting_methods",
-    "orientations", "status",
+    "sizes", "thickness", "mounting_method",
+    "orientation", "status",
   ],
   images: ["images"],
 };
