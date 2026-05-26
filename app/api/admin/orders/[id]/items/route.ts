@@ -7,7 +7,7 @@ export const GET = withHandler(
         const routeParams = await params;
 
         const orderId = routeParams?.id;
-        
+
         const OrderedItems = await getAdminOrderedItemsByOrderId(orderId as string)
 
         const response = okList(OrderedItems);
@@ -18,5 +18,5 @@ export const GET = withHandler(
         );
 
         return response;
-    }
+    }, { access: "admin" }
 )
