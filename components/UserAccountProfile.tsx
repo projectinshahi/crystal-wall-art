@@ -10,6 +10,12 @@ import { useRouter } from "next/navigation";
 import { AuthUserRow } from "@/types/AuthUserRow.types";
 import { UserOrders } from "@/types/order.type";
 import { Badge } from "./ui/badge";
+import { Dialog, DialogContent } from "./ui/dialog";
+import AdminFormInput from "./Admin/inputs/FormInputs";
+import { useForm } from "react-hook-form";
+import z from "zod";
+import { toast } from "sonner";
+import { zodResolver } from "@hookform/resolvers/zod";
 
 export function getDisplayName(user: AuthUserRow | any): string {
   if (user?.name) return user.name;
@@ -32,6 +38,7 @@ const UserAccountProfile = () => {
 
   const [ordersList, setOrdersList] = useState<UserOrders[]>([]);
   const [loadingOrders, setLoadingOrders] = useState(true);
+  const [showEditProfile, setShowEditProfile] = useState<boolean>(false);
 
   // Redirect unauthenticated users
   useEffect(() => {
@@ -103,72 +110,73 @@ const UserAccountProfile = () => {
   };
 
   return (
-    <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
-      <div className="space-y-6 animate-fade-in">
+    <>
+      <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
+        <div className="space-y-6 animate-fade-in">
 
-        {/* Header */}
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center overflow-hidden">
-              <User className="h-6 w-6 text-primary" />
+          {/* Header */}
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center overflow-hidden">
+                <User className="h-6 w-6 text-primary" />
+              </div>
+
+              <div>
+                <h1 className="text-xl font-bold">My Account</h1>
+
+                <p className="text-sm text-muted-foreground">
+                  {getDisplayName(session.user)}
+                </p>
+              </div>
             </div>
 
-            <div>
-              <h1 className="text-xl font-bold">My Account</h1>
+            <div className="flex items-center gap-2">
+              <Button variant="outline" size="sm" onClick={() => setShowEditProfile(true)}>
+                Edit Profile
+              </Button>
 
-              <p className="text-sm text-muted-foreground">
-                {getDisplayName(session.user)}
-              </p>
+              <Button variant="outline" size="sm" onClick={handleLogout}>
+                <LogOut className="h-4 w-4 mr-2" />
+                Logout
+              </Button>
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm">
-              Edit Profile
-            </Button>
+          {/* Orders */}
+          <div className="rounded-2xl border bg-card p-4 sm:p-6">
+            <Typography
+              variant="body-lg"
+              className="font-semibold mb-4 flex items-center gap-2"
+            >
+              <Package className="h-5 w-5" />
+              My Orders
+            </Typography>
 
-            <Button variant="outline" size="sm" onClick={handleLogout}>
-              <LogOut className="h-4 w-4 mr-2" />
-              Logout
-            </Button>
-          </div>
-        </div>
+            {loadingOrders ? (
+              <div className="text-center py-8 text-muted-foreground">
+                Loading orders...
+              </div>
+            ) : ordersList.length === 0 ? (
+              <div className="text-center py-8">
+                <Package className="h-10 w-10 text-muted-foreground mx-auto mb-2" />
 
-        {/* Orders */}
-        <div className="rounded-2xl border bg-card p-4 sm:p-6">
-          <Typography
-            variant="body-lg"
-            className="font-semibold mb-4 flex items-center gap-2"
-          >
-            <Package className="h-5 w-5" />
-            My Orders
-          </Typography>
+                <Typography
+                  variant="body-sm"
+                  className="text-muted-foreground"
+                >
+                  No orders yet. Start shopping!
+                </Typography>
 
-          {loadingOrders ? (
-            <div className="text-center py-8 text-muted-foreground">
-              Loading orders...
-            </div>
-          ) : ordersList.length === 0 ? (
-            <div className="text-center py-8">
-              <Package className="h-10 w-10 text-muted-foreground mx-auto mb-2" />
-
-              <Typography
-                variant="body-sm"
-                className="text-muted-foreground"
-              >
-                No orders yet. Start shopping!
-              </Typography>
-
-              <Link href="/">
-                <Button className="mt-3 text-white" size="sm">
-                  Browse Products
-                </Button>
-              </Link>
-            </div>
-          ) : (
-            <div className="space-y-3">
-              {ordersList.map((order) => (
-                <Link
+                <Link href="/">
+                  <Button className="mt-3 text-white" size="sm">
+                    Browse Products
+                  </Button>
+                </Link>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {ordersList.map((order) => (
+                  <Link
                     key={order.id}
                     href={`/order/${order.id}`}
                     className="flex items-center justify-between p-3 rounded-xl border hover:bg-muted/50 transition-colors"
@@ -188,13 +196,159 @@ const UserAccountProfile = () => {
                       </Badge>
                     </div>
                   </Link>
-              ))}
-            </div>
-          )}
+                ))}
+              </div>
+            )}
+          </div>
         </div>
       </div>
-    </div>
+
+      <Dialog open={showEditProfile} onOpenChange={setShowEditProfile}>
+        <DialogContent className="sm:max-w-md p-0 gap-0 overflow-hidden">
+          <EditProfileScreen
+            user={session.user as AuthUserRow}
+            onClose={() => setShowEditProfile(false)}
+          // onLogout={handleLogout}
+          />
+        </DialogContent>
+      </Dialog>
+
+    </>
   );
 };
 
 export default UserAccountProfile;
+
+const profileSchema = z.object({
+  user_name: z
+    .string()
+    .min(2, "User name must be at least 2 characters"),
+
+  email: z
+    .string()
+    .email("Please enter a valid email"),
+
+  phone: z
+    .string()
+    .min(10, "Please enter a valid phone number"),
+});
+
+type EditProfileFormValues = {
+  user_name: string;
+  email: string;
+  phone: string;
+};
+
+const EditProfileScreen = ({ user, onClose }: { user: AuthUserRow, onClose: () => void }) => {
+
+  const [loading, setLoading] = useState(false);
+
+  const {
+    control,
+    handleSubmit,
+    reset,
+    formState: { errors },
+  } = useForm<EditProfileFormValues>({
+    resolver: zodResolver(profileSchema),
+    mode: "onChange",
+    defaultValues: {
+      user_name: "",
+      email: "",
+      phone: "",
+    },
+  });
+
+  useEffect(() => {
+    if (user) {
+      reset({
+        user_name: user?.profile?.user_name || "",
+        email: user?.email || "",
+        phone: user?.phone || "",
+      });
+    }
+  }, [user, reset]);
+
+  const handleSave = async (
+    values: EditProfileFormValues
+  ) => {
+    try {
+      setLoading(true);
+
+      const response = await fetch(
+        `/api/user/account/profile`,
+        {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(values),
+        }
+      );
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(
+          data?.message || "Failed to update profile"
+        );
+      }
+
+      onClose()
+      toast.success("Profile updated successfully");
+    } catch (error: any) {
+      toast.error(
+        error?.message || "Something went wrong"
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="flex flex-col min-h-full">
+      <div className="w-full flex justify-center items-center h-14 px-4 bg-primary text-white shrink-0">
+        <Typography
+          className="font-bold"
+          variant="body-lg"
+        >
+          Edit Profile
+        </Typography>
+      </div>
+
+      <div className="w-full space-y-5 flex-1 p-4">
+        <AdminFormInput
+          name="user_name"
+          control={control}
+          label="User Name"
+          required
+          error={errors.user_name?.message}
+        />
+
+        <AdminFormInput
+          name="email"
+          control={control}
+          label="Email Address"
+          required
+          error={errors.email?.message}
+        />
+
+        <AdminFormInput
+          name="phone"
+          control={control}
+          label="Phone"
+          required
+          error={errors.phone?.message}
+        />
+
+        <Button
+          variant="default"
+          className="w-full"
+          disabled={loading}
+          onClick={handleSubmit(handleSave)}
+        >
+          {loading ? "Saving..." : "Save"}
+        </Button>
+      </div>
+    </div>
+  );
+}
