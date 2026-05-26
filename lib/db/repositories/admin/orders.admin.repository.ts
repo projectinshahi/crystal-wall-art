@@ -1,4 +1,4 @@
-import { readQuery } from "@/lib/db";
+import { readQuery, writeQuery } from "@/lib/db";
 import { OrdersAdminQueries } from "../../queries/admin/orders.admin.queries";
 import { AdminOrderDTO, toAdminOrderDTO } from "../../dto/order.dto";
 import { PaginationMeta } from "../../content.db";
@@ -95,6 +95,63 @@ export async function getAdminOrderedShipmentsByOrderId(orderId: string): Promis
 
 }
 
+export async function addAdminOrderedShipmentsByOrderId(orderId: string, shipmentNumber: string, courier: string, trackingId: string ): Promise<AdminOrderedShipmentsDTO[]> {
+
+  const query = OrderedShipmentsAdminQueries.createShipment;
+
+  const rows = await writeQuery<AdminOrderedShipmentsDTO>(query, [orderId, shipmentNumber, courier, trackingId, "pending"]);
+
+  return rows.map(toAdminOrderedShipmentsDTO)
+
+}
+
+export async function deleteAdminOrderShipmentById(shipmentId: string) {
+  const query = OrderedShipmentsAdminQueries.deleteShipment;
+
+    const rows = await writeQuery<AdminOrderedShipmentsDTO>(
+        query,
+        [shipmentId]
+    );
+
+    return rows.map(toAdminOrderedShipmentsDTO);
+}
+
+type UpdateShipmentPayload = {
+  courier?: string;
+  tracking_id?: string;
+  status?: string;
+  notes?: string;
+  shipped_at?: string | null;
+  delivered_at?: string | null;
+};
+
+export async function updateAdminShipmentById(
+  shipmentId: string,
+  payload: UpdateShipmentPayload
+): Promise<AdminOrderedShipmentsDTO | null> {
+
+  const query = OrderedShipmentsAdminQueries.updateShipment;
+
+  const rows = await writeQuery<AdminOrderedShipmentsDTO>(
+    query,
+    [
+      shipmentId,
+      payload.courier ?? null,
+      payload.tracking_id ?? null,
+      payload.status ?? null,
+      payload.notes ?? null,
+      payload.shipped_at ?? null,
+      payload.delivered_at ?? null,
+    ]
+  );
+
+  if (!rows.length) {
+        return null;
+    }
+
+    return toAdminOrderedShipmentsDTO(rows[0]);
+}
+
 export async function getAdminOrderTimelinesByOrderId(orderId: string): Promise<AdminOrderTimelinesDTO[]> {
 
   const query = OrderTimelinesAdminQueries.getAllByOrderId;
@@ -118,4 +175,41 @@ export async function getAdminShipmentItemsByShipmentIds(shipmentIds: string[]):
     const rows = await readQuery<AdminOrderedShipmentItemsDTO>(query, [shipmentIds]);
 
     return rows.map(toAdminOrderedShipmentItemsDTO)
+}
+
+export async function addShipmentItems(
+    shipmentId: string,
+    items: {
+        order_item_id: string;
+        quantity: number;
+    }[]
+) {
+    if (!items.length) return [];
+
+    const values = items
+        .map(
+            (_, index) =>
+                `($1, $${index * 2 + 2}, $${index * 2 + 3})`
+        )
+        .join(", ");
+
+    const params = [
+        shipmentId,
+        ...items.flatMap((item) => [
+            item.order_item_id,
+            item.quantity,
+        ]),
+    ];
+
+    const query = `
+        INSERT INTO shipment_items (
+            shipment_id,
+            order_item_id,
+            quantity
+        )
+        VALUES ${values}
+        RETURNING *;
+    `;
+
+    return await writeQuery(query, params);
 }

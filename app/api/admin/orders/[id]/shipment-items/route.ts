@@ -24,5 +24,5 @@ export const GET = withHandler(
         );
 
         return response;
-    }
+    },{access: "admin"}
 );
