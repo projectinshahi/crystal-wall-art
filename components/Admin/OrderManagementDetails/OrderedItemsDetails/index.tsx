@@ -92,6 +92,7 @@ const OrderedItemsDetails = ({ id, orderData }: { id: string, orderData: UserOrd
                 shipments={shipments}
                 shipmentItems={shipmentItems}
                 orderData={orderData}
+                reftech={fetchOrderDetails}
             />
             <Timeline
                 data={timeline}
