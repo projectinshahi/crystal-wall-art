@@ -11,11 +11,11 @@ import { AuthUserRow } from "@/types/AuthUserRow.types";
 import { UserOrders } from "@/types/order.type";
 import { Badge } from "./ui/badge";
 import { Dialog, DialogContent } from "./ui/dialog";
-import AdminFormInput from "./Admin/inputs/FormInputs";
 import { useForm } from "react-hook-form";
 import z from "zod";
 import { toast } from "sonner";
 import { zodResolver } from "@hookform/resolvers/zod";
+import UserFormInput from "./Admin/inputs/FormInput/UserFormInputs";
 
 export function getDisplayName(user: AuthUserRow | any): string {
   if (user?.name) return user.name;
@@ -241,6 +241,8 @@ type EditProfileFormValues = {
 
 const EditProfileScreen = ({ user, onClose }: { user: AuthUserRow, onClose: () => void }) => {
 
+  const { update } = useSession();
+
   const [loading, setLoading] = useState(false);
 
   const {
@@ -293,6 +295,16 @@ const EditProfileScreen = ({ user, onClose }: { user: AuthUserRow, onClose: () =
         );
       }
 
+      await update({
+        email: values.email,
+
+        profile: {
+          ...user.profile,
+          user_name: values.user_name,
+        },
+      });
+
+
       onClose()
       toast.success("Profile updated successfully");
     } catch (error: any) {
@@ -305,7 +317,7 @@ const EditProfileScreen = ({ user, onClose }: { user: AuthUserRow, onClose: () =
   };
 
   return (
-    <div className="flex flex-col min-h-full">
+    <div className="flex flex-col min-h-full bg-white">
       <div className="w-full flex justify-center items-center h-14 px-4 bg-primary text-white shrink-0">
         <Typography
           className="font-bold"
@@ -316,7 +328,7 @@ const EditProfileScreen = ({ user, onClose }: { user: AuthUserRow, onClose: () =
       </div>
 
       <div className="w-full space-y-5 flex-1 p-4">
-        <AdminFormInput
+        <UserFormInput
           name="user_name"
           control={control}
           label="User Name"
@@ -324,15 +336,16 @@ const EditProfileScreen = ({ user, onClose }: { user: AuthUserRow, onClose: () =
           error={errors.user_name?.message}
         />
 
-        <AdminFormInput
+        <UserFormInput
           name="email"
           control={control}
           label="Email Address"
           required
           error={errors.email?.message}
+          inputDisabled
         />
 
-        <AdminFormInput
+        <UserFormInput
           name="phone"
           control={control}
           label="Phone"

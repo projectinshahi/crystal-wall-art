@@ -7,7 +7,6 @@ import {
     DialogTitle,
 } from "@/components/ui/dialog";
 import React, { useState } from "react";
-import AdminFormInput from "../inputs/FormInputs";
 import AdminFormTextarea from "../inputs/FormTextArea";
 import { Typography } from "@/components/ui/Typography";
 import AdminImageUpload from "../inputs/ImageUpload";
@@ -25,6 +24,7 @@ import { useCloudinaryDelete } from "@/hooks/useCloudinaryDelete";
 import { toast } from "sonner";
 import { CategoryFormInput } from "@/schema/category.schema";
 import { CategoryTypes } from "@/types/Admin/categories.types";
+import AdminFormInput from "../inputs/FormInput/AdminFormInput";
 
 type ImageType = {
     url: string;
