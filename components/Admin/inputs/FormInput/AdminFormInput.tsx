@@ -15,6 +15,7 @@ type FormInputProps<T extends FieldValues> = {
     onChange?: (value: string) => void;
     error?: string;
     required?: boolean
+    inputDisabled?: boolean;
 };
 
 const AdminFormInput = <T extends FieldValues>({
@@ -27,7 +28,8 @@ const AdminFormInput = <T extends FieldValues>({
     value,
     onChange,
     error: externalError,
-    required
+    required,
+    inputDisabled = false
 }: FormInputProps<T>) => {
 
     const controller = name && control
@@ -61,6 +63,7 @@ const AdminFormInput = <T extends FieldValues>({
                         value,
                         onChange: (e: any) => onChange?.(e.target.value),
                     })}
+                disabled={inputDisabled}
             />
 
             {error && (
