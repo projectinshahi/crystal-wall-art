@@ -42,3 +42,14 @@ export interface UserOrders {
     updated_at?: string;
     payment_method?: string;
 }
+
+export interface OrderResult {
+  id: string;
+  order_number: string;
+  customer_name: string;
+  status: string;
+  payment_status: string;
+  total: number;
+  created_at: string;
+  items: { product_title: string; quantity: number; unit_price: number }[];
+}
