@@ -25,19 +25,19 @@ const ProductsListing = () => {
 
       const params = new URLSearchParams();
 
-    if (search) params.append("search", search);
-    if (statusFilter !== "all") params.append("status", statusFilter);
-    if (categoryFilter !== "all") params.append("category", categoryFilter);
+      if (search) params.append("search", search);
+      if (statusFilter !== "all") params.append("status", statusFilter);
+      if (categoryFilter !== "all") params.append("category", categoryFilter);
 
-    const queryString = params.toString();
+      const queryString = params.toString();
 
-    const url = queryString
-      ? `/api/admin/product?page=1&limit=10&${queryString}`
-      : `/api/admin/product?page=1&limit=10`;
+      const url = queryString
+        ? `/api/admin/product?page=1&limit=10&${queryString}`
+        : `/api/admin/product?page=1&limit=10`;
 
-    const res = await fetch(url, {
-      credentials: "include",
-    });
+      const res = await fetch(url, {
+        credentials: "include",
+      });
 
       if (!res.ok) throw new Error("Failed to fetch products");
 
