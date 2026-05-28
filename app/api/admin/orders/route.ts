@@ -11,12 +11,21 @@ export const GET = withHandler(
         const searchParams = req.nextUrl.searchParams;
 
         const page = Math.max(1, Number(searchParams.get("page")) || 1);
-
         const limit = Math.min(100, Math.max(1, Number(searchParams.get("limit")) || 20));
+        const paymentStatus = searchParams.get("payment") || undefined;
+        const status = searchParams.get("status") || undefined;
+        const searchValue = searchParams.get("search") || undefined;
 
         const id = searchParams.get("id");
 
-        const orders = await getAdminOrders({ page: page || 1, limit: limit || 20, id: id });
+        const orders = await getAdminOrders({
+            page,
+            limit,
+            id,
+            paymentStatus,
+            status,
+            search: searchValue,
+        });
 
         const response = okList(
             orders.data,
