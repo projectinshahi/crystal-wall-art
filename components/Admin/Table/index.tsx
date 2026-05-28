@@ -26,7 +26,7 @@ interface RowActions<T> {
 interface Props<T extends RowData> {
     data: T[];
     columns: ColumnDef<T>[];          // columns come from outside — table stays generic
-    meta: PaginationMeta;
+    meta?: PaginationMeta;
     onPageChange?: (page: number) => void;
     rowActions?: RowActions<T>;        // all row-level callbacks passed as one object
     emptyState?: string;
@@ -90,9 +90,9 @@ export function DataTable<T extends RowData>({
             />
 
             <AdminPagination
-                currentPage={meta.page}
-                totalItems={meta.total}
-                pageSize={meta.limit}
+                currentPage={meta ? meta.page : 1}
+                totalItems={meta ? meta.total : 0}
+                pageSize={meta ? meta.limit : 0}
                 onPageChange={onPageChange ?? (() => { })}
             />
         </div>
