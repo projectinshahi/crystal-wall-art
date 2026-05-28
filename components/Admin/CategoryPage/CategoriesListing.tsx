@@ -14,6 +14,7 @@ import { toast } from "sonner";
 import AppDialog from "../Common/AppDialog";
 import { DialogClose } from "@/components/ui/dialog";
 import { useState } from "react";
+import { useGlobalLoading } from "@/providers/loading-provider";
 
 type ImageType = {
   url: string;
@@ -35,6 +36,8 @@ const CategoriesListing = ({
   resetForm,
   setCategories
 }: Props) => {
+
+  const { startLoading, stopLoading } = useGlobalLoading();
 
   const [deleteOpen, setDeleteOpen] = useState<boolean>(false);
   const [deleting, setDeleting] = useState(false);
@@ -75,6 +78,7 @@ const CategoriesListing = ({
   const handleDelete = async (id: string) => {
 
     setDeleting(true);
+    startLoading()
 
     try {
       const res = await fetch(`/api/admin/category/${id}`, {
@@ -107,11 +111,13 @@ const CategoriesListing = ({
       toast.error(error.message || "Something went wrong");
     } finally {
       setDeleting(false);
+      stopLoading()
     }
   };
 
   // ✅ Toggle active
   const toggleActive = async (id: string, value: boolean) => {
+    startLoading();
     try {
       const res = await fetch(`/api/admin/category/${id}`, {
         method: "PATCH",
@@ -150,6 +156,8 @@ const CategoriesListing = ({
       console.error("🔥 Update failed:", error.message);
 
       toast.error(error.message || "Something went wrong");
+    }finally{
+      stopLoading()
     }
   };
 

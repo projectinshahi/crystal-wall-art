@@ -25,6 +25,7 @@ import { toast } from "sonner";
 import { CategoryFormInput } from "@/schema/category.schema";
 import { CategoryTypes } from "@/types/Admin/categories.types";
 import AdminFormInput from "../inputs/FormInput/AdminFormInput";
+import { useGlobalLoading } from "@/providers/loading-provider";
 
 type ImageType = {
     url: string;
@@ -62,6 +63,7 @@ const CategoryForm = ({
     setError
 }: Props) => {
     const { deleteFile } = useCloudinaryDelete();
+    const { startLoading, stopLoading } = useGlobalLoading();
     const [saving, setSaving] = useState(false);
 
     const image_url = watch("image_url");
@@ -73,6 +75,7 @@ const CategoryForm = ({
     const handleSave = async (formData: CategoryFormInput) => {
         try {
             setSaving(true);
+            startLoading()
 
             const image = formData.image_url;
 
@@ -103,9 +106,9 @@ const CategoryForm = ({
             }
 
             const url = editCat?.id
-                ? `/api/admin/category/${editCat.id}`
-                : `/api/admin/category`;
-
+            ? `/api/admin/category/${editCat.id}`
+            : `/api/admin/category`;
+            
             const method = editCat?.id ? "PUT" : "POST";
 
             const res = await fetch(url, {
@@ -143,6 +146,7 @@ const CategoryForm = ({
             toast.error(err.message || "Something went wrong");
         } finally {
             setSaving(false);
+            stopLoading()
         }
     };
 
