@@ -9,7 +9,8 @@ import { CategoryTypes } from "@/types/Admin/categories.types";
 
 interface Props {
   products: ProductTypes[];
-  meta: PaginationMeta;
+  meta?: PaginationMeta;
+  setData: React.Dispatch<React.SetStateAction<ProductTypes[]>>
 }
 
 interface CategoryResponse {
@@ -17,9 +18,8 @@ interface CategoryResponse {
   message?: string;
 }
 
-const TableData = ({ products, meta }: Props) => {
+const TableData = ({ products, meta,setData }: Props) => {
   const [categories, setCategories] = useState<CategoryTypes[]>([]);
-  const [loading, setLoading] = useState<boolean>(true);
 
   const isMobile = useIsMobile();
 
@@ -28,7 +28,6 @@ const TableData = ({ products, meta }: Props) => {
 
     const fetchCategories = async () => {
       try {
-        setLoading(true);
 
         const res = await fetch("/api/admin/category", {
           method: "GET",
@@ -50,8 +49,6 @@ const TableData = ({ products, meta }: Props) => {
         if (err.name === "AbortError") return;
 
         console.error("Category fetch error:", err);
-      } finally {
-        setLoading(false);
       }
     };
 
@@ -64,7 +61,8 @@ const TableData = ({ products, meta }: Props) => {
     <DesktopData
       products={products}
       meta={meta}
-      categories={categories} 
+      categories={categories}
+      setData={setData}
     />
   );
 };
