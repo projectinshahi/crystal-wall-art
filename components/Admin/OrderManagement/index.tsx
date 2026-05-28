@@ -2,7 +2,7 @@
 
 import { PaginationMeta } from '@/lib/db/content.db';
 import { UserOrders } from '@/types/order.type';
-import React, { useCallback, useState } from 'react'
+import React, { useCallback, useEffect, useState } from 'react'
 import Spinner from '../Loader/Spinner';
 import TableData from '../ProductPage/TableData';
 import Filters from './Filters';
@@ -12,18 +12,17 @@ import { ordersColumns } from './tableHeaders';
 import { AdminOrderDTO } from '@/lib/db/dto/order.dto';
 import { useRouter } from 'next/navigation';
 
-interface Props {
-    data: UserOrders[];
-    metaData: PaginationMeta;
-}
-
-const OrdersManagement = ({ data, metaData }: Props) => {
+const OrdersManagement = () => {
 
     const router = useRouter();
 
-    const [ordersData, setOrdersData] = useState<UserOrders[]>(data);
-    const [meta, setMeta] = useState<PaginationMeta>(metaData);
+    const [ordersData, setOrdersData] = useState<UserOrders[]>([]);
+    const [meta, setMeta] = useState<PaginationMeta>();
     const [isLoading, setIsLoading] = useState(false);
+
+    const [search, setSearch] = useState('');
+    const [statusFilter, setStatusFilter] = useState<string>("all");
+    const [paymentFilter, setPaymentFilter] = useState<string>("all");
 
     const handleView = useCallback(
         (row: AdminOrderDTO) => {
@@ -31,6 +30,45 @@ const OrdersManagement = ({ data, metaData }: Props) => {
         },
         [router]
     );
+
+    const fetchOrders = async () => {
+        try {
+            setIsLoading(true);
+
+            const params = new URLSearchParams();
+
+            if (search) params.append("search", search);
+            if (statusFilter !== "all") params.append("status", statusFilter);
+            if (paymentFilter !== "all") params.append("payment", paymentFilter);
+
+            const queryString = params.toString();
+
+            const url = queryString
+                ? `/api/admin/orders?page=1&limit=10&${queryString}`
+                : `/api/admin/orders?page=1&limit=10`;
+
+            const res = await fetch(url, {
+                credentials: "include",
+            });
+
+            if (!res.ok) throw new Error("Failed to fetch products");
+
+            const json = await res.json();
+
+            setOrdersData(json.data || []);
+            setMeta(json.meta);
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        const handler = setTimeout(() => {
+            fetchOrders();
+        }, 400);
+
+        return () => clearTimeout(handler);
+    }, [search, statusFilter, paymentFilter]);
 
     return (
         <div className='space-y-4'>
@@ -40,7 +78,14 @@ const OrdersManagement = ({ data, metaData }: Props) => {
                 subTitle="Track and manage customer orders"
             />
 
-            <Filters />
+            <Filters
+                search={search}
+                setSearch={setSearch}
+                statusFilter={statusFilter}
+                setStatusFilter={setStatusFilter}
+                paymentFilter={paymentFilter}
+                setPaymentFilter={setPaymentFilter}
+            />
 
             {isLoading ? (
                 <Spinner />

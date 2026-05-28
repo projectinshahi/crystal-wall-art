@@ -139,16 +139,16 @@ export const GET = withHandler(
         const page = Math.max(1, Number(searchParams.get("page")) || 1);
         const limit = Math.min(100, Math.max(1, Number(searchParams.get("limit")) || 20));
         const category = searchParams.get("category") || undefined;
-const status = searchParams.get("status") || undefined;
-const searchValue = searchParams.get("search") || undefined;
+        const status = searchParams.get("status") || undefined;
+        const searchValue = searchParams.get("search") || undefined;
 
         const products = await getAdminProducts({
-  page,
-  limit,
-  category,
-  status,
-  search: searchValue,
-});
+            page,
+            limit,
+            category,
+            status,
+            search: searchValue,
+        });
 
         const response = okList(
             products.data,

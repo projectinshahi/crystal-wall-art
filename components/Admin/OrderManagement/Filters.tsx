@@ -5,11 +5,25 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Search } from 'lucide-react'
 import React, { useState } from 'react'
 
-const Filters = () => {
+interface Props {
+  search: string;
+  setSearch: (v: string) => void;
 
-    const [search, setSearch] = useState('');
-    const [statusFilter, setStatusFilter] = useState<string>("all");
-    const [paymentFilter, setPaymentFilter] = useState<string>("all");
+  statusFilter: string;
+  setStatusFilter: (v: string) => void;
+
+  paymentFilter: string;
+  setPaymentFilter: (v: string) => void;
+}
+
+const Filters = ({
+  search,
+  setSearch,
+  statusFilter,
+  setStatusFilter,
+  paymentFilter,
+  setPaymentFilter,
+}: Props) => {
     
     return (
         <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
