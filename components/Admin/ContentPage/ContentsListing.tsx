@@ -11,6 +11,7 @@ import { Edit, Trash2 } from 'lucide-react'
 import AppDialog from '../Common/AppDialog'
 import { Typography } from '@/components/ui/Typography'
 import { DialogClose } from '@/components/ui/dialog'
+import { useGlobalLoading } from '@/providers/loading-provider'
 
 interface Props {
     contentsData: ContentFormOutput[];
@@ -19,11 +20,14 @@ interface Props {
 
 const ContentsListing = ({ contentsData, setContentsData }: Props) => {
 
+    const { startLoading, stopLoading } = useGlobalLoading();
+
     const [deleteOpen, setDeleteOpen] = useState<boolean>(false);
     const [deleting, setDeleting] = useState(false);
 
     // ✅ Toggle active
     const toggleActive = async (id: string, value: boolean) => {
+        startLoading()
         try {
             const res = await fetch(`/api/admin/content/${id}`, {
                 method: "PATCH",
@@ -55,19 +59,22 @@ const ContentsListing = ({ contentsData, setContentsData }: Props) => {
 
             // ✅ Success toast
             toast.success(
-                value ? "Category activated" : "Category deactivated"
+                value ? "Content activated" : "Content deactivated"
             );
 
         } catch (error: any) {
             console.error("🔥 Update failed:", error.message);
 
             toast.error(error.message || "Something went wrong");
+        }finally{
+            stopLoading()
         }
     };
 
     const handleDelete = async (id: string) => {
 
         setDeleting(true);
+        startLoading()
 
         try {
             const res = await fetch(`/api/admin/content/${id}`, {
@@ -100,6 +107,7 @@ const ContentsListing = ({ contentsData, setContentsData }: Props) => {
             toast.error(error.message || "Something went wrong");
         } finally {
             setDeleting(false);
+            stopLoading()
         }
     };
 
@@ -133,13 +141,13 @@ const ContentsListing = ({ contentsData, setContentsData }: Props) => {
                                     />
 
                                     {/* Button for Edit */}
-                                    <Button
+                                    {/* <Button
                                         size="icon"
                                         variant="ghost"
                                     //   onClick={() => openEdit(c)}
                                     >
                                         <Edit className="h-4 w-4" />
-                                    </Button>
+                                    </Button> */}
 
                                     {/* Button for Delete and Alery Dialog Box */}
                                     <AppDialog
