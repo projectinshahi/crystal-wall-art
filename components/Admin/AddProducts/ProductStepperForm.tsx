@@ -10,7 +10,6 @@ import {
   productStepFields,
 } from "@/schema/product.schema";
 import { zodResolver } from "@hookform/resolvers/zod";
-import AdminFormInput from "../inputs/FormInputs";
 import AdminFormSelect from "../inputs/FormSelect";
 import AdminFormTextarea from "../inputs/FormTextArea";
 import AdminFormTagInput from "../inputs/FormTagInput";
@@ -23,6 +22,7 @@ import SucessScreen from "./SucessScreen";
 import { CategoryTypes } from "@/types/Admin/categories.types";
 import { toast } from "sonner";
 import { blobUrlToBase64 } from "@/lib/utils/imageUtils";
+import AdminFormInput from "../inputs/FormInput/AdminFormInput";
 
 export const ORIENTATION = [
   { value: "portrait", label: "Portrait" },

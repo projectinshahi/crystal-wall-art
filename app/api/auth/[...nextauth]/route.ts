@@ -124,6 +124,7 @@ export const authOptions: NextAuthOptions = {
   SELECT
     u.id,
     u.email,
+    u.phone,
     u.password_hash,
     u.is_active,
 
@@ -170,6 +171,7 @@ export const authOptions: NextAuthOptions = {
           return {
             id: user.id,
             email: user.email,
+            phone: user.phone,
 
             role: {
               id: user.role?.id,
@@ -195,13 +197,38 @@ export const authOptions: NextAuthOptions = {
   },
 
   callbacks: {
-    async jwt({ token, user, account }) {
+    async jwt({ token, user, account, trigger, session }) {
       if (user) {
         token.id = user.id;
         token.email = user.email;
+        token.phone = user.phone;
         token.role = user.role;
         token.profile = user.profile;
         token.provider = account?.provider;
+      }
+
+      if (
+        trigger === "update" &&
+        session
+      ) {
+        if (session.email) {
+          token.email = session.email;
+        }
+
+        if (session.phone) {
+          token.phone = session.phone;
+        }
+
+        if (session.profile) {
+          token.profile = {
+            ...token.profile,
+            ...session.profile,
+          };
+        }
+
+        if (session.role) {
+          token.role = session.role;
+        }
       }
 
       return token;
@@ -211,6 +238,7 @@ export const authOptions: NextAuthOptions = {
       session.user = {
         id: token.id as string,
         email: token.email as string,
+        phone: token.phone as string,
         role: token.role,
         profile: token.profile,
       };

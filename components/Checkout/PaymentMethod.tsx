@@ -28,7 +28,7 @@ const PaymentMethod = ({ method, handlePayment }: Props) => {
             </Button>
 
             {/* COD */}
-            <Button className={`bg-transparent w-full h-auto rounded-lg flex items-center gap-3 p-3 transition-all text-left hover:bg-transparent
+            {/* <Button className={`bg-transparent w-full h-auto rounded-lg flex items-center gap-3 p-3 transition-all text-left hover:bg-transparent
                 ${method === 'cod' ? 'border-primary bg-primary/5' : 'border-grayBorder hover:border-primary/40'}`}
                 onClick={() => handlePayment('cod')}>
                 <div className='h-5 w-5 rounded-full border-2 border-grayBorder flex items-center justify-center shrink-0 '>
@@ -39,7 +39,7 @@ const PaymentMethod = ({ method, handlePayment }: Props) => {
                     <Typography variant='label'>Cash on Delivery</Typography>
                     <Typography variant='caption'>Enter pincode to check</Typography>
                 </div>
-            </Button>
+            </Button> */}
         </div>
     )
 }
