@@ -1,7 +1,6 @@
 import React, { useState } from 'react'
 import AppDialog from '../Common/AppDialog'
 import AdminFormSelect from '../inputs/FormSelect'
-import AdminFormInput from '../inputs/FormInputs'
 import AdminFormTextarea from '../inputs/FormTextArea'
 import AdminImageUpload from '../inputs/ImageUpload'
 import { Button } from '@/components/ui/button'
@@ -10,6 +9,7 @@ import { Control, UseFormHandleSubmit, UseFormSetError } from 'react-hook-form'
 import { CONTENT_TYPES } from '@/lib/constants/content.constants'
 import { toast } from 'sonner'
 import { ContentFormInput, ContentFormOutput } from '@/types/Admin/content.types'
+import AdminFormInput from '../inputs/FormInput/AdminFormInput'
 
 interface Props {
     control: Control<ContentFormInput>

@@ -8,19 +8,68 @@ import { useRouter } from 'next/navigation';
 import React from 'react'
 import AdminPagination from './AdminPagination';
 import { PaginationMeta } from '@/lib/db/content.db';
+import { useGlobalLoading } from '@/providers/loading-provider';
+import { toast } from 'sonner';
 
 
 interface Props {
     products: ProductTypes[];
-    meta: PaginationMeta;
+    meta?: PaginationMeta;
     categories: CategoryTypes[];
+    setData: React.Dispatch<React.SetStateAction<ProductTypes[]>>
 }
 
-const DesktopData = ({ products, meta, categories }: Props) => {
+const DesktopData = ({ products, meta, categories, setData }: Props) => {
 
     const router = useRouter();
+    const { startLoading, stopLoading } = useGlobalLoading();
 
-    const toggleSelect = (id: string) => { }
+    const toggleStatus = async (id: string, value: boolean) => {
+        startLoading()
+        try {
+            const res = await fetch(`/api/admin/product/${id}`, {
+                method: "PATCH",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify({ is_active: value }),
+            });
+
+            const text = await res.text();
+
+            let data;
+            try {
+                data = JSON.parse(text);
+            } catch {
+                throw new Error("Invalid server response");
+            }
+
+            if (!res.ok) {
+                throw new Error(data?.message || "Failed to update status");
+            }
+
+            // ✅ Update state ONLY after success
+            setData((prev) =>
+                prev.map((p) =>
+                    p.id === id
+                        ? { ...p, status: value ? "active" : "inactive" }
+                        : p
+                )
+            );
+
+            // ✅ Success toast
+            toast.success(
+                value ? "Product activated" : "Product deactivated"
+            );
+
+        } catch (error: any) {
+            console.error("🔥 Update failed:", error.message);
+
+            toast.error(error.message || "Something went wrong");
+        } finally {
+            stopLoading()
+        }
+    }
 
     const statusBadge = (status: string) => {
         switch (status) {
@@ -31,8 +80,6 @@ const DesktopData = ({ products, meta, categories }: Props) => {
     };
 
     const handleDelete = async (id: string) => { };
-
-    const toggleStatus = async (p: ProductTypes) => { };
 
     return (
         <>
@@ -49,14 +96,14 @@ const DesktopData = ({ products, meta, categories }: Props) => {
                                 <th className="p-3 text-left text-sm font-medium text-muted-foreground">Stock</th>
                                 <th className="p-3 text-left text-sm font-medium text-muted-foreground">Status</th>
                                 <th className="p-3 text-left text-sm font-medium text-muted-foreground">Category</th>
-                                <th className="p-3 text-right text-sm font-medium text-muted-foreground">Actions</th>
+                                {/* <th className="p-3 text-right text-sm font-medium text-muted-foreground">Actions</th> */}
                             </tr>
                         </thead>
                         <tbody>
                             {products.map((p: ProductTypes) => {
                                 const cat = categories.find(c => c.id === p.category_id);
                                 const image = p.thumbnail ? JSON.parse(p.thumbnail).url : null;
-                                
+
                                 return (
                                     <tr key={p.id}>
                                         <td className="p-3">
@@ -89,16 +136,16 @@ const DesktopData = ({ products, meta, categories }: Props) => {
                                         <td className="p-3">
                                             <div className="flex items-center gap-2">
                                                 {statusBadge(p.status)}
-                                                <Switch checked={p.status === "active"} onCheckedChange={() => toggleStatus(p)} className="scale-75" />
+                                                <Switch checked={p.status === "active"} onCheckedChange={(val) => toggleStatus(p.id, val)} className="scale-75" />
                                             </div>
                                         </td>
                                         <td className="p-3 text-sm text-muted-foreground">{cat?.title || "—"}</td>
-                                        <td className="p-3 text-right">
+                                        {/* <td className="p-3 text-right">
                                             <div className="flex items-center justify-end gap-1">
                                                 <Button size="icon" variant="ghost" onClick={() => router.push(`/products/${p.id}/edit`)}><Edit className="h-4 w-4" /></Button>
                                                 <Button size="icon" variant="ghost" onClick={() => handleDelete(p.id)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
                                             </div>
-                                        </td>
+                                        </td> */}
                                     </tr>
                                 )
                             })}
@@ -106,7 +153,7 @@ const DesktopData = ({ products, meta, categories }: Props) => {
                     </table>
                 </div>
             </div>
-            <AdminPagination currentPage={meta.page} totalItems={meta.total} pageSize={meta.limit} onPageChange={()=>{}} />
+            <AdminPagination currentPage={meta ? meta.page : 1} totalItems={meta ? meta.total : 0} pageSize={meta ? meta.limit : 0} onPageChange={() => { }} />
         </>
     )
 }

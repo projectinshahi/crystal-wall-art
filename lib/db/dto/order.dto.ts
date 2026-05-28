@@ -1,4 +1,4 @@
-import { Address, PaymentStatus, UserOrders } from "@/types/order.type";
+import { Address, OrderResult, PaymentStatus, UserOrders } from "@/types/order.type";
 
 export type OrderStatus =
     | "pending"
@@ -57,6 +57,17 @@ export type UserOrderDTO = {
     status: OrderStatus;
     total: number;
     created_at: string;
+};
+
+export type OrderStatusDTO = {
+    id: string;
+    order_number: string;
+    customer_name: string;
+    status: string;
+    payment_status: string;
+    total: number;
+    created_at: string;
+    items: { product_title: string; quantity: number; unit_price: number }[];
 };
 
 export function toUserOrderDTO(
@@ -140,4 +151,19 @@ export function toAdminOrderDTO(
         updated_at: row.updated_at,
         payment_method: row.payment_method
     };
+}
+
+export function toPublicOrderDTO(
+    row: OrderResult
+): OrderStatusDTO {
+    return {
+        id: row.id,
+        order_number: row.order_number,
+        customer_name: row.customer_name,
+        status: row.status,
+        payment_status: row.payment_status,
+        total: row.total,
+        created_at: row.created_at,
+        items: row.items
+    }
 }
