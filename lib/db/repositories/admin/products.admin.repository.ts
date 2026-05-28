@@ -1,4 +1,4 @@
-import { readQuery } from "@/lib/db";
+import { readQuery, writeQuery } from "@/lib/db";
 import { AdminProductDTO, toAdminProductDTO } from "../../dto/products.dto";
 import { ProductAdminQueries } from "../../queries/admin/product.admin.queries";
 import { ProductTypes } from "@/types/Admin/products.types";
@@ -130,77 +130,96 @@ export async function getAdminProducts(
 }
 
 export const createProduct = async (client: PoolClient, data: ProductFormValues): Promise<AdminProductDTO> => {
-    const result = await client.query<ProductTypes>(
-        ProductAdminQueries.create,
-        [
-            data.title,
-            data.description,
-            data.price,
-            data.discount_price || null,
-            data.stock_quantity,
-            data.category,
-            data.status,
-            data.sizes,
-            data.thickness,
-            data.mounting_method,
-            data.orientation,
-            data.thumbnail
-        ]
-    );
+  const result = await client.query<ProductTypes>(
+    ProductAdminQueries.create,
+    [
+      data.title,
+      data.description,
+      data.price,
+      data.discount_price || null,
+      data.stock_quantity,
+      data.category,
+      data.status,
+      data.sizes,
+      data.thickness,
+      data.mounting_method,
+      data.orientation,
+      data.thumbnail
+    ]
+  );
 
-    return toAdminProductDTO(result.rows[0]);
+  return toAdminProductDTO(result.rows[0]);
 }
 
-export const insertProductImages = async (client:PoolClient, productId: string, imageUrls: string[]): Promise<any> => {
-    
-    if(!imageUrls || imageUrls.length === 0) {
-        return;
-    }
+export const insertProductImages = async (client: PoolClient, productId: string, imageUrls: string[]): Promise<any> => {
 
-    const values: string[] = [];
-    const placeholders: string[] = [];
+  if (!imageUrls || imageUrls.length === 0) {
+    return;
+  }
 
-    imageUrls.forEach((url, index) => {
-        values.push(url);
-        placeholders.push(`($1, $${index + 2})`);
-    });
+  const values: string[] = [];
+  const placeholders: string[] = [];
 
-    const query = `
+  imageUrls.forEach((url, index) => {
+    values.push(url);
+    placeholders.push(`($1, $${index + 2})`);
+  });
+
+  const query = `
         INSERT INTO product_images (product_id, image_url)
         VALUES ${placeholders.join(", ")}
     `;
 
-    await client.query(query, [productId, ...values]);
+  await client.query(query, [productId, ...values]);
 }
 
 export const insertProductVariants = async (
-    client: PoolClient,
-    variants: {
-        product_id: string,
-        size: string,
-        thickness: string,
-        price: number,
-        discount_price: number | null,
-        orientation: string,
-        stock_quantity: number
-    }[]): Promise<any> => {
-    if (!variants || variants.length === 0) {
-        return;
-    }
+  client: PoolClient,
+  variants: {
+    product_id: string,
+    size: string,
+    thickness: string,
+    price: number,
+    discount_price: number | null,
+    orientation: string,
+    stock_quantity: number
+  }[]): Promise<any> => {
+  if (!variants || variants.length === 0) {
+    return;
+  }
 
-    const values: unknown[] = [];
-    const placeholders: string[] = [];
+  const values: unknown[] = [];
+  const placeholders: string[] = [];
 
-    variants.forEach((variant, index) => {
-        values.push(variant.product_id, variant.size, variant.thickness, variant.price, variant.discount_price, variant.orientation, variant.stock_quantity);
-        const baseIndex = index * 7;
-        placeholders.push(`($${baseIndex + 1}, $${baseIndex + 2}, $${baseIndex + 3}, $${baseIndex + 4}, $${baseIndex + 5}, $${baseIndex + 6}, $${baseIndex + 7})`);
-    });
+  variants.forEach((variant, index) => {
+    values.push(variant.product_id, variant.size, variant.thickness, variant.price, variant.discount_price, variant.orientation, variant.stock_quantity);
+    const baseIndex = index * 7;
+    placeholders.push(`($${baseIndex + 1}, $${baseIndex + 2}, $${baseIndex + 3}, $${baseIndex + 4}, $${baseIndex + 5}, $${baseIndex + 6}, $${baseIndex + 7})`);
+  });
 
-    const query = `
+  const query = `
         INSERT INTO product_variants (product_id, size, thickness, price, discount_price, orientation, stock_quantity)
         VALUES ${placeholders.join(", ")}
     `;
 
-    await client.query(query, values);
+  await client.query(query, values);
+}
+
+export async function updateProductStatus(
+  id: string,
+  is_active: boolean
+): Promise<AdminProductDTO> {
+
+  const rows =
+    await writeQuery<ProductTypes>(
+      ProductAdminQueries.updateStatus,
+      [
+        is_active ? 'active' : 'inactive',
+        id,
+      ]
+    );
+
+  return toAdminProductDTO(
+    rows[0]
+  );
 }

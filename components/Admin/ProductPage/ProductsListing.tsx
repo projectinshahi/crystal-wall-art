@@ -12,7 +12,7 @@ const ProductsListing = () => {
   const [data, setData] = useState<ProductTypes[]>([]);
   const [meta, setMeta] = useState<PaginationMeta>();
 
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
 
   // 🔥 FILTER STATE MOVED HERE
   const [search, setSearch] = useState("");
@@ -75,7 +75,7 @@ const ProductsListing = () => {
       ) : data.length === 0 ? (
         <NoProducts />
       ) : (
-        <TableData products={data} meta={meta} />
+        <TableData products={data} meta={meta} setData={setData} />
       )}
     </>
   );

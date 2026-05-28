@@ -8,19 +8,68 @@ import { useRouter } from 'next/navigation';
 import React from 'react'
 import AdminPagination from './AdminPagination';
 import { PaginationMeta } from '@/lib/db/content.db';
+import { useGlobalLoading } from '@/providers/loading-provider';
+import { toast } from 'sonner';
 
 
 interface Props {
     products: ProductTypes[];
     meta?: PaginationMeta;
     categories: CategoryTypes[];
+    setData: React.Dispatch<React.SetStateAction<ProductTypes[]>>
 }
 
-const DesktopData = ({ products, meta, categories }: Props) => {
+const DesktopData = ({ products, meta, categories, setData }: Props) => {
 
     const router = useRouter();
+    const { startLoading, stopLoading } = useGlobalLoading();
 
-    const toggleSelect = (id: string) => { }
+    const toggleStatus = async (id: string, value: boolean) => {
+        startLoading()
+        try {
+            const res = await fetch(`/api/admin/product/${id}`, {
+                method: "PATCH",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify({ is_active: value }),
+            });
+
+            const text = await res.text();
+
+            let data;
+            try {
+                data = JSON.parse(text);
+            } catch {
+                throw new Error("Invalid server response");
+            }
+
+            if (!res.ok) {
+                throw new Error(data?.message || "Failed to update status");
+            }
+
+            // ✅ Update state ONLY after success
+            setData((prev) =>
+                prev.map((p) =>
+                    p.id === id
+                        ? { ...p, status: value ? "active" : "inactive" }
+                        : p
+                )
+            );
+
+            // ✅ Success toast
+            toast.success(
+                value ? "Product activated" : "Product deactivated"
+            );
+
+        } catch (error: any) {
+            console.error("🔥 Update failed:", error.message);
+
+            toast.error(error.message || "Something went wrong");
+        } finally {
+            stopLoading()
+        }
+    }
 
     const statusBadge = (status: string) => {
         switch (status) {
@@ -31,8 +80,6 @@ const DesktopData = ({ products, meta, categories }: Props) => {
     };
 
     const handleDelete = async (id: string) => { };
-
-    const toggleStatus = async (p: ProductTypes) => { };
 
     return (
         <>
@@ -56,7 +103,7 @@ const DesktopData = ({ products, meta, categories }: Props) => {
                             {products.map((p: ProductTypes) => {
                                 const cat = categories.find(c => c.id === p.category_id);
                                 const image = p.thumbnail ? JSON.parse(p.thumbnail).url : null;
-                                
+
                                 return (
                                     <tr key={p.id}>
                                         <td className="p-3">
@@ -89,7 +136,7 @@ const DesktopData = ({ products, meta, categories }: Props) => {
                                         <td className="p-3">
                                             <div className="flex items-center gap-2">
                                                 {statusBadge(p.status)}
-                                                <Switch checked={p.status === "active"} onCheckedChange={() => toggleStatus(p)} className="scale-75" />
+                                                <Switch checked={p.status === "active"} onCheckedChange={(val) => toggleStatus(p.id, val)} className="scale-75" />
                                             </div>
                                         </td>
                                         <td className="p-3 text-sm text-muted-foreground">{cat?.title || "—"}</td>
@@ -106,7 +153,7 @@ const DesktopData = ({ products, meta, categories }: Props) => {
                     </table>
                 </div>
             </div>
-            <AdminPagination currentPage={meta ? meta.page : 1} totalItems={meta ? meta.total : 0} pageSize={meta ? meta.limit : 0} onPageChange={()=>{}} />
+            <AdminPagination currentPage={meta ? meta.page : 1} totalItems={meta ? meta.total : 0} pageSize={meta ? meta.limit : 0} onPageChange={() => { }} />
         </>
     )
 }
