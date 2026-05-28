@@ -9,7 +9,7 @@ import { CategoryTypes } from "@/types/Admin/categories.types";
 
 interface Props {
   products: ProductTypes[];
-  meta: PaginationMeta;
+  meta?: PaginationMeta;
 }
 
 interface CategoryResponse {
@@ -64,7 +64,7 @@ const TableData = ({ products, meta }: Props) => {
     <DesktopData
       products={products}
       meta={meta}
-      categories={categories} 
+      categories={categories}
     />
   );
 };

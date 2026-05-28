@@ -1,7 +1,21 @@
 export const ProductAdminQueries = {
     getAll: `
         SELECT
-            *
+            id,
+            title,
+            description,
+            price,
+            discount_price,
+            stock_quantity,
+            category_id,
+            status,
+            created_at,
+            updated_at,
+            sizes,
+            thicknesses,
+            mounting_methods,
+            orientations,
+            thumbnail
         FROM products
     `,
 

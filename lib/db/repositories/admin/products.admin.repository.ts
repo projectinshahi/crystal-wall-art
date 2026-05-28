@@ -10,6 +10,9 @@ interface GetAdminProductsParams {
   id?: string;
   title?: string;
   is_active?: boolean;
+  category?: string;
+  status?: string;
+  search?: string;
 
   page?: number;
   limit?: number;
@@ -34,7 +37,12 @@ export async function getAdminProducts(
   const conditions: string[] = [];
   const values: unknown[] = [];
 
+  // base condition
   conditions.push(`deleted = FALSE`);
+
+  // =========================
+  // FILTERS
+  // =========================
 
   if (filters?.id) {
     values.push(filters.id);
@@ -43,62 +51,80 @@ export async function getAdminProducts(
 
   if (filters?.title) {
     values.push(`%${filters.title}%`);
-
     conditions.push(`LOWER(title) LIKE LOWER($${values.length})`);
   }
 
-  const whereClause = `
-    WHERE ${conditions.join(" AND ")}
-  `;
+  if (filters?.category) {
+    values.push(filters.category);
+    conditions.push(`category_id = $${values.length}`);
+  }
 
+  if (filters?.status) {
+    values.push(filters.status);
+    conditions.push(`status = $${values.length}`);
+  }
+
+  if (filters?.search) {
+    values.push(`%${filters.search}%`);
+    conditions.push(`(
+      LOWER(title) LIKE LOWER($${values.length})
+      OR LOWER(description) LIKE LOWER($${values.length})
+    )`);
+  }
+
+  const whereClause = `WHERE ${conditions.join(" AND ")}`;
+
+  // =========================
+  // PAGINATION
+  // =========================
   const page = filters?.page || 1;
   const limit = filters?.limit || 20;
   const offset = (page - 1) * limit;
 
+  // =========================
+  // COUNT QUERY
+  // =========================
   const countQuery = `
     SELECT COUNT(*)::int AS total
     FROM products
     ${whereClause}
   `;
 
-  const countRows = await readQuery<{
-    total: number;
-  }>(
+  const countRows = await readQuery<{ total: number }>(
     countQuery,
     values
   );
 
   const total = countRows[0]?.total || 0;
-  
-  values.push(limit);
-  values.push(offset);
+
+  // =========================
+  // PAGINATION PARAMS (IMPORTANT FIX)
+  // =========================
+  const paginationValues = [...values];
+
+  paginationValues.push(limit);
+  paginationValues.push(offset);
 
   const query = `
     ${ProductAdminQueries.getAll}
-
     ${whereClause}
-
     ORDER BY created_at DESC
-
-    LIMIT $${values.length - 1}
-    OFFSET $${values.length}
+    LIMIT $${paginationValues.length - 1}
+    OFFSET $${paginationValues.length}
   `;
 
   const rows = await readQuery<ProductTypes>(
     query,
-    values
+    paginationValues
   );
-  
+
   return {
     data: rows.map(toAdminProductDTO),
-
     pagination: {
       page,
       limit,
       total,
-      totalPages: Math.ceil(
-        total / limit
-      ),
+      totalPages: Math.ceil(total / limit),
     },
   };
 }

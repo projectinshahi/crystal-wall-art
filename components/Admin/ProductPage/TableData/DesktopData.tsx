@@ -12,7 +12,7 @@ import { PaginationMeta } from '@/lib/db/content.db';
 
 interface Props {
     products: ProductTypes[];
-    meta: PaginationMeta;
+    meta?: PaginationMeta;
     categories: CategoryTypes[];
 }
 
@@ -106,7 +106,7 @@ const DesktopData = ({ products, meta, categories }: Props) => {
                     </table>
                 </div>
             </div>
-            <AdminPagination currentPage={meta.page} totalItems={meta.total} pageSize={meta.limit} onPageChange={()=>{}} />
+            <AdminPagination currentPage={meta ? meta.page : 1} totalItems={meta ? meta.total : 0} pageSize={meta ? meta.limit : 0} onPageChange={()=>{}} />
         </>
     )
 }
