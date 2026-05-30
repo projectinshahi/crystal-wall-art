@@ -11,8 +11,8 @@ import Image from 'next/image'
 import { cn } from '@/lib/utils'
 
 export type SlideData = {
-  id: number
-  image: string
+  id?: number
+  image_url: string;
   content?: React.ReactNode,
 }
 
@@ -104,7 +104,7 @@ const ImageSlider = ({
             <div className="embla__slide" key={slide.id}>
               <div className={cn('embla__slide__content', contentClassName)}>
                 <Image
-                  src={slide.image}
+                  src={slide.image_url}
                   alt="Slide Image"
                   fill
                   sizes="(max-width: 768px) 100vw, 800px"

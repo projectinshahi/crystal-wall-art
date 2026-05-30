@@ -26,7 +26,7 @@ const ProductDetails = ({ title, data }: { title: string, data: ProductTypes }) 
     const [sizes, setSizes] = useState<ChipsOptionsSelector>()
     const [thickness, setThickness] = useState<ChipsOptionsSelector>()
     const [mounting_methods, setMountingMethods] = useState<ChipsOptionsSelector>()
-    const [orientations, setOrientations] = useState<ChipsOptionsSelector>()
+    const [orientations, setOrientations] = useState<ChipsOptionsSelector>();
 
     const height = useNavbarHeight();
 
@@ -173,7 +173,7 @@ const ProductDetails = ({ title, data }: { title: string, data: ProductTypes }) 
         }
     };
 
-    const handleAddToCart = ()=>{
+    const handleAddToCart = () => {
         if (!data) return;
         addItem({
             product_id: data.id, title: data.title, image: JSON.parse(data.thumbnail).url || null,
@@ -204,7 +204,7 @@ const ProductDetails = ({ title, data }: { title: string, data: ProductTypes }) 
                                 overflow: "auto"
                             }}
                         >
-                            <ProductGallery />
+                            <ProductGallery images={data.images || []} />
                         </div>
                     </div>
                     <div className='flex flex-col gap-2 col-span-5 lg:col-span-2'>
@@ -217,8 +217,13 @@ const ProductDetails = ({ title, data }: { title: string, data: ProductTypes }) 
                             onChange={handleChangeSelectedOptions}
                         />
                         <ProductDescription desc={data.description} />
-                        <SizeChart />
-                        <Description />
+                        <SizeChart
+                            size={sizes?.selected}
+                            thickness={thickness?.selected}
+                            mounting={mounting_methods?.selected}
+                            orientation={orientations?.selected}
+                        />
+                        {/* <Description /> */}
                         <Button className="w-full cursor-pointer text-white font-semibold mt-3" size="lg" onClick={handleAddToCart}>
                             Add to Cart
                         </Button>
