@@ -8,7 +8,7 @@ export const ProductPublicQueries = {
             discount_price,
             category_id,
             sizes,
-            thicknesses,
+            thickness,
             mounting_methods,
             orientations,
             thumbnail
@@ -25,7 +25,7 @@ export const ProductPublicQueries = {
             discount_price,
             category_id,
             sizes,
-            thicknesses,
+            thickness,
             mounting_methods,
             orientations,
             thumbnail
