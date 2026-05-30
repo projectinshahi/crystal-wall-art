@@ -24,7 +24,7 @@ const ProductDetails = ({ title, data }: { title: string, data: ProductTypes }) 
     const [variants, setVariants] = useState<Variant[]>([]);
 
     const [sizes, setSizes] = useState<ChipsOptionsSelector>()
-    const [thicknesses, setThicknesses] = useState<ChipsOptionsSelector>()
+    const [thickness, setThickness] = useState<ChipsOptionsSelector>()
     const [mounting_methods, setMountingMethods] = useState<ChipsOptionsSelector>()
     const [orientations, setOrientations] = useState<ChipsOptionsSelector>()
 
@@ -69,15 +69,15 @@ const ProductDetails = ({ title, data }: { title: string, data: ProductTypes }) 
             });
         }
 
-        if (data.thicknesses?.length) {
-            setThicknesses({
+        if (data.thickness?.length) {
+            setThickness({
                 options:
-                    data.thicknesses.map((v: string) => ({
+                    data.thickness.map((v: string) => ({
                         label: v,
                         value: v,
                         disabled: false,
                     })),
-                selected: data.thicknesses[0]
+                selected: data.thickness[0]
             });
         }
 
@@ -126,7 +126,7 @@ const ProductDetails = ({ title, data }: { title: string, data: ProductTypes }) 
             const variant = variants.find(
                 v =>
                     normalize(v.size) === normalize(sizes?.selected) &&
-                    normalize(v.thickness) === normalize(thicknesses?.selected)
+                    normalize(v.thickness) === normalize(thickness?.selected)
             );
 
             const basePrice = Number(data?.price ?? 0);
@@ -148,7 +148,7 @@ const ProductDetails = ({ title, data }: { title: string, data: ProductTypes }) 
                 displayDiscountPrice: discount,
                 effectivePrice: finalPrice,
             };
-        }, [variants, sizes?.selected, thicknesses?.selected, mounting_methods?.selected, orientations?.selected, data]);
+        }, [variants, sizes?.selected, thickness?.selected, mounting_methods?.selected, orientations?.selected, data]);
 
     const handleChangeSelectedOptions = (type: string, value: string) => {
         switch (type) {
@@ -157,7 +157,7 @@ const ProductDetails = ({ title, data }: { title: string, data: ProductTypes }) 
                 break;
 
             case "thickness":
-                setThicknesses((prev) => prev ? { ...prev, selected: value } : prev);
+                setThickness((prev) => prev ? { ...prev, selected: value } : prev);
                 break;
 
             case "mounting":
@@ -177,7 +177,7 @@ const ProductDetails = ({ title, data }: { title: string, data: ProductTypes }) 
         if (!data) return;
         addItem({
             product_id: data.id, title: data.title, image: JSON.parse(data.thumbnail).url || null,
-            size: sizes?.selected || '', thickness: thicknesses?.selected || '', mounting_method: mounting_methods?.selected || '',
+            size: sizes?.selected || '', thickness: thickness?.selected || '', mounting_method: mounting_methods?.selected || '',
             orientation: orientations?.selected || '', price: effectivePrice, quantity: 1,
             variant_id: activeVariant?.id
         });
@@ -211,7 +211,7 @@ const ProductDetails = ({ title, data }: { title: string, data: ProductTypes }) 
                         <ProductInfo title={data.title} price={effectivePrice.toLocaleString("en-IN")} finalPrice={displayDiscountPrice && displayPrice.toLocaleString("en-IN")} />
                         <ProductOptions
                             size={sizes || undefined}
-                            thickness={thicknesses || undefined}
+                            thickness={thickness || undefined}
                             mounting={mounting_methods || undefined}
                             orientations={orientations || undefined}
                             onChange={handleChangeSelectedOptions}

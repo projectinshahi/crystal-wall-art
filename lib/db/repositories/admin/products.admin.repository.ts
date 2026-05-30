@@ -142,7 +142,7 @@ export const createProduct = async (client: PoolClient, data: ProductFormValues)
       data.status,
       data.sizes,
       data.thickness,
-      data.mounting_method,
+      data.mounting_methods,
       data.orientation,
       data.thumbnail
     ]

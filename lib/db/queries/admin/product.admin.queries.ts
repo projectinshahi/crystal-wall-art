@@ -12,7 +12,7 @@ export const ProductAdminQueries = {
             created_at,
             updated_at,
             sizes,
-            thicknesses,
+            thickness,
             mounting_methods,
             orientations,
             thumbnail
@@ -29,7 +29,7 @@ export const ProductAdminQueries = {
             category_id,
             status,
             sizes,
-            thicknesses,
+            thickness,
             mounting_methods,
             orientations,
             thumbnail
@@ -68,7 +68,7 @@ export const ProductAdminQueries = {
             created_at,
             updated_at,
             sizes,
-            thicknesses,
+            thickness,
             mounting_methods,
             orientations,
             thumbnail
