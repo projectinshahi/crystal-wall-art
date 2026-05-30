@@ -5,6 +5,7 @@ import bcrypt from "bcrypt";
 import { readQuery } from "@/lib/db";
 import { validateEmail, validatePassword } from "@/lib/validation";
 import { AuthUserRow } from "@/types/AuthUserRow.types";
+import { adminAuth } from "@/lib/firebase/admin";
 
 export const authOptions: NextAuthOptions = {
   providers: [
@@ -106,18 +107,28 @@ export const authOptions: NextAuthOptions = {
       name: "Client OTP",
 
       credentials: {
-        email: { label: "Email", type: "email" },
-        password: { label: "Password", type: "password" },
+        firebaseToken: { label: 'Firebase Token', type: 'text' },
       },
 
       async authorize(credentials) {
         try {
-          if (!credentials?.email || !credentials?.password) {
-            return null;
-          }
 
-          const cleanEmail = validateEmail(credentials.email);
-          const cleanPass = validatePassword(credentials.password);
+          if (!credentials?.firebaseToken) return null
+
+          // 1. Verify the Firebase ID token server-side
+                const decoded = await adminAuth.verifyIdToken(credentials.firebaseToken)
+ 
+                // 2. Look up the user in your DB by phone number
+                const phone = decoded.phone_number
+
+                if (!phone) return null
+
+          // if (!credentials?.email || !credentials?.password) {
+          //   return null;
+          // }
+
+          // const cleanEmail = validateEmail(credentials.email);
+          // const cleanPass = validatePassword(credentials.password);
 
           const [user] = await readQuery<AuthUserRow>(
             `
@@ -146,27 +157,27 @@ export const authOptions: NextAuthOptions = {
   JOIN public.roles r
     ON r.id = up.role_id
 
-  WHERE u.email = $1
+  WHERE u.phone = $1
   LIMIT 1
   `,
-            [cleanEmail]
+            [phone]
           );
 
           // timing attack prevention
-          const hash = user?.password_hash;
+          // const hash = user?.password_hash;
 
-          const passwordValid = await bcrypt.compare(
-            cleanPass,
-            hash
-          );
+          // const passwordValid = await bcrypt.compare(
+          //   cleanPass,
+          //   hash
+          // );
 
-          if (
-            !user ||
-            !passwordValid ||
-            user.is_active !== true
-          ) {
-            return null;
-          }
+          // if (
+          //   !user ||
+          //   !passwordValid ||
+          //   user.is_active !== true
+          // ) {
+          //   return null;
+          // }
 
           return {
             id: user.id,

@@ -26,6 +26,10 @@ export default function RootLayout({
           src="https://checkout.razorpay.com/v1/checkout.js"
           strategy="beforeInteractive"
         />
+        <Script
+          src="https://www.google.com/recaptcha/enterprise.js?render=6Le58AMtAAAAAM0cqBh6ng-cgWfA5U7Ps43OMnlB"
+          strategy="afterInteractive"
+        />
 
         <Toaster />
 

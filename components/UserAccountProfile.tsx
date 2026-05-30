@@ -342,7 +342,7 @@ const EditProfileScreen = ({ user, onClose }: { user: AuthUserRow, onClose: () =
           label="Email Address"
           required
           error={errors.email?.message}
-          inputDisabled
+          // inputDisabled
         />
 
         <UserFormInput
