@@ -173,7 +173,7 @@ const ProductDetails = ({ title, data }: { title: string, data: ProductTypes }) 
         }
     };
 
-    const handleAddToCart = ()=>{
+    const handleAddToCart = () => {
         if (!data) return;
         addItem({
             product_id: data.id, title: data.title, image: JSON.parse(data.thumbnail).url || null,
@@ -217,8 +217,13 @@ const ProductDetails = ({ title, data }: { title: string, data: ProductTypes }) 
                             onChange={handleChangeSelectedOptions}
                         />
                         <ProductDescription desc={data.description} />
-                        <SizeChart />
-                        <Description />
+                        <SizeChart
+                            size={sizes?.selected}
+                            thickness={thickness?.selected}
+                            mounting={mounting_methods?.selected}
+                            orientation={orientations?.selected}
+                        />
+                        {/* <Description /> */}
                         <Button className="w-full cursor-pointer text-white font-semibold mt-3" size="lg" onClick={handleAddToCart}>
                             Add to Cart
                         </Button>
