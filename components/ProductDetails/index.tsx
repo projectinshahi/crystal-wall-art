@@ -26,7 +26,7 @@ const ProductDetails = ({ title, data }: { title: string, data: ProductTypes }) 
     const [sizes, setSizes] = useState<ChipsOptionsSelector>()
     const [thickness, setThickness] = useState<ChipsOptionsSelector>()
     const [mounting_methods, setMountingMethods] = useState<ChipsOptionsSelector>()
-    const [orientations, setOrientations] = useState<ChipsOptionsSelector>()
+    const [orientations, setOrientations] = useState<ChipsOptionsSelector>();
 
     const height = useNavbarHeight();
 
@@ -204,7 +204,7 @@ const ProductDetails = ({ title, data }: { title: string, data: ProductTypes }) 
                                 overflow: "auto"
                             }}
                         >
-                            <ProductGallery />
+                            <ProductGallery images={data.images || []} />
                         </div>
                     </div>
                     <div className='flex flex-col gap-2 col-span-5 lg:col-span-2'>
