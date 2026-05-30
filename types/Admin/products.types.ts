@@ -10,7 +10,7 @@ export type ProductTypes = {
   created_at: string;
   updated_at: string;
   sizes: string[];
-  thicknesses: string[];
+  thickness: string[];
   mounting_methods: string[];
   orientations: string[];
   thumbnail: string;
