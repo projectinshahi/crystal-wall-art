@@ -23,6 +23,7 @@ import { CategoryTypes } from "@/types/Admin/categories.types";
 import { toast } from "sonner";
 import { blobUrlToBase64 } from "@/lib/utils/imageUtils";
 import AdminFormInput from "../inputs/FormInput/AdminFormInput";
+import { useGlobalLoading } from "@/providers/loading-provider";
 
 export const ORIENTATION = [
   { value: "portrait", label: "Portrait" },
@@ -56,6 +57,9 @@ export type Variant = {
 
 // ─── Component ────────────────────────────────────────────────────────────────
 const ProductStepperForm = () => {
+
+  const { startLoading, stopLoading } = useGlobalLoading();
+
   const [step, setStep] = useState(0);
   const [submitState, setSubmitState] = useState<SubmitState>("idle");
   const [submitError, setSubmitError] = useState<string | null>(null);
@@ -104,19 +108,19 @@ const ProductStepperForm = () => {
   };
 
   const watchedSizes = watch("sizes");
-  const watchedThicknesses = watch("thickness");
+  const watchedThickness = watch("thickness");
   const watchedPrice = watch("price");
   const watchedImages = watch("images") || [];
   const watchedThumbnail = watch("thumbnail");
 
   // -- Generate Variants
   const generateVariants = () => {
-    if (watchedSizes.length === 0 && watchedThicknesses.length === 0) {
+    if (watchedSizes.length === 0 && watchedThickness.length === 0) {
       setVariants(prev => [...prev, { size: "", thickness: "", price: Number(watchedPrice) || 0, discount_price: null, orientation: '', stock_quantity: 0 }]);
       return;
     }
     const sizes = watchedSizes.length > 0 ? watchedSizes : [""];
-    const thicks = watchedThicknesses.length > 0 ? watchedThicknesses : [""];
+    const thicks = watchedThickness.length > 0 ? watchedThickness : [""];
     const newVariants: Variant[] = [];
     for (const s of sizes) {
       for (const t of thicks) {
@@ -185,11 +189,11 @@ const ProductStepperForm = () => {
       <AdminFormTagInput
         name="thickness"
         control={typedControl}
-        label="Thicknesses (e.g. 3mm, 5mm, 10mm)"
+        label="thickness (e.g. 3mm, 5mm, 10mm)"
         placeholder="Type a thickness and press Enter"
       />
       <AdminFormTagInput
-        name="mounting_method"
+        name="mounting_methods"
         control={typedControl}
         label="Mounting Methods (e.g. Sticker, Studs, Hanging Hook)"
         placeholder="Type a method and press Enter"
@@ -247,7 +251,7 @@ const ProductStepperForm = () => {
 
       {variants.length === 0 ? (
         <p className="text-xs text-muted-foreground italic py-4 text-center">
-          No variants yet. Add sizes and thicknesses in Details tab first, then click "Generate Variants".
+          No variants yet. Add sizes and thickness in Details tab first, then click "Generate Variants".
         </p>
       ) : (
         <div className="space-y-2">
@@ -463,6 +467,7 @@ const ProductStepperForm = () => {
 
   // ── Submit ───────────────────────────────────────────────────────────────────
   const onSubmit = async (data: ProductFormValues) => {
+    startLoading();
     try {
       setSubmitState("loading");
       setSubmitError(null);
@@ -505,7 +510,7 @@ const ProductStepperForm = () => {
         stock_quantity: data.stock_quantity,
         sizes: data.sizes,
         thickness: data.thickness,
-        mounting_method: data.mounting_method,
+        mounting_methods: data.mounting_methods,
         orientation: data.orientation,
         status: data.status,
         images: convertedImages,
@@ -552,6 +557,8 @@ const ProductStepperForm = () => {
       setSubmitError(message);
       setSubmitState("error");
       toast.error(message);
+    }finally {
+      stopLoading();
     }
   };
 

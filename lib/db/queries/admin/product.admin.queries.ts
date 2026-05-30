@@ -1,7 +1,21 @@
 export const ProductAdminQueries = {
     getAll: `
         SELECT
-            *
+            id,
+            title,
+            description,
+            price,
+            discount_price,
+            stock_quantity,
+            category_id,
+            status,
+            created_at,
+            updated_at,
+            sizes,
+            thickness,
+            mounting_methods,
+            orientations,
+            thumbnail
         FROM products
     `,
 
@@ -15,7 +29,7 @@ export const ProductAdminQueries = {
             category_id,
             status,
             sizes,
-            thicknesses,
+            thickness,
             mounting_methods,
             orientations,
             thumbnail
@@ -35,5 +49,28 @@ export const ProductAdminQueries = {
             $12
         )
         RETURNING *
+    `,
+
+    updateStatus: `
+        UPDATE products
+        SET
+            status = $1
+        WHERE id = $2
+        RETURNING
+            id,
+            title,
+            description,
+            price,
+            discount_price,
+            stock_quantity,
+            category_id,
+            status,
+            created_at,
+            updated_at,
+            sizes,
+            thickness,
+            mounting_methods,
+            orientations,
+            thumbnail
     `
 }

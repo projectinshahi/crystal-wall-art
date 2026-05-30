@@ -14,6 +14,9 @@ interface GetAdminOrderParams {
   id?: string | null;
   page?: number;
   limit?: number;
+  paymentStatus?: string;
+  status?: string;
+  search?: string;
 }
 
 interface GetAdminOrderResponse {
@@ -21,45 +24,90 @@ interface GetAdminOrderResponse {
   pagination: PaginationMeta;
 }
 
-export async function getAdminOrders(filters?: GetAdminOrderParams): Promise<GetAdminOrderResponse> {
+export async function getAdminOrders(
+  filters?: GetAdminOrderParams
+): Promise<GetAdminOrderResponse> {
 
+  const conditions: string[] = [];
+  const values: unknown[] = [];
+
+  // =====================
+  // BASE FILTERS
+  // =====================
+  if (filters?.id) {
+    values.push(filters.id);
+    conditions.push(`id = $${values.length}`);
+  }
+
+  if (filters?.status) {
+    values.push(filters.status);
+    conditions.push(`status = $${values.length}`);
+  }
+
+  if (filters?.paymentStatus) {
+    values.push(filters.paymentStatus);
+    conditions.push(`payment_status = $${values.length}`);
+  }
+
+  if (filters?.search) {
+    const searchValue = `%${filters.search}%`;
+    values.push(searchValue);
+
+    const param = `$${values.length}`;
+
+    conditions.push(`
+    (
+      LOWER(customer_name) LIKE LOWER(${param})
+      OR LOWER(customer_email) LIKE LOWER(${param})
+      OR customer_phone LIKE ${param}
+      OR LOWER(order_number) LIKE LOWER(${param})
+    )
+  `);
+  }
+
+  const whereClause =
+    conditions.length > 0
+      ? `WHERE ${conditions.join(" AND ")}`
+      : "";
+
+  // =====================
+  // PAGINATION
+  // =====================
   const page = Math.max(1, filters?.page || 1);
   const limit = Math.min(100, Math.max(1, filters?.limit || 20));
   const offset = (page - 1) * limit;
 
-  const id = filters?.id ?? null;
-
-  const whereClause = id ? `WHERE id = $1` : "";
-  const countValues: unknown[] = id ? [id] : [];
-
+  // =====================
+  // COUNT QUERY (same filters!)
+  // =====================
   const countQuery = `
     SELECT COUNT(*)::int AS total
     FROM orders
     ${whereClause}
   `;
 
-  const countRows = await readQuery<{ total: number }>(countQuery, countValues);
+  const countRows = await readQuery<{ total: number }>(
+    countQuery,
+    values
+  );
+
   const total = countRows[0]?.total ?? 0;
 
-  const dataValues: unknown[] = [];
-  let paramIndex = 1;
+  // =====================
+  // DATA QUERY (reuse filters)
+  // =====================
+  const dataValues = [...values];
 
-  let filterClause = "";
-  if (id) {
-    filterClause = `WHERE id = $${paramIndex++}`;
-    dataValues.push(id);
-  }
-
-  const limitParam = paramIndex++;
-  const offsetParam = paramIndex++;
-  dataValues.push(limit, offset);
+  // add pagination params safely
+  dataValues.push(limit);
+  dataValues.push(offset);
 
   const query = `
     ${OrdersAdminQueries.getAll}
-    ${filterClause}
+    ${whereClause}
     ORDER BY created_at DESC
-    LIMIT $${limitParam}
-    OFFSET $${offsetParam}
+    LIMIT $${dataValues.length - 1}
+    OFFSET $${dataValues.length}
   `;
 
   const rows = await readQuery<AdminOrderDTO>(query, dataValues);
@@ -95,7 +143,7 @@ export async function getAdminOrderedShipmentsByOrderId(orderId: string): Promis
 
 }
 
-export async function addAdminOrderedShipmentsByOrderId(orderId: string, shipmentNumber: string, courier: string, trackingId: string ): Promise<AdminOrderedShipmentsDTO[]> {
+export async function addAdminOrderedShipmentsByOrderId(orderId: string, shipmentNumber: string, courier: string, trackingId: string): Promise<AdminOrderedShipmentsDTO[]> {
 
   const query = OrderedShipmentsAdminQueries.createShipment;
 
@@ -108,12 +156,12 @@ export async function addAdminOrderedShipmentsByOrderId(orderId: string, shipmen
 export async function deleteAdminOrderShipmentById(shipmentId: string) {
   const query = OrderedShipmentsAdminQueries.deleteShipment;
 
-    const rows = await writeQuery<AdminOrderedShipmentsDTO>(
-        query,
-        [shipmentId]
-    );
+  const rows = await writeQuery<AdminOrderedShipmentsDTO>(
+    query,
+    [shipmentId]
+  );
 
-    return rows.map(toAdminOrderedShipmentsDTO);
+  return rows.map(toAdminOrderedShipmentsDTO);
 }
 
 type UpdateShipmentPayload = {
@@ -146,10 +194,10 @@ export async function updateAdminShipmentById(
   );
 
   if (!rows.length) {
-        return null;
-    }
+    return null;
+  }
 
-    return toAdminOrderedShipmentsDTO(rows[0]);
+  return toAdminOrderedShipmentsDTO(rows[0]);
 }
 
 export async function getAdminOrderTimelinesByOrderId(orderId: string): Promise<AdminOrderTimelinesDTO[]> {
@@ -172,36 +220,36 @@ export async function getAdminShipmentItemsByShipmentIds(shipmentIds: string[]):
         ORDER BY created_at ASC
     `;
 
-    const rows = await readQuery<AdminOrderedShipmentItemsDTO>(query, [shipmentIds]);
+  const rows = await readQuery<AdminOrderedShipmentItemsDTO>(query, [shipmentIds]);
 
-    return rows.map(toAdminOrderedShipmentItemsDTO)
+  return rows.map(toAdminOrderedShipmentItemsDTO)
 }
 
 export async function addShipmentItems(
-    shipmentId: string,
-    items: {
-        order_item_id: string;
-        quantity: number;
-    }[]
+  shipmentId: string,
+  items: {
+    order_item_id: string;
+    quantity: number;
+  }[]
 ) {
-    if (!items.length) return [];
+  if (!items.length) return [];
 
-    const values = items
-        .map(
-            (_, index) =>
-                `($1, $${index * 2 + 2}, $${index * 2 + 3})`
-        )
-        .join(", ");
+  const values = items
+    .map(
+      (_, index) =>
+        `($1, $${index * 2 + 2}, $${index * 2 + 3})`
+    )
+    .join(", ");
 
-    const params = [
-        shipmentId,
-        ...items.flatMap((item) => [
-            item.order_item_id,
-            item.quantity,
-        ]),
-    ];
+  const params = [
+    shipmentId,
+    ...items.flatMap((item) => [
+      item.order_item_id,
+      item.quantity,
+    ]),
+  ];
 
-    const query = `
+  const query = `
         INSERT INTO shipment_items (
             shipment_id,
             order_item_id,
@@ -211,5 +259,5 @@ export async function addShipmentItems(
         RETURNING *;
     `;
 
-    return await writeQuery(query, params);
+  return await writeQuery(query, params);
 }

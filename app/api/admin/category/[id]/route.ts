@@ -81,7 +81,7 @@ export const PUT = withHandler(
     }
 
     // DEFAULT TO EXISTING IMAGE
-    let image_url = existing.image_url;
+    let image_url = JSON.parse(existing[0].image_url)
 
     // NEW IMAGE UPLOAD
     if (file && file.size > 0) {

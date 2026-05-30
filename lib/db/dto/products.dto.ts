@@ -1,4 +1,4 @@
-import { ProductTypes, ProductVariantTypes } from "@/types/Admin/products.types";
+import { ProductImage, ProductTypes, ProductVariantTypes } from "@/types/Admin/products.types";
 
 export type AdminProductDTO = {
     id: string;
@@ -12,10 +12,12 @@ export type AdminProductDTO = {
     created_at: string;
     updated_at: string;
     sizes: string[];
-    thicknesses: string[];
+    thickness: string[];
     mounting_methods: string[];
     orientations: string[];
     thumbnail: string;
+    images?: string[];
+
 };
 
 export type PublicProductDTO = {
@@ -26,10 +28,11 @@ export type PublicProductDTO = {
     discount_price: number;
     category_id: string;
     sizes: string[];
-    thicknesses: string[];
+    thickness: string[];
     mounting_methods: string[];
     orientations: string[];
     thumbnail: string;
+    images?: ProductImage[];
 };
 
 export type PublicProductVariantDTO = {
@@ -57,7 +60,7 @@ export function toAdminProductDTO(
         created_at: row.created_at,
         updated_at: row.updated_at,
         sizes: row.sizes,
-        thicknesses: row.thicknesses,
+        thickness: row.thickness,
         mounting_methods: row.mounting_methods,
         orientations: row.orientations,
         thumbnail: row.thumbnail
@@ -75,10 +78,11 @@ export function toPublicProductDTO(
         discount_price: row.discount_price,
         category_id: row.category_id,
         sizes: row.sizes,
-        thicknesses: row.thicknesses,
+        thickness: row.thickness,
         mounting_methods: row.mounting_methods,
         orientations: row.orientations,
-        thumbnail: row.thumbnail
+        thumbnail: row.thumbnail,
+        images: row.images?.map(image => image) ?? []
     };
 }
 

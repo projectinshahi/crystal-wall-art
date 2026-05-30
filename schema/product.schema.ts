@@ -42,11 +42,11 @@ export const productSchema = z
 
     // Tag arrays
     sizes: z.array(z.string().min(1).trim()).optional().default([]),
-    thicknesses: z.array(z.string().min(1).trim()).optional().default([]),
+    thickness: z.array(z.string().min(1).trim()).optional().default([]),
     mounting_methods: z.array(z.string().min(1).trim()).optional().default([]),
 
     // Multi-select
-    orientations: z.array(orientationEnum),
+    orientation: z.array(orientationEnum),
 
     // Status
     status: productStatusEnum.default("draft"),
@@ -95,7 +95,7 @@ export type ProductFormValues = {
   stock_quantity: number;
   sizes: string[];
   thickness: string[];
-  mounting_method: string[];
+  mounting_methods: string[];
   orientation: ("portrait" | "landscape" | "square")[];
   status: "draft" | "active" | "inactive";
   images?: ImageValue[];
@@ -113,7 +113,7 @@ export const productDefaultValues: ProductFormValues = {
   stock_quantity: 0,
   sizes: [],
   thickness: [],
-  mounting_method: [],
+  mounting_methods: [],
   orientation: [],
   status: "draft",
   images: [],
@@ -126,7 +126,7 @@ export const productStepFields: Record<string, (keyof ProductFormValues)[]> = {
   details: [
     "title", "description", "category",
     "price", "discount_price", "stock_quantity",
-    "sizes", "thickness", "mounting_method",
+    "sizes", "thickness", "mounting_methods",
     "orientation", "status",
   ],
   images: ["images"],
