@@ -15,6 +15,20 @@ export const AccountQueries = {
             updated_at
     `,
 
+    updatePassword: `
+        UPDATE auth_users
+        SET password_hash = $2
+        WHERE id = $1
+        RETURNING id
+    `,
+
+    getAuthUserById: `
+        SELECT id, password_hash
+        FROM auth_users
+        WHERE id = $1
+        LIMIT 1
+    `,
+
     updateProfile: `
         UPDATE user_profiles
         SET
