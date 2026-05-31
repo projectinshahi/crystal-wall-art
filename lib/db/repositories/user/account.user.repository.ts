@@ -42,3 +42,21 @@ export async function updateAccountProfile(
 
     return rows?.[0] ?? null;
 }
+
+export async function getAuthUserById(userId: string) {
+    const rows = await readQuery(
+        AccountQueries.getAuthUserById,
+        [userId]
+    );
+
+    return rows?.[0] ?? null;
+}
+
+export async function updateUserPassword(userId: string, passwordHash: string) {
+    const rows = await writeQuery(
+        AccountQueries.updatePassword,
+        [userId, passwordHash]
+    );
+
+    return rows?.[0] ?? null;
+}

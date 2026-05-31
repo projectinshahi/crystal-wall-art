@@ -38,7 +38,7 @@ const UserAccountProfile = () => {
 
   const [ordersList, setOrdersList] = useState<UserOrders[]>([]);
   const [loadingOrders, setLoadingOrders] = useState(true);
-  const [showEditProfile, setShowEditProfile] = useState<boolean>(false);
+  const [selectedDialog, setSelectedDialog] = useState<"edit" | "password" | null>(null);
 
   // Redirect unauthenticated users
   useEffect(() => {
@@ -115,7 +115,13 @@ const UserAccountProfile = () => {
         <div className="space-y-6 animate-fade-in">
 
           {/* Header */}
-          <div className="flex items-center justify-between">
+          <div className="w-full flex flex-end justify-end">
+            <Button variant="outline" size="sm" onClick={handleLogout}>
+              <LogOut className="h-4 w-4 mr-2" />
+              Logout
+            </Button>
+          </div>
+          {/* <div className="flex flex-col sm:flex-row sm:items-center gap-4 sm:gap-0 justify-between">
             <div className="flex items-center gap-3">
               <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center overflow-hidden">
                 <User className="h-6 w-6 text-primary" />
@@ -130,14 +136,73 @@ const UserAccountProfile = () => {
               </div>
             </div>
 
-            <div className="flex items-center gap-2">
-              <Button variant="outline" size="sm" onClick={() => setShowEditProfile(true)}>
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                className="w-full sm:w-auto"
+                onClick={() => setSelectedDialog("password")}
+              >
+                Change Password
+              </Button>
+
+              <Button
+                variant="outline"
+                size="sm"
+                className="w-full sm:w-auto"
+                onClick={() => setSelectedDialog("edit")}
+              >
                 Edit Profile
               </Button>
 
               <Button variant="outline" size="sm" onClick={handleLogout}>
                 <LogOut className="h-4 w-4 mr-2" />
                 Logout
+              </Button>
+            </div>
+          </div> */}
+
+          <div className="grid gap-4 sm:grid-cols-[1fr_auto]">
+            <div className="rounded-2xl border bg-card p-4 space-y-4">
+              <div>
+                <p className="text-sm uppercase tracking-wide text-muted-foreground">
+                  Profile details
+                </p>
+                <p className="text-base font-medium mt-2">
+                  {session.user.email}
+                </p>
+                <p className="text-sm text-muted-foreground">
+                  {session.user.phone ?? "Phone not added"}
+                </p>
+              </div>
+
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div className="rounded-2xl border border-slate-200 bg-slate-50 p-3">
+                  <p className="text-xs uppercase tracking-wide text-muted-foreground">
+                    Orders
+                  </p>
+                  <p className="text-xl font-semibold">{ordersList.length}</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="rounded-2xl border bg-card p-4 flex flex-col justify-center gap-3">
+              <Typography variant="body" className="text-muted-foreground">
+                Keep your account secure and update your details here.
+              </Typography>
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => setSelectedDialog("edit")}
+              >
+                Edit profile
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setSelectedDialog("password")}
+              >
+                Change password
               </Button>
             </div>
           </div>
@@ -203,13 +268,23 @@ const UserAccountProfile = () => {
         </div>
       </div>
 
-      <Dialog open={showEditProfile} onOpenChange={setShowEditProfile}>
+      <Dialog
+        open={selectedDialog !== null}
+        onOpenChange={(open) => {
+          if (!open) setSelectedDialog(null);
+        }}
+      >
         <DialogContent className="sm:max-w-md p-0 gap-0 overflow-hidden">
-          <EditProfileScreen
-            user={session.user as AuthUserRow}
-            onClose={() => setShowEditProfile(false)}
-          // onLogout={handleLogout}
-          />
+          {selectedDialog === "edit" ? (
+            <EditProfileScreen
+              user={session.user as AuthUserRow}
+              onClose={() => setSelectedDialog(null)}
+            />
+          ) : selectedDialog === "password" ? (
+            <ChangePasswordScreen
+              onClose={() => setSelectedDialog(null)}
+            />
+          ) : null}
         </DialogContent>
       </Dialog>
 
@@ -233,13 +308,129 @@ const profileSchema = z.object({
     .min(10, "Please enter a valid phone number"),
 });
 
+const passwordSchema = z
+  .object({
+    current_password: z
+      .string()
+      .min(8, "Current password is required"),
+    new_password: z
+      .string()
+      .min(8, "New password must be at least 8 characters"),
+    confirm_password: z
+      .string()
+      .min(8, "Please confirm your new password"),
+  })
+  .refine((data) => data.new_password === data.confirm_password, {
+    path: ["confirm_password"],
+    message: "Passwords do not match",
+  });
+
+type ChangePasswordFormValues = {
+  current_password: string;
+  new_password: string;
+  confirm_password: string;
+};
+
 type EditProfileFormValues = {
   user_name: string;
   email: string;
   phone: string;
 };
 
-const EditProfileScreen = ({ user, onClose }: { user: AuthUserRow, onClose: () => void }) => {
+const ChangePasswordScreen = ({ onClose }: { onClose: () => void }) => {
+  const [loading, setLoading] = useState(false);
+
+  const {
+    control,
+    handleSubmit,
+    formState: { errors },
+  } = useForm<ChangePasswordFormValues>({
+    resolver: zodResolver(passwordSchema),
+    mode: "onChange",
+    defaultValues: {
+      current_password: "",
+      new_password: "",
+      confirm_password: "",
+    },
+  });
+
+  const handleSave = async (values: ChangePasswordFormValues) => {
+    try {
+      setLoading(true);
+
+      const response = await fetch(`/api/user/account/password`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(values),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data?.error || data?.message || "Failed to update password");
+      }
+
+      onClose();
+      toast.success("Password updated successfully");
+    } catch (error: any) {
+      toast.error(error?.message || "Something went wrong");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="flex flex-col min-h-full bg-white">
+      <div className="w-full flex justify-center items-center h-14 px-4 bg-primary text-white shrink-0">
+        <Typography className="font-bold" variant="body-lg">
+          Change Password
+        </Typography>
+      </div>
+
+      <div className="w-full space-y-5 flex-1 p-4">
+        <UserFormInput
+          name="current_password"
+          control={control}
+          type="password"
+          label="Current Password"
+          required
+          error={errors.current_password?.message}
+        />
+
+        <UserFormInput
+          name="new_password"
+          control={control}
+          type="password"
+          label="New Password"
+          required
+          error={errors.new_password?.message}
+        />
+
+        <UserFormInput
+          name="confirm_password"
+          control={control}
+          type="password"
+          label="Confirm Password"
+          required
+          error={errors.confirm_password?.message}
+        />
+
+        <Button
+          variant="default"
+          className="w-full"
+          disabled={loading}
+          onClick={handleSubmit(handleSave)}
+        >
+          {loading ? "Saving..." : "Update Password"}
+        </Button>
+      </div>
+    </div>
+  );
+};
+
+const EditProfileScreen = ({ user, onClose }: { user: AuthUserRow; onClose: () => void }) => {
 
   const { update } = useSession();
 
@@ -297,6 +488,7 @@ const EditProfileScreen = ({ user, onClose }: { user: AuthUserRow, onClose: () =
 
       await update({
         email: values.email,
+        phone: values.phone,
 
         profile: {
           ...user.profile,
