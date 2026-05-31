@@ -1,6 +1,29 @@
 import { err, ok, withHandler } from "@/lib/api/handler";
-import { getAdminProducts, updateProductStatus } from "@/lib/db/repositories/admin/products.admin.repository";
+import { getAdminProductById, getAdminProducts, updateProductStatus } from "@/lib/db/repositories/admin/products.admin.repository";
 import { NextResponse } from "next/server";
+
+export const GET = withHandler(
+  async ({ params }): Promise<NextResponse> => {
+    const routeParams = await params;
+    const productId = routeParams?.id;
+
+    if (!productId) {
+      return err("Product ID is required", 400);
+    }
+
+    const product = await getAdminProductById(productId);
+
+    if (!product) {
+      return err("Product not found", 404);
+    }
+
+    const response = ok({ message: "Product found", data: product });
+    response.headers.set("Cache-Control", "private, no-store");
+
+    return response;
+  },
+  { access: "admin" }
+);
 
 export const PATCH = withHandler(
   async ({ req, params }): Promise<NextResponse> => {
@@ -30,7 +53,7 @@ export const PATCH = withHandler(
     // CHECK EXISTS
     const existing = await getAdminProducts({ id: productID });
 
-    if (!existing) {
+    if (!existing?.data?.length) {
       return err(
         "Product not found",
         404
