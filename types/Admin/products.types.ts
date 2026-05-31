@@ -1,3 +1,8 @@
+export type ProductImage = {
+  id?: string;
+  image_url: string;
+};
+
 export type ProductTypes = {
   id: string;
   title: string;
@@ -14,6 +19,7 @@ export type ProductTypes = {
   mounting_methods: string[];
   orientations: string[];
   thumbnail: string;
+  images?: ProductImage[];
 };
 
 export type ProductVariantTypes = {
