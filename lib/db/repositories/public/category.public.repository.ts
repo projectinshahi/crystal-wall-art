@@ -7,8 +7,6 @@ export async function getPublicCategories(): Promise<PublicCategoryDTO[]> {
 
     try {
 
-        console.log("[getPublicCategories] Fetch started");
-
         const conditions: string[] = [];
 
         conditions.push(`deleted = FALSE`);
@@ -26,21 +24,9 @@ export async function getPublicCategories(): Promise<PublicCategoryDTO[]> {
             ORDER BY priority ASC, created_at DESC
         `;
 
-        console.log("[getPublicCategories] Executing query:", query);
-
         const rows = await readQuery<CategoryTypes>(query);
 
-        console.log(
-            "[getPublicCategories] Rows fetched:",
-            rows?.length || 0
-        );
-
         const categories = rows.map(toPublicCategoryDTO);
-
-        console.log(
-            "[getPublicCategories] DTO mapped:",
-            categories?.length || 0
-        );
 
         return categories;
 
