@@ -39,10 +39,7 @@ type SubmitState = "idle" | "loading" | "success" | "error";
 type ProductControl = Control<ProductFormValues, any, ProductFormValues>;
 
 const getImageUrl = (img: any) => {
-
-  if (!img) {
-    return "";
-  }
+  if (!img) return "";
 
   if (typeof img === "string") {
     try {
@@ -53,13 +50,12 @@ const getImageUrl = (img: any) => {
     }
   }
 
-  if ("previewUrl" in img) {
-    return img.previewUrl;
-  }
+  if ("previewUrl" in img) return img.previewUrl;  // newly uploaded (pending)
 
-  if ("image_url" in img) {
-    return JSON.parse(img.image_url).url;
-  }
+  if ("url" in img) return img.url;                // existing/uploaded ← ADD THIS
+
+  if ("img" in img) return img.img.url;            // nested shape
+
   return "";
 };
 
@@ -331,6 +327,7 @@ const ProductStepperForm = ({ productId }: ProductStepperFormProps) => {
 
               <AdminFormSelect
                 // name="orientation"
+                value={v.orientation}
                 control={typedControl}
                 required
                 options={ORIENTATION as any}
@@ -655,7 +652,6 @@ const ProductStepperForm = ({ productId }: ProductStepperFormProps) => {
       if (!res.ok) throw new Error("Product not found");
       
       const { data: product } = await res.json();
-      console.log("product", product);
 
       const normalizeProductImage = (img: any) => {
         if (!img) return null;
@@ -769,7 +765,6 @@ const ProductStepperForm = ({ productId }: ProductStepperFormProps) => {
   // ── Form ─────────────────────────────────────────────────────────────────────
   return (
     <form
-      onSubmit={handleSubmit(onSubmit)}
       className="space-y-6 mt-4"
       noValidate
     >
@@ -801,7 +796,7 @@ const ProductStepperForm = ({ productId }: ProductStepperFormProps) => {
         </Button>
 
         {isLastStep ? (
-          <Button type="submit" disabled={isSubmitting || isLoading}>
+          <Button type="button" disabled={isSubmitting || isLoading} onClick={handleSubmit(onSubmit)}>
             {isSubmitting ? (productId ? "Updating..." : "Creating...") : (productId ? "Update Product" : "Create Product")}
           </Button>
         ) : (
