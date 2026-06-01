@@ -1,7 +1,7 @@
 import { readQuery, writeQuery } from "@/lib/db";
 import { AdminProductDTO, toAdminProductDTO } from "../../dto/products.dto";
 import { ProductAdminQueries } from "../../queries/admin/product.admin.queries";
-import { ProductTypes } from "@/types/Admin/products.types";
+import { ProductImage, ProductTypes, ProductVariantTypes } from "@/types/Admin/products.types";
 import { PoolClient } from "pg";
 import { ProductFormValues } from "@/schema/product.schema";
 import { err } from "@/lib/api/handler";
@@ -222,4 +222,28 @@ export async function updateProductStatus(
   return toAdminProductDTO(
     rows[0]
   );
+}
+
+export async function getAdminProductById(
+  productId: string
+): Promise<AdminProductDTO | null> {
+  console.log("productId",)
+  const rows = await readQuery<
+    ProductTypes & {
+      images?: ProductImage[];
+      variants?: ProductVariantTypes[];
+      category_title?: string;
+    }
+  >(ProductAdminQueries.getById, [productId]);
+
+  const row = rows?.[0];
+  if (!row) return null;
+
+  return {
+    ...toAdminProductDTO(row),
+    // @ts-ignore
+    images: row.images ?? [],
+    variants: row.variants ?? [],
+    category_title: row.category_title,
+  };
 }

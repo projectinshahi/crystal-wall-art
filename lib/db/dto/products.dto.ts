@@ -20,6 +20,14 @@ export type AdminProductDTO = {
 
 };
 
+export type AdminProductDetailsDTO = AdminProductDTO & {
+    images: ProductImage[];
+    variants: ProductVariantTypes[];
+    category_title?: string;
+};
+
+export type { ProductImage, ProductVariantTypes };
+
 export type PublicProductDTO = {
     id: string;
     title: string;
