@@ -23,7 +23,7 @@ const page = async ({
         }
       />
 
-      <AddProductsPage/>
+      <AddProductsPage productId={id} />
     </>
   )
 }

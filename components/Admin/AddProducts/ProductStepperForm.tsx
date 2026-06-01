@@ -16,7 +16,7 @@ import AdminFormTagInput from "../inputs/FormTagInput";
 import { Typography } from "@/components/ui/Typography";
 import { Button } from "@/components/ui/button";
 import { CardTitle } from "@/components/ui/card";
-import { Plus, Trash2, X } from "lucide-react";
+import { Plus, Trash2, X, Loader2 } from "lucide-react";
 import AdminImageUpload from "../inputs/ImageUpload";
 import SucessScreen from "./SucessScreen";
 import { CategoryTypes } from "@/types/Admin/categories.types";
@@ -39,9 +39,27 @@ type SubmitState = "idle" | "loading" | "success" | "error";
 type ProductControl = Control<ProductFormValues, any, ProductFormValues>;
 
 const getImageUrl = (img: any) => {
-  if (!img) return "";
-  if ("previewUrl" in img) return img.previewUrl; // pending
-  if ("url" in img) return img.url; // uploaded
+
+  if (!img) {
+    return "";
+  }
+
+  if (typeof img === "string") {
+    try {
+      const parsed = JSON.parse(img);
+      return parsed.url ?? "";
+    } catch (e) {
+      return img;
+    }
+  }
+
+  if ("previewUrl" in img) {
+    return img.previewUrl;
+  }
+
+  if ("image_url" in img) {
+    return JSON.parse(img.image_url).url;
+  }
   return "";
 };
 
@@ -55,8 +73,12 @@ export type Variant = {
   stock_quantity: number;
 };
 
+interface ProductStepperFormProps {
+  productId?: string;
+}
+
 // ─── Component ────────────────────────────────────────────────────────────────
-const ProductStepperForm = () => {
+const ProductStepperForm = ({ productId }: ProductStepperFormProps) => {
 
   const { startLoading, stopLoading } = useGlobalLoading();
 
@@ -68,6 +90,7 @@ const ProductStepperForm = () => {
   >([]);
   const [variants, setVariants] = useState<Variant[]>([]);
   const [categories, setCategories] = useState<CategoryTypes[]>([]);
+  const [isLoading, setIsLoading] = useState(!!productId);
 
   // Provide all three generics explicitly:
   //   useForm<TFieldValues, TContext, TTransformedValues>
@@ -477,7 +500,7 @@ const ProductStepperForm = () => {
         (data.images as (File | string)[]).map(async (img, index) => {
           try {
             if (img instanceof File) return await fileToBase64(img);
-            if (img.startsWith("blob:")) return await blobUrlToBase64(img);
+            if (typeof img === 'string' && img.startsWith("blob:")) return await blobUrlToBase64(img);
             return img; // plain https:// URL (edit mode)
           } catch {
             throw new Error(`Failed to process image ${index + 1}. Please re-upload it.`);
@@ -494,7 +517,7 @@ const ProductStepperForm = () => {
         });
       }
 
-      const convertedThumbnail = data.thumbnail?.startsWith("blob:")
+      const convertedThumbnail = data.thumbnail && typeof data.thumbnail === 'string' && data.thumbnail.startsWith("blob:")
         ? await blobUrlToBase64(data.thumbnail).catch(() => {
           throw new Error("Failed to process thumbnail. Please re-select it.");
         })
@@ -518,10 +541,14 @@ const ProductStepperForm = () => {
       };
 
       // ── 3. Send to API ───────────────────────────────────────────────────
+      const isEdit = !!productId;
+      const url = isEdit ? `/api/admin/product/${productId}` : "/api/admin/product";
+      const method = isEdit ? "PUT" : "POST";
+
       let addProductRes: Response;
       try {
-        addProductRes = await fetch("/api/admin/product", {
-          method: "POST",
+        addProductRes = await fetch(url, {
+          method,
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             product_details: payload,
@@ -548,8 +575,8 @@ const ProductStepperForm = () => {
 
       // ── 5. Success ───────────────────────────────────────────────────────
       setSubmitState("success");
-      toast.success("Product created successfully!");
-      reset()
+      toast.success(isEdit ? "Product updated successfully!" : "Product created successfully!");
+      if (!isEdit) reset();
 
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : "An unexpected error occurred.";
@@ -606,24 +633,138 @@ const ProductStepperForm = () => {
   }, [watchedImages]);
 
   const loadInitialData = async () => {
-    const res = await fetch('/api/admin/category', { method: 'GET' });
+    try {
+      const res = await fetch('/api/admin/category', { method: 'GET' });
+      const data = await res.json();
+      setCategories(
+        data.data.map((item: CategoryTypes) => ({
+          label: item.title,
+          value: item.id,
+        })) || []
+      );
+    } catch (err) {
+      console.error("Failed to load categories:", err);
+      toast.error("Failed to load categories");
+    }
+  };
 
-    const data = await res.json();
-    setCategories(
-      data.data.map((item: CategoryTypes) => ({
-        label: item.title,
-        value: item.id,
-      })) || []
-    );
-  }
+  const loadProductData = async () => {
+    if (!productId) return;
+    try {
+      const res = await fetch(`/api/admin/product/${productId}`);
+      if (!res.ok) throw new Error("Product not found");
+      
+      const { data: product } = await res.json();
+      console.log("product", product);
 
-  // Load Inital Data
+      const normalizeProductImage = (img: any) => {
+        if (!img) return null;
+
+        if (typeof img === "string") {
+          return { url: img };
+        }
+
+        if (typeof img === "object") {
+          if (typeof img.url === "string") {
+            return {
+              url: img.url,
+              public_id:
+                typeof img.public_id === "string" ? img.public_id : undefined,
+            };
+          }
+
+          if (typeof img.image_url === "string") {
+            try {
+              const parsed = JSON.parse(img.image_url);
+              return {
+                url: parsed.url,
+                public_id:
+                  typeof parsed.public_id === "string" ? parsed.public_id : undefined,
+              };
+            } catch {
+              return { url: img.image_url };
+            }
+          }
+        }
+
+        return null;
+      };
+
+      const normalizedImages = (product.images || [])
+        .map((item: any) => normalizeProductImage(item))
+        .filter(Boolean);
+
+      const normalizedThumbnail = getImageUrl(product.thumbnail);
+
+      // Populate form fields
+      reset({
+        title: product.title,
+        category: product.category_id,
+        description: product.description,
+        price: product.price,
+        discount_price: product.discount_price || undefined,
+        stock_quantity: product.stock_quantity,
+        sizes: product.sizes || [],
+        thickness: product.thickness || [],
+        mounting_methods: product.mounting_methods || [],
+        orientation: product.orientations || [],
+        status: product.status,
+        images: normalizedImages,
+        thumbnail: normalizedThumbnail,
+      });
+
+      // Set orientations
+      setSelectedOrientations(product.orientations || []);
+
+      // Populate variants
+      if (product.variants && Array.isArray(product.variants)) {
+        const formattedVariants: Variant[] = product.variants.map((v: any) => ({
+          id: v.id,
+          size: v.size || "",
+          thickness: v.thickness || "",
+          price: v.price,
+          discount_price: v.discount_price || null,
+          orientation: v.orientation || "",
+          stock_quantity: v.stock_quantity || 0,
+        }));
+        setVariants(formattedVariants);
+      }
+
+      toast.success("Product loaded successfully");
+    } catch (err) {
+      console.error("Failed to load product:", err);
+      toast.error("Failed to load product data");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Load Initial Data
   useEffect(() => {
     loadInitialData();
   }, []);
 
+  // Load Product Data for Edit Mode
+  useEffect(() => {
+    if (productId) {
+      loadProductData();
+    } else {
+      setIsLoading(false);
+    }
+  }, [productId]);
+
   // ── Success screen ───────────────────────────────────────────────────────────
-  if (submitState === "success") return <SucessScreen handleReset={handleReset} />;
+  if (submitState === "success") return <SucessScreen handleReset={handleReset} title={productId ? "Product Updated Successfully!" : "Product Created Successfully!"} />;
+
+  // ── Loading state for product data ────────────────────────────────────────────
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+        <span className="ml-2 text-muted-foreground">Loading product data...</span>
+      </div>
+    );
+  }
 
   // ── Form ─────────────────────────────────────────────────────────────────────
   return (
@@ -654,17 +795,17 @@ const ProductStepperForm = () => {
           type="button"
           variant="outline"
           onClick={prevStep}
-          disabled={step === 0 || isSubmitting}
+          disabled={step === 0 || isSubmitting || isLoading}
         >
           Back
         </Button>
 
         {isLastStep ? (
-          <Button type="submit" disabled={isSubmitting}>
-            {isSubmitting ? "Creating..." : "Create Product"}
+          <Button type="submit" disabled={isSubmitting || isLoading}>
+            {isSubmitting ? (productId ? "Updating..." : "Creating...") : (productId ? "Update Product" : "Create Product")}
           </Button>
         ) : (
-          <Button type="button" onClick={nextStep} disabled={isSubmitting}>
+          <Button type="button" onClick={nextStep} disabled={isSubmitting || isLoading}>
             Next
           </Button>
         )}
