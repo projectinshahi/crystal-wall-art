@@ -79,7 +79,14 @@ const DesktopData = ({ products, meta, categories, setData }: Props) => {
         }
     };
 
-    const handleDelete = async (id: string) => { };
+    const getThumbUrl = (thumbnail: string | null | undefined): string | null => {
+        if (!thumbnail) return null;
+        try {
+            return JSON.parse(thumbnail).url ?? null;
+        } catch {
+            return thumbnail; // fallback: treat as plain URL string
+        }
+    };
 
     return (
         <>
@@ -102,7 +109,7 @@ const DesktopData = ({ products, meta, categories, setData }: Props) => {
                         <tbody>
                             {products.map((p: ProductTypes) => {
                                 const cat = categories.find(c => c.id === p.category_id);
-                                const image = p.thumbnail ? JSON.parse(p.thumbnail).url : null;
+                                const image = getThumbUrl(p.thumbnail);
 
                                 return (
                                     <tr key={p.id}>
@@ -145,9 +152,9 @@ const DesktopData = ({ products, meta, categories, setData }: Props) => {
                                                 <Button size="icon" variant="ghost" onClick={() => router.push(`/admin/products/${p.id}`)}>
                                                     <Eye className="h-4 w-4" />
                                                 </Button>
-                                                {/* <Button size="icon" variant="ghost" onClick={() => router.push(`/admin/products/new?id=${p.id}`)}>
+                                                <Button size="icon" variant="ghost" onClick={() => router.push(`/admin/products/new?id=${p.id}`)}>
                                                     <Edit className="h-4 w-4" />
-                                                </Button> */}
+                                                </Button>
                                             </div>
                                         </td>
                                     </tr>

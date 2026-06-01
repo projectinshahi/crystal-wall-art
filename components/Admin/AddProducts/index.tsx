@@ -1,9 +1,13 @@
 import React from 'react'
 import ProductStepperForm from './ProductStepperForm'
 
-const AddProductsPage = () => {
+interface Props {
+    productId?: string;
+}
+
+const AddProductsPage = ({ productId }: Props) => {
     return (
-        <ProductStepperForm />
+        <ProductStepperForm productId={productId} />
     )
 }
 
