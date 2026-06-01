@@ -18,12 +18,10 @@ type CategoryWithImage = CategoryFormOutput & {
 };
 
 const CategoriesSection = async () => {
-    console.log("url",process.env.NEXT_PUBLIC_URL);
 
     const res = await fetch(`${process.env.NEXT_PUBLIC_URL}/api/category?active=true`);
 
     const catRes = await res.json();
-    console.log("catRes",catRes);
 
     if (!catRes?.success) return null;
 

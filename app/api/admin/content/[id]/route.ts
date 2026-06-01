@@ -41,6 +41,18 @@ export const PUT = withHandler(
 
         const formData = await req.formData();
 
+        // Debug: log incoming form keys and presence of file/remove flag
+        try {
+            const keys: string[] = [];
+            formData.forEach((v, k) => keys.push(k));
+            const rf = String(formData.get("remove_image") || "");
+            const f = formData.get("file") as File | null;
+            if (f) console.log("[admin/content PUT] file present:", f.name, f.type, f.size);
+            else console.log("[admin/content PUT] no file in formData");
+        } catch (e) {
+            console.warn("[admin/content PUT] failed to inspect formData", e);
+        }
+
         // Sanitize inputs
         const type = sanitizeString(String(formData.get("type") || ""), 120);
         const title = sanitizeString(String(formData.get("title") || ""), 120);
@@ -50,7 +62,8 @@ export const PUT = withHandler(
         const folder = sanitizeString(String(formData.get("folder") || "categories"), 50);
         const file = formData.get("file") as File | null;
 
-        const existing: any = await getAdminContents({ id: contentId });
+        const existingRaw: any = await getAdminContents({ id: contentId });
+        const existing = Array.isArray(existingRaw) ? existingRaw[0] : existingRaw;
 
         if (!existing) {
             return err(
@@ -66,8 +79,26 @@ export const PUT = withHandler(
             );
         }
 
-        // DEFAULT TO EXISTING IMAGE
-        let image_url = existing.image;
+        // DEFAULT TO EXISTING IMAGE (parse stored JSON if necessary)
+        let image_url: any = null;
+        try {
+            if (existing.image) {
+                image_url = typeof existing.image === "string"
+                    ? JSON.parse(existing.image)
+                    : existing.image;
+            } else {
+                image_url = null;
+            }
+        } catch (parseErr) {
+            console.warn("[admin/content PUT] failed to parse existing.image", parseErr);
+            image_url = null;
+        }
+
+        // Honor explicit remove request from client
+        const removeImageFlag = String(formData.get("remove_image") || "");
+        if (removeImageFlag === "1" || removeImageFlag === "true") {
+            image_url = null;
+        }
 
         // NEW IMAGE UPLOAD
         if (file && file.size > 0) {
@@ -87,7 +118,6 @@ export const PUT = withHandler(
             }
 
             try {
-
                 // UPLOAD NEW IMAGE
                 const uploaded = await uploadToCloudinary(file, folder);
 
@@ -98,10 +128,9 @@ export const PUT = withHandler(
 
                 // DELETE OLD IMAGE
                 try {
-
-                    const oldImage = typeof existing.image_url === "string"
-                        ? JSON.parse(existing.image_url)
-                        : existing.image_url;
+                            const oldImage = typeof existing.image === "string"
+                            ? JSON.parse(existing.image)
+                            : existing.image;
 
                     if (oldImage?.public_id) {
                         await deleteFromCloudinary(oldImage.public_id);
@@ -128,16 +157,28 @@ export const PUT = withHandler(
         }
 
         // VALIDATION
-        const parsed = contentApiSchema.safeParse(
-            {
+        // Allow explicit null image on update (client requested removal)
+        let parsed;
+        if (image_url === null) {
+            const updateSchema = contentApiSchema.extend({ image: (contentApiSchema as any)._def.shape.image.optional().nullable() });
+            parsed = updateSchema.safeParse({
                 type,
                 title,
                 description,
                 link_url,
                 image: image_url,
                 priority,
-            }
-        );
+            });
+        } else {
+            parsed = contentApiSchema.safeParse({
+                type,
+                title,
+                description,
+                link_url,
+                image: image_url,
+                priority,
+            });
+        }
 
         if (parsed.success === false) {
             return err(
@@ -147,10 +188,16 @@ export const PUT = withHandler(
         }
 
         // UPDATE CONTENT
-        const updatedContent = await updateContent(
-            contentId,
-            parsed.data as ContentFormInput
-        )
+        let updatedContent;
+        try {
+            updatedContent = await updateContent(
+                contentId,
+                parsed.data as ContentFormInput
+            );
+        } catch (updateError) {
+            console.error("[admin/content PUT] updateContent failed:", updateError);
+            throw updateError;
+        }
 
         const response = ok({
             message: "Content updated successfully",

@@ -11,8 +11,6 @@ const HeroSection = async () => {
 
     if (!slidesRes?.success || !slidesRes.data) return null;
 
-    console.log("slidesRes", slidesRes.data);
-
     const slidesData = slidesRes?.data?.data || [];
 
     const slides =
