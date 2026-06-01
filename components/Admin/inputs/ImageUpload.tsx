@@ -18,7 +18,8 @@ type UploadedImage = {
 };
 
 // Field value is either a pending file, an uploaded image, or arrays of both
-type SingleValue = PendingImage | UploadedImage | undefined;
+type SingleValue = PendingImage | UploadedImage | null | undefined;
+
 type MultipleValue = (PendingImage | UploadedImage)[];
 
 type Props<T extends FieldValues> = {
@@ -53,7 +54,7 @@ const AdminImageUpload = <T extends FieldValues>({
   folder = "general",
   required = false,
   multiple = false,
-  hideUploadedImages=false
+  hideUploadedImages = false
 }: Props<T>) => {
   const {
     field: { value, onChange },
@@ -106,7 +107,7 @@ const AdminImageUpload = <T extends FieldValues>({
   const handleRemoveSingle = () => {
     const prev = value as SingleValue;
     if (isPending(prev)) revoke(prev.previewUrl);
-    onChange(undefined);
+    onChange(null);  // ← use null, not undefined
     if (inputRef.current) inputRef.current.value = "";
   };
 
