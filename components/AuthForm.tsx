@@ -22,8 +22,9 @@ const AuthForm = () => {
     });
 
     const [loading, setLoading] = useState(false);
-    const [mode, setMode] = useState<'login' | 'signup'>('login');
+    const [mode, setMode] = useState<'login' | 'signup' | 'forgot'>('login');
     const [error, setError] = useState<string>('');
+    const [infoMessage, setInfoMessage] = useState<string>('');
 
     const handleChange = (key: string, value: string) => {
         setForm(prev => ({ ...prev, [key]: value }));
@@ -32,10 +33,11 @@ const AuthForm = () => {
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setLoading(true);
+        setError('');
+        setInfoMessage('');
 
         try {
             if (mode === "signup") {
-                // 1. Create user
                 const res = await fetch("/api/auth/signup", {
                     method: "POST",
                     body: JSON.stringify(form),
@@ -61,6 +63,27 @@ const AuthForm = () => {
                     router.push('/')
                     router.refresh();
                 }
+            } else if (mode === 'forgot') {
+                const res = await fetch('/api/auth/forgot-password', {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        email: form.email,
+                        new_password: form.password,
+                        confirm_password: form.confirmPassword,
+                    }),
+                });
+
+                const data = await res.json();
+
+                if (!res.ok) {
+                    setError(data.error || 'Unable to reset password');
+                    toast(data.error || 'Unable to reset password');
+                    return;
+                }
+
+                setInfoMessage('Password reset successfully. You can now login with your new password.');
+                setMode('login');
+                setForm(prev => ({ ...prev, password: '', confirmPassword: '' }));
             } else {
                 const result = await signIn("client-login", {
                     email: form.email,
@@ -92,16 +115,23 @@ const AuthForm = () => {
                     <div className="flex flex-col items-center space-y-3 mb-6">
                         <img src="/logo/logo.svg" alt="Logo" className="h-14" />
                         <Typography variant="h4">
-                            {mode === 'signup' ? 'Create account' : 'Welcome back'}
+                            {mode === 'signup'
+                                ? 'Create account'
+                                : mode === 'forgot'
+                                ? 'Reset your password'
+                                : 'Welcome back'}
                         </Typography>
                         <Typography variant="body" className="text-muted-foreground text-sm">
                             {mode === 'signup'
                                 ? 'Sign up to get started'
+                                : mode === 'forgot'
+                                ? 'Enter your email and a new password'
                                 : 'Login to continue'}
                         </Typography>
                     </div>
 
                     {error && (<Typography variant='body-sm' className='text-destructive mb-3 font-semibold'>{error}</Typography>)}
+                    {infoMessage && (<Typography variant='body-sm' className='text-success mb-3 font-semibold'>{infoMessage}</Typography>)}
 
                     <form className="space-y-4" onSubmit={handleSubmit}>
 
@@ -184,7 +214,7 @@ const AuthForm = () => {
                         </div>
 
                         {/* Confirm Password */}
-                        {mode === 'signup' && (
+                        {(mode === 'signup' || mode === 'forgot') && (
                             <div className="relative">
                                 <Input
                                     id="confirmPassword"
@@ -210,8 +240,29 @@ const AuthForm = () => {
                                 <button
                                     type="button"
                                     className="text-sm text-primary hover:underline"
+                                    onClick={() => {
+                                        setMode('forgot');
+                                        setError('');
+                                        setInfoMessage('');
+                                    }}
                                 >
                                     Forgot password?
+                                </button>
+                            </div>
+                        )}
+
+                        {mode === 'forgot' && (
+                            <div className="text-right">
+                                <button
+                                    type="button"
+                                    className="text-sm text-muted-foreground hover:underline"
+                                    onClick={() => {
+                                        setMode('login');
+                                        setError('');
+                                        setInfoMessage('');
+                                    }}
+                                >
+                                    Back to login
                                 </button>
                             </div>
                         )}
@@ -223,7 +274,11 @@ const AuthForm = () => {
                             className="w-full h-14 rounded-xl text-base font-semibold shadow-lg"
                         >
                             {loading && <Loader2 className="h-5 w-5 animate-spin mr-2" />}
-                            {mode === 'signup' ? 'Create Account' : 'Login'}
+                            {mode === 'signup'
+                                ? 'Create Account'
+                                : mode === 'forgot'
+                                ? 'Reset Password'
+                                : 'Login'}
                         </Button>
                     </form>
 

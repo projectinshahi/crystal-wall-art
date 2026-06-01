@@ -85,7 +85,7 @@ export default function AdminRootLayout({
       <body
         className={`antialiased ${inter.variable} ${poppins.variable}`}
       >
-        <Toaster />
+        <Toaster position="top-right" />
         <Providers>
           <AdminLayout>
             {children}

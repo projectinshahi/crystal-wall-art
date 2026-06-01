@@ -54,6 +54,7 @@ export default function AppTabs({
         {tabs.map((tab) => (
           <TabsTrigger
             key={tab.value}
+            type="button"
             value={tab.value}
             disabled={tab.disabled}
             className={triggerClassName}

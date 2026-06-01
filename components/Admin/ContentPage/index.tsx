@@ -18,7 +18,7 @@ interface Props {
 
 const ContentPage = ({data,metaData}: Props) => {
 
-    const [editContent, setEditContent] = useState<ContentFormOutput | null>()
+    const [editContent, setEditContent] = useState<ContentFormOutput | null>(null)
     const [dialogOpen, setDialogOpen] = useState<boolean>(false);
     const [isLoading, setIsLoading] = useState<boolean>(true);
     const [contentsData, setContentsData] = useState<ContentFormOutput[]>(data || [])
@@ -52,6 +52,24 @@ const ContentPage = ({data,metaData}: Props) => {
         setDialogOpen(true);
     };
 
+    // Open Edit Modal
+    const openEditDialog = (content: ContentFormOutput) => {
+        setEditContent(content);
+
+        const parsedImage = content.image ? JSON.parse(content.image) : undefined;
+
+        reset({
+            type: content.type as any || undefined,
+            title: content.title || "",
+            description: content.description ?? "",
+            image: parsedImage,
+            link_url: content.link_url ?? "",
+            priority: content.priority ?? 0,
+        });
+
+        setDialogOpen(true);
+    }
+
     const handleCloseDialog = () => {
         setDialogOpen(false);
         setEditContent(null);
@@ -74,9 +92,9 @@ const ContentPage = ({data,metaData}: Props) => {
                 <AddContentButton handleAction={openAddDialog} />
             </AdminPageHeader>
 
-            <ContectForm control={control} dialogOpen={dialogOpen} formSubmit={handleSubmit} closeDialog={handleCloseDialog} setError={setError} editContent={editContent && editContent.id} setContentsData={setContentsData} />
+            <ContectForm control={control} dialogOpen={dialogOpen} formSubmit={handleSubmit} closeDialog={handleCloseDialog} setError={setError} editContent={editContent ?? null} setContentsData={setContentsData} />
 
-            <ContentsListing contentsData={contentsData} setContentsData={setContentsData}/>
+            <ContentsListing contentsData={contentsData} setContentsData={setContentsData} onEdit={openEditDialog} />
         </div>
     )
 }

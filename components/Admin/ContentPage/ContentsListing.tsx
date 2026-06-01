@@ -16,9 +16,10 @@ import { useGlobalLoading } from '@/providers/loading-provider'
 interface Props {
     contentsData: ContentFormOutput[];
     setContentsData: any;
+    onEdit?: (c: ContentFormOutput) => void;
 }
 
-const ContentsListing = ({ contentsData, setContentsData }: Props) => {
+const ContentsListing = ({ contentsData, setContentsData, onEdit }: Props) => {
 
     const { startLoading, stopLoading } = useGlobalLoading();
 
@@ -140,14 +141,14 @@ const ContentsListing = ({ contentsData, setContentsData }: Props) => {
                                         onCheckedChange={(val) => toggleActive(c.id, val)}
                                     />
 
-                                    {/* Button for Edit */}
-                                    {/* <Button
-                                        size="icon"
-                                        variant="ghost"
-                                    //   onClick={() => openEdit(c)}
-                                    >
-                                        <Edit className="h-4 w-4" />
-                                    </Button> */}
+                                        {/* Button for Edit */}
+                                        <Button
+                                            size="icon"
+                                            variant="ghost"
+                                            onClick={() => onEdit && onEdit(c)}
+                                        >
+                                            <Edit className="h-4 w-4" />
+                                        </Button>
 
                                     {/* Button for Delete and Alery Dialog Box */}
                                     <AppDialog
