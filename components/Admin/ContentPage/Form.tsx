@@ -17,7 +17,7 @@ interface Props {
     formSubmit: UseFormHandleSubmit<ContentFormInput>;
     closeDialog: () => void;
     setError: UseFormSetError<ContentFormInput>;
-    editContent?: string | null;
+    editContent?: ContentFormOutput | null;
     setContentsData: any;
 }
 
@@ -35,7 +35,7 @@ const ContectForm = ({
             open={dialogOpen}
             title={editContent ? 'Edit Content' : 'Add Content'}
             content={
-                <Form control={control} formSubmit={formSubmit} setError={setError} editContentId={editContent && editContent} closeDialog={closeDialog} setContentsData={setContentsData} />
+                <Form control={control} formSubmit={formSubmit} setError={setError} editContent={editContent} closeDialog={closeDialog} setContentsData={setContentsData} />
             }
             disableOutsideClose
             onOpenChange={closeDialog}
@@ -45,11 +45,11 @@ const ContectForm = ({
 
 export default ContectForm
 
-const Form = ({ control, formSubmit, setError, editContentId, closeDialog, setContentsData }: {
+const Form = ({ control, formSubmit, setError, editContent, closeDialog, setContentsData }: {
     control: Control<ContentFormInput>;
     formSubmit: UseFormHandleSubmit<ContentFormInput>;
     setError: UseFormSetError<ContentFormInput>;
-    editContentId?: string | null;
+    editContent?: ContentFormOutput | null;
     closeDialog: () => void;
     setContentsData: any;
 }) => {
@@ -62,8 +62,10 @@ const Form = ({ control, formSubmit, setError, editContentId, closeDialog, setCo
 
             const image = formData.image;
 
-            // Validate image existence
-            if (!image) {
+            console.log("[ContentForm] saving content", { editContent: editContent?.id });
+
+            // Validate image existence: required for create, optional for edit (we support removal)
+            if (!image && !editContent) {
                 setError("image", {
                     type: "manual",
                     message: "Content image is required",
@@ -84,42 +86,61 @@ const Form = ({ control, formSubmit, setError, editContentId, closeDialog, setCo
             // ✅ Handle image
             if (!image) {
                 // Case 1: no image provided
-                // Do nothing OR handle default
-            }
-            else if ("__pendingFile" in image) {
+                // If we're editing existing content and the user removed the image,
+                // send a remove flag so the server will clear the image.
+                if (editContent) {
+                    fd.append("remove_image", "1");
+                    console.log("[ContentForm] appended remove_image flag for edit");
+                }
+            } else if ("__pendingFile" in image) {
                 // Case 2: new file upload
                 fd.append("file", image.__pendingFile);
                 fd.append("folder", image.__folder);
-            }
-            else {
+                console.log("[ContentForm] appended file to FormData:", image.__pendingFile.name, image.__pendingFile.type, image.__pendingFile.size);
+            } else {
                 // Case 3: existing image
                 fd.append("image_url", JSON.stringify(image));
+                console.log("[ContentForm] keeping existing image", image);
             }
 
-            const url = editContentId
-                ? `/api/admin/content/${editContentId}`
+            const url = editContent && editContent.id
+                ? `/api/admin/content/${editContent.id}`
                 : `/api/admin/content`;
 
-            const method = editContentId ? "PUT" : "POST";
+            const method = editContent && editContent.id ? "PUT" : "POST";
 
+            console.log("[ContentForm] sending request", { url, method });
             const res = await fetch(url, {
                 method,
                 body: fd
             });
 
-            const result = await res.json();
-            if (!res.ok) throw new Error(result?.message || "Save failed");
+            const text = await res.text();
+            console.log("[ContentForm] server response status", res.status, "text:", text);
+
+            let result: any = null;
+            try {
+                result = text ? JSON.parse(text) : null;
+            } catch (parseErr) {
+                console.warn("[ContentForm] failed to parse JSON response", parseErr);
+            }
+
+            if (!res.ok) {
+                const message = result?.message || result?.error || `Save failed (status ${res.status})`;
+                console.error("[ContentForm] save failed:", message, { result });
+                throw new Error(message);
+            }
 
             // Update UI
-            if (editContentId) {
-                // setContentsData((prev: ContentFormOutput[]) =>
-                //     prev.map((c) => (c.id === editCon.id ? result.data : c))
-                // );
+            if (editContent && editContent.id) {
+                setContentsData((prev: ContentFormOutput[]) =>
+                    prev.map((c) => (c.id === result.data.id ? result.data : c))
+                );
             } else {
                 setContentsData((prev:ContentFormOutput[]) => [result.data, ...prev]);
             }
 
-            toast.success(editContentId ? "Updated successfully" : "Created successfully");
+            toast.success(editContent ? "Updated successfully" : "Created successfully");
             closeDialog()
 
         } catch (error: any) {
@@ -143,7 +164,7 @@ const Form = ({ control, formSubmit, setError, editContentId, closeDialog, setCo
                 {isSaving && (
                     <Loader2 className='h-4 w-4 animate-spin mr-2' />
                 )}
-                {isSaving ? "Creating..." : "Create"}
+                {isSaving ? (editContent ? "Updating..." : "Saving...") : (editContent ? "Update" : "Create")}
             </Button>
         </form>
     )
