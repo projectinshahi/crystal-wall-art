@@ -145,7 +145,7 @@ const menuSections: MenuSection[] = [
                 icon: <Shield className="h-5 w-5" />,
             },
             {
-                to: "/terms-condition",
+                to: "/terms-and-conditions",
                 label: "Terms & Conditions",
                 icon: <FileText className="h-5 w-5" />,
             },
