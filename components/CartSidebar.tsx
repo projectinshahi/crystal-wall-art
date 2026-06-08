@@ -142,12 +142,12 @@ const CartSidebar = () => {
                         <div className="flex flex-col gap-3">
                             <div className="flex items-center justify-between">
                                 <span className="text-sm text-black">Subtotal</span>
-                                <span className="text-sm">₹1099</span>
+                                <span className="text-sm">₹{getTotal()}</span>
                             </div>
-                            <div className="flex items-center justify-between">
+                            {/* <div className="flex items-center justify-between">
                                 <span className="text-sm text-black">Discount</span>
                                 <span className="text-sm">₹298</span>
-                            </div>
+                            </div> */}
                             <div className="flex items-center justify-between">
                                 <span className="text-sm text-black">Shipping</span>
                                 <span className="text-sm">Free</span>
@@ -158,7 +158,7 @@ const CartSidebar = () => {
 
                         <div className="flex items-center justify-between">
                             <span className="text-lg text-black font-bold">Total</span>
-                            <span className="text-lg text-black font-bold">₹2099</span>
+                            <span className="text-lg text-black font-bold">₹{getTotal()}</span>
                         </div>
 
                         <div className='flex flex-col space-y-2'>
