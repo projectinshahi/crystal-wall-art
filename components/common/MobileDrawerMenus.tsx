@@ -159,6 +159,11 @@ const menuSections: MenuSection[] = [
                 label: "Shipping Policy",
                 icon: <GiftIcon className="h-5 w-5" />,
             },
+            {
+                to: "/photo-upload-policy",
+                label: "Photo Upload & Copyright Policy",
+                icon: <GiftIcon className="h-5 w-5" />,
+            },
         ],
     },
 ]
