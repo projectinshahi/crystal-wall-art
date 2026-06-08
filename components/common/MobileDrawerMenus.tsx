@@ -3,7 +3,7 @@
 import React, { useState } from 'react'
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '../ui/sheet'
 import Link from 'next/link';
-import { ChevronDown, ChevronUp, Heart, Search } from 'lucide-react';
+import { ChevronDown, ChevronUp, GiftIcon, Heart, Search } from 'lucide-react';
 import { Input } from '../ui/input';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '../ui/collapsible';
 import {
@@ -145,14 +145,24 @@ const menuSections: MenuSection[] = [
                 icon: <Shield className="h-5 w-5" />,
             },
             {
-                to: "/terms-condition",
+                to: "/terms-and-conditions",
                 label: "Terms & Conditions",
                 icon: <FileText className="h-5 w-5" />,
             },
             {
-                to: "/return-policy",
-                label: "Return Policy",
+                to: "/refund-policy",
+                label: "Refund and Replacement Policy",
                 icon: <CornerDownLeft className="h-5 w-5" />,
+            },
+            {
+                to: "/shipping-policy",
+                label: "Shipping Policy",
+                icon: <GiftIcon className="h-5 w-5" />,
+            },
+            {
+                to: "/photo-upload-policy",
+                label: "Photo Upload & Copyright Policy",
+                icon: <GiftIcon className="h-5 w-5" />,
             },
         ],
     },
