@@ -150,8 +150,8 @@ const menuSections: MenuSection[] = [
                 icon: <FileText className="h-5 w-5" />,
             },
             {
-                to: "/return-policy",
-                label: "Return Policy",
+                to: "/refund-policy",
+                label: "Refund and Replacement Policy",
                 icon: <CornerDownLeft className="h-5 w-5" />,
             },
         ],
