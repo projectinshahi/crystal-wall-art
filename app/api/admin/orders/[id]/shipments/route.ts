@@ -55,6 +55,8 @@ export const POST = withHandler(
             "Cache-Control",
             "no-store"
         );
+
+        return response;
     }, { access: "admin" }
 )
 

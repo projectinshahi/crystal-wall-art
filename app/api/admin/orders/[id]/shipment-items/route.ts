@@ -22,5 +22,8 @@ export const GET = withHandler(
             "Cache-Control",
             "no-store"
         );
-    },{access: "admin"}
+
+        return response;
+    },
+    { access: "admin" }
 );
