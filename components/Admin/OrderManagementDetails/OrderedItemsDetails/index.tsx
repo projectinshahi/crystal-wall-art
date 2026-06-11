@@ -29,13 +29,16 @@ const OrderedItemsDetails = ({ id, orderData }: { id: string, orderData: UserOrd
 
             const [itemsRes, shipmentsRes, timelineRes] = await Promise.all([
                 fetch(
-                    `${process.env.NEXT_PUBLIC_URL}/api/admin/orders/${id}/items`
+                    `${process.env.NEXT_PUBLIC_URL}/api/admin/orders/${id}/items`,
+                    { cache: "no-store" }
                 ),
                 fetch(
-                    `${process.env.NEXT_PUBLIC_URL}/api/admin/orders/${id}/shipments`
+                    `${process.env.NEXT_PUBLIC_URL}/api/admin/orders/${id}/shipments`,
+                    { cache: "no-store" }
                 ),
                 fetch(
-                    `${process.env.NEXT_PUBLIC_URL}/api/admin/orders/${id}/timeline`
+                    `${process.env.NEXT_PUBLIC_URL}/api/admin/orders/${id}/timeline`,
+                    { cache: "no-store" }
                 ),
             ]);
 
@@ -54,7 +57,8 @@ const OrderedItemsDetails = ({ id, orderData }: { id: string, orderData: UserOrd
                     .join(",");
 
                 const shipmentItemsRes = await fetch(
-                    `${process.env.NEXT_PUBLIC_URL}/api/admin/orders/${id}/shipment-items?shipment_ids=${shipmentIds}`
+                    `${process.env.NEXT_PUBLIC_URL}/api/admin/orders/${id}/shipment-items?shipment_ids=${shipmentIds}`,
+                    { cache: "no-store" }
                 );
 
                 const shipmentItemsData =
