@@ -5,6 +5,25 @@ import Link from 'next/link';
 import React from 'react'
 import Container from '../Container/Container';
 
+const footerLinks = [
+    {
+        label: "Privacy Policy",
+        href: "/privacy-policies",
+    },
+    {
+        label: "Terms & Conditions",
+        href: "/terms-and-conditions",
+    },
+    {
+        label: "Return Policy",
+        href: "/refund-policy",
+    },
+    {
+        label: "Shipping Policy",
+        href: "/shipping-policy",
+    },
+];
+
 const Footer = () => {
     return (
         <footer className="bg-lightGray text-black mt-4 sm:mt-16">
@@ -24,11 +43,14 @@ const Footer = () => {
                         </Link>
 
                         <ul className="space-y-2 text-center sm:text-left">
-                            {["Privacy Policy", "Terms & Conditions", "Return Policy", "Shipping Policy"].map(label => (
-                                <li key={label}>
-                                    <span className="text-sm text-black hover:text-black54 transition-colors cursor-pointer">
-                                        {label}
-                                    </span>
+                            {footerLinks.map((item) => (
+                                <li key={item.label}>
+                                    <Link
+                                        href={item.href}
+                                        className="text-sm text-black hover:text-black54 transition-colors"
+                                    >
+                                        {item.label}
+                                    </Link>
                                 </li>
                             ))}
                         </ul>
