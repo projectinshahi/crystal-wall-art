@@ -6,9 +6,6 @@ export const GET = withHandler(
     async (): Promise<NextResponse> => {
 
         try {
-
-            console.log("[GET /api/categories] Request started");
-
             const categories = await getPublicCategories();
 
             console.log(
@@ -20,10 +17,8 @@ export const GET = withHandler(
 
             response.headers.set(
                 "Cache-Control",
-                "public, max-age=300, s-maxage=600"
+                "no-store"
             );
-
-            console.log("[GET /api/categories] Response sent");
 
             return response;
 

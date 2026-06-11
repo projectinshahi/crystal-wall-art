@@ -21,7 +21,7 @@ export const GET = withHandler(
 
         response.headers.set(
             "Cache-Control",
-            "public, max-age=300, s-maxage=600"
+            "no-store"
         );
 
         return response
