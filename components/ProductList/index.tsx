@@ -6,6 +6,7 @@ import Container from "@/components/Container/Container";
 import { ProductTypes } from "@/types/Admin/products.types";
 import { useEffect, useState } from "react";
 import ProductCardSkeleton from "../skeletons/ProductCardSkeleton";
+import { useRouter } from "next/navigation";
 
 const ProductList = ({
   categoryName = "All Products",
@@ -14,6 +15,8 @@ const ProductList = ({
   categoryName: string;
   categoryId?: string;
 }) => {
+
+  const router = useRouter();
   const [data, setData] = useState<ProductTypes[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -52,7 +55,7 @@ const ProductList = ({
 
   return (
     <div className="w-full">
-      <PageHeader title={categoryName} handleBack={() => { }} />
+      <PageHeader title={categoryName} handleBack={() => router.back()} />
 
       <Container className="max-w-7xl mx-auto px-0 sm:px-0 lg:px-0">
         {/* 🔄 Loading */}

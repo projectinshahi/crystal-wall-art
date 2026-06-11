@@ -15,8 +15,11 @@ import { ProductTypes } from '@/types/Admin/products.types'
 import { Variant } from '../Admin/AddProducts/ProductStepperForm'
 import { useCartStore } from '@/store/cartStore'
 import { toast } from 'sonner'
+import { useRouter } from 'next/navigation'
 
 const ProductDetails = ({ title, data }: { title: string, data: ProductTypes }) => {
+
+    const router = useRouter();
 
     const addItem = useCartStore(s => s.addItem);
 
@@ -191,7 +194,7 @@ const ProductDetails = ({ title, data }: { title: string, data: ProductTypes }) 
                 className="sticky z-40 bg-white"
                 style={{ top: `var(--nav-height)` }}
             >
-                <PageHeader title={title || 'All Products'} handleBack={() => { }} />
+                <PageHeader title={title || 'All Products'} handleBack={() => router.back()} />
             </section>
             <Container className='max-w-7xl mx-auto'>
                 <div className='w-full relative grid grid-cols-5 gap-4 mb-6'>
