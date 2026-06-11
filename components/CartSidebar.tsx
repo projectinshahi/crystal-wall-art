@@ -72,7 +72,7 @@ const CartSidebar = () => {
                         <div className="flex flex-col items-center justify-center h-full text-center gap-3">
                             <ShoppingBag className="h-12 w-12 text-muted-foreground/20" />
                             <Typography variant='body-sm' className='text-muted-foreground'>Your cart is empty</Typography>
-                            <Button variant="outline" size="sm" onClick={close}>
+                            <Button variant="outline" size="sm" onClick={() => setOpen(false)}>
                                 Continue Shopping
                             </Button>
                         </div>
