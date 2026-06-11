@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '../ui/sheet'
 import Link from 'next/link';
 import { ChevronDown, ChevronUp, GiftIcon, Heart, Search } from 'lucide-react';
@@ -22,6 +22,15 @@ import {
     CornerDownLeft,
 } from "lucide-react";
 import { usePathname, useSearchParams } from "next/navigation";
+import { CategoryWithImage } from '../homePage/CategoriesSection';
+import { CategoryFormOutput } from '@/schema/category.schema';
+
+const getImageUrl = (img: any) => {
+    if (!img) return "";
+    if ("previewUrl" in img) return img.previewUrl; // pending
+    if ("url" in img) return img.url; // uploaded
+    return "";
+};
 
 interface MenuChild {
     to: string
@@ -41,133 +50,6 @@ interface MenuSection {
     items: MenuItem[]
 }
 
-const categories = [
-    {
-        "id": "533effe5-ab10-4616-95b8-cd0054a46d7b",
-        "title": "Special Gifts",
-    },
-    {
-        "id": "a535fd19-29b9-42ad-bfb8-318937bdd6f4",
-        "title": "Photo Frames",
-    },
-    {
-        "id": "5ae4ee6c-9ed8-483c-8128-6cbb60b6ce10",
-        "title": "Wall Clocks",
-    }
-]
-
-const menuSections: MenuSection[] = [
-    {
-        label: "SHOP",
-        items: [
-            {
-                to: "/store",
-                label: "Categories",
-                icon: <LayoutGrid className="h-5 w-5" />,
-                expandable: true,
-                children: categories.map(c => ({ to: `/store?category=${c.id}`, label: c.title })),
-            },
-            {
-                to: "/store",
-                label: "Trending design",
-                icon: <TrendingUp className="h-5 w-5" />,
-                expandable: true,
-                children: categories.map(c => ({ to: `/store?trending=${c.id}`, label: c.title })),
-            },
-            {
-                to: "/wishlist",
-                label: "Wishlist",
-                icon: <Heart className="h-5 w-5" />,
-            },
-            {
-                to: "/offers",
-                label: "Offers",
-                icon: <Tag className="h-5 w-5" />,
-            },
-        ],
-    },
-    {
-        label: "ACCOUNT",
-        items: [
-            {
-                to: "/store/account",
-                label: "Login / Signup",
-                icon: <LogIn className="h-5 w-5" />,
-            },
-            {
-                to: "/account/orders",
-                label: "My Orders",
-                icon: <ClipboardList className="h-5 w-5" />,
-            },
-        ],
-    },
-    {
-        label: "EXPLORE",
-        items: [
-            {
-                to: "/blogs",
-                label: "Blogs",
-                icon: <BookOpen className="h-5 w-5" />,
-            },
-            {
-                to: "/faq",
-                label: "FAQ",
-                icon: <HelpCircle className="h-5 w-5" />,
-            },
-            {
-                to: "/about",
-                label: "About",
-                icon: <Info className="h-5 w-5" />,
-            },
-        ],
-    },
-    {
-        label: "HELP",
-        items: [
-            {
-                to: "/contact",
-                label: "Contact",
-                icon: <Phone className="h-5 w-5" />,
-            },
-            {
-                to: "/track-order",
-                label: "Track Order",
-                icon: <MapPin className="h-5 w-5" />,
-            },
-        ],
-    },
-    {
-        label: "POLICY & LEGAL",
-        items: [
-            {
-                to: "/privacy-policies",
-                label: "Privacy Policy",
-                icon: <Shield className="h-5 w-5" />,
-            },
-            {
-                to: "/terms-and-conditions",
-                label: "Terms & Conditions",
-                icon: <FileText className="h-5 w-5" />,
-            },
-            {
-                to: "/refund-policy",
-                label: "Refund and Replacement Policy",
-                icon: <CornerDownLeft className="h-5 w-5" />,
-            },
-            {
-                to: "/shipping-policy",
-                label: "Shipping Policy",
-                icon: <GiftIcon className="h-5 w-5" />,
-            },
-            {
-                to: "/photo-upload-policy",
-                label: "Photo Upload & Copyright Policy",
-                icon: <GiftIcon className="h-5 w-5" />,
-            },
-        ],
-    },
-]
-
 const MobileDrawerMenus = ({ open, close }: { open: boolean; close: (open: boolean) => void }) => {
 
     const pathname = usePathname()
@@ -175,6 +57,7 @@ const MobileDrawerMenus = ({ open, close }: { open: boolean; close: (open: boole
 
     const [search, setSearch] = useState("")
     const [expandedItems, setExpandedItems] = useState<Record<string, boolean>>({ categories: true })
+    const [categories, setCategories] = useState<CategoryWithImage[]>([]);
 
     const toggleExpand = (key: string) => {
         setExpandedItems(prev => ({ ...prev, [key]: !prev[key] }))
@@ -263,6 +146,161 @@ const MobileDrawerMenus = ({ open, close }: { open: boolean; close: (open: boole
         if (item.children?.some(child => isActive(child.to))) return false
         return isActive(item.to)
     }
+
+    useEffect(() => {
+        const fetchCategories = async () => {
+            try {
+                const res = await fetch(
+                    `${process.env.NEXT_PUBLIC_URL}/api/category?active=true`
+                );
+
+                const catRes = await res.json();
+
+                if (!catRes?.success) return;
+
+                const categoriesData: CategoryWithImage[] = catRes.data
+                    .map((item: CategoryFormOutput) => {
+                        let parsed;
+
+                        try {
+                            parsed =
+                                typeof item.image_url === "string"
+                                    ? JSON.parse(item.image_url)
+                                    : item.image_url;
+                        } catch {
+                            parsed = null;
+                        }
+
+                        return {
+                            ...item,
+                            image: getImageUrl(parsed),
+                        };
+                    })
+                    .filter((item: CategoryWithImage) => !!item.image);
+
+                setCategories(categoriesData);
+            } catch (error) {
+                console.error("Failed to fetch categories", error);
+            }
+        };
+
+        fetchCategories();
+    }, []);
+
+    const menuSections: MenuSection[] = [
+        {
+            label: "SHOP",
+            items: [
+                {
+                    to: "/products",
+                    label: "Categories",
+                    icon: <LayoutGrid className="h-5 w-5" />,
+                    expandable: true,
+                    children: categories.map(c => ({
+                        to: `/products?category=${c.id}`,
+                        label: c.title,
+                    })),
+                },
+                // {
+                //     to: "/store",
+                //     label: "Trending design",
+                //     icon: <TrendingUp className="h-5 w-5" />,
+                //     expandable: true,
+                //     children: categories.map(c => ({ to: `/store?trending=${c.id}`, label: c.title })),
+                // },
+                // {
+                //     to: "/wishlist",
+                //     label: "Wishlist",
+                //     icon: <Heart className="h-5 w-5" />,
+                // },
+                // {
+                //     to: "/offers",
+                //     label: "Offers",
+                //     icon: <Tag className="h-5 w-5" />,
+                // },
+            ],
+        },
+        {
+            label: "ACCOUNT",
+            items: [
+                {
+                    to: "/account",
+                    label: "Login / Signup",
+                    icon: <LogIn className="h-5 w-5" />,
+                },
+                {
+                    to: "/account",
+                    label: "My Orders",
+                    icon: <ClipboardList className="h-5 w-5" />,
+                },
+            ],
+        },
+        {
+            label: "EXPLORE",
+            items: [
+                // {
+                //     to: "/blogs",
+                //     label: "Blogs",
+                //     icon: <BookOpen className="h-5 w-5" />,
+                // },
+                // {
+                //     to: "/faq",
+                //     label: "FAQ",
+                //     icon: <HelpCircle className="h-5 w-5" />,
+                // },
+                {
+                    to: "/about",
+                    label: "About",
+                    icon: <Info className="h-5 w-5" />,
+                },
+            ],
+        },
+        {
+            label: "HELP",
+            items: [
+                // {
+                //     to: "/contact",
+                //     label: "Contact",
+                //     icon: <Phone className="h-5 w-5" />,
+                // },
+                {
+                    to: "/track-order",
+                    label: "Track Order",
+                    icon: <MapPin className="h-5 w-5" />,
+                },
+            ],
+        },
+        {
+            label: "POLICY & LEGAL",
+            items: [
+                {
+                    to: "/privacy-policies",
+                    label: "Privacy Policy",
+                    icon: <Shield className="h-5 w-5" />,
+                },
+                {
+                    to: "/terms-and-conditions",
+                    label: "Terms & Conditions",
+                    icon: <FileText className="h-5 w-5" />,
+                },
+                {
+                    to: "/refund-policy",
+                    label: "Refund and Replacement Policy",
+                    icon: <CornerDownLeft className="h-5 w-5" />,
+                },
+                {
+                    to: "/shipping-policy",
+                    label: "Shipping Policy",
+                    icon: <GiftIcon className="h-5 w-5" />,
+                },
+                {
+                    to: "/photo-upload-policy",
+                    label: "Photo Upload & Copyright Policy",
+                    icon: <GiftIcon className="h-5 w-5" />,
+                },
+            ],
+        },
+    ]
 
     const activeClass = "text-primary font-semibold"
     const inactiveClass = "text-foreground"

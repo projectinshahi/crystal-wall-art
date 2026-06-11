@@ -12,7 +12,7 @@ import { useCartStore } from '@/store/cartStore';
 const DESKTOP_NAV = [
     { to: "/", label: "Shop" },
     { to: "/about", label: "About" },
-    { to: "/contact", label: "Contact" },
+    // { to: "/contact", label: "Contact" },
     { to: "/track-order", label: "Track Order" },
 ];
 

@@ -13,7 +13,7 @@ const getImageUrl = (img: any) => {
     return "";
 };
 
-type CategoryWithImage = CategoryFormOutput & {
+export type CategoryWithImage = CategoryFormOutput & {
     image: string;
 };
 
