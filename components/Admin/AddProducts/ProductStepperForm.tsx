@@ -500,7 +500,8 @@ const ProductStepperForm = ({ productId }: ProductStepperFormProps) => {
             if (typeof img === 'string' && img.startsWith("blob:")) return await blobUrlToBase64(img);
             return img; // plain https:// URL (edit mode)
           } catch {
-            throw new Error(`Failed to process image ${index + 1}. Please re-upload it.`);
+            const label = img instanceof File ? `"${img.name}"` : `Image ${index + 1}`;
+            throw new Error(`${label} couldn't be processed. Please re-upload it.`);
           }
         })
       );
@@ -516,7 +517,7 @@ const ProductStepperForm = ({ productId }: ProductStepperFormProps) => {
 
       const convertedThumbnail = data.thumbnail && typeof data.thumbnail === 'string' && data.thumbnail.startsWith("blob:")
         ? await blobUrlToBase64(data.thumbnail).catch(() => {
-          throw new Error("Failed to process thumbnail. Please re-select it.");
+          throw new Error("The thumbnail couldn't be processed. Please re-select it.");
         })
         : data.thumbnail;
 
@@ -553,20 +554,43 @@ const ProductStepperForm = ({ productId }: ProductStepperFormProps) => {
           }),
         });
       } catch {
-        throw new Error("Network error: Unable to reach the server. Please check your connection.");
+        throw new Error("Network error: Unable to reach the server. Please check your connection and try again.");
       }
 
-      // ── 4. Parse response ────────────────────────────────────────────────
-      let res: { success: boolean; message?: string; error?: string; productId?: string };
-      try {
-        res = await addProductRes.json();
-      } catch {
-        throw new Error(`Server error (${addProductRes.status}): Unexpected response format.`);
+      // ── 4. Parse response (text-first, so we can diagnose non-JSON responses) ──
+      const rawText = await addProductRes.text();
+      const isJson = addProductRes.headers.get("content-type")?.includes("application/json");
+
+      let res: { success?: boolean; message?: string; error?: string; productId?: string } = {};
+
+      if (isJson && rawText) {
+        try {
+          res = JSON.parse(rawText);
+        } catch {
+          console.error("❌ Malformed JSON from server:", rawText.slice(0, 500));
+          throw new Error("The server sent back a response we couldn't understand. Please try again.");
+        }
+      } else {
+        console.error(`❌ Non-JSON response (${addProductRes.status}):`, rawText.slice(0, 500));
+
+        if (addProductRes.status === 413) {
+          throw new Error("Your images are too large to upload. Try using smaller images or fewer at once.");
+        }
+        if (addProductRes.status === 401 || addProductRes.status === 403) {
+          throw new Error("Your session has expired. Please log in again and retry.");
+        }
+        if (addProductRes.status === 408 || addProductRes.status === 504) {
+          throw new Error("The request took too long. Please check your connection and try again.");
+        }
+        if (addProductRes.status >= 500) {
+          throw new Error("Something went wrong on our end. Please try again in a moment.");
+        }
+        throw new Error(`Something went wrong (error ${addProductRes.status}). Please try again.`);
       }
 
       if (!addProductRes.ok || !res.success) {
         throw new Error(
-          res.error ?? res.message ?? `Request failed with status ${addProductRes.status}.`
+          res.error ?? res.message ?? "We couldn't save the product. Please review the details and try again."
         );
       }
 
@@ -576,12 +600,12 @@ const ProductStepperForm = ({ productId }: ProductStepperFormProps) => {
       if (!isEdit) reset();
 
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : "An unexpected error occurred.";
+      const message = err instanceof Error ? err.message : "Something unexpected happened. Please try again.";
       console.error("❌ Submission error:", err);
       setSubmitError(message);
       setSubmitState("error");
       toast.error(message);
-    }finally {
+    } finally {
       stopLoading();
     }
   };
@@ -650,7 +674,7 @@ const ProductStepperForm = ({ productId }: ProductStepperFormProps) => {
     try {
       const res = await fetch(`/api/admin/product/${productId}`);
       if (!res.ok) throw new Error("Product not found");
-      
+
       const { data: product } = await res.json();
 
       const normalizeProductImage = (img: any) => {
