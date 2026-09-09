@@ -176,10 +176,27 @@ const ProductDetails = ({ title, data }: { title: string, data: ProductTypes }) 
         }
     };
 
+    const getThumbnailUrl = (value?: string | null): string | null => {
+        if (!value) return null;
+
+        const trimmed = value.trim();
+        if (!trimmed) return null;
+
+        try {
+            const parsed = JSON.parse(trimmed);
+            const url = typeof parsed === 'string'
+                ? parsed
+                : parsed?.url || parsed?.image_url || parsed?.secure_url;
+            return typeof url === 'string' ? url : trimmed;
+        } catch {
+            return trimmed;
+        }
+    };
+
     const handleAddToCart = () => {
         if (!data) return;
         addItem({
-            product_id: data.id, title: data.title, image: JSON.parse(data.thumbnail).url || null,
+            product_id: data.id, title: data.title, image: getThumbnailUrl(data.thumbnail) || null,
             size: sizes?.selected || '', thickness: thickness?.selected || '', mounting_method: mounting_methods?.selected || '',
             orientation: orientations?.selected || '', price: effectivePrice, quantity: 1,
             variant_id: activeVariant?.id

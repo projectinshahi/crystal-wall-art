@@ -4,11 +4,28 @@ import { ProductTypes } from '@/types/Admin/products.types';
 import Image from 'next/image'
 import { useRouter } from 'next/navigation'
 
+const getProductImageUrl = (value?: string | null): string => {
+    if (!value) return "";
+
+    const trimmed = value.trim();
+    if (!trimmed) return "";
+
+    try {
+        const parsed = JSON.parse(trimmed);
+        const url = typeof parsed === 'string'
+            ? parsed
+            : parsed?.url || parsed?.image_url || parsed?.secure_url;
+        return typeof url === 'string' ? url : trimmed;
+    } catch {
+        return trimmed;
+    }
+};
+
 const ProductCard = ({ product }: { product: ProductTypes }) => {
 
     const router = useRouter();
 
-    const image = product.thumbnail ? JSON.parse(product.thumbnail).url : "";
+    const image = getProductImageUrl(product.thumbnail);
 
     return (
         <div
@@ -25,13 +42,19 @@ const ProductCard = ({ product }: { product: ProductTypes }) => {
 
                     <div className="relative w-full aspect-square overflow-hidden rounded-xl bg-muted">
 
-                        <Image
-                            src={image}
-                            alt={product.title}
-                            fill
-                            sizes="(max-width:640px) 140px, (max-width:1024px) 170px, 200px"
-                            className="object-cover group-hover:scale-105 transition-transform duration-500"
-                        />
+                        {image ? (
+                            <Image
+                                src={image}
+                                alt={product.title}
+                                fill
+                                sizes="(max-width:640px) 140px, (max-width:1024px) 170px, 200px"
+                                className="object-cover group-hover:scale-105 transition-transform duration-500"
+                            />
+                        ) : (
+                            <div className="flex h-full w-full items-center justify-center text-xs text-muted-foreground">
+                                No image
+                            </div>
+                        )}
 
                     </div>
 
