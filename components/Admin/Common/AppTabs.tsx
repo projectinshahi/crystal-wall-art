@@ -66,17 +66,14 @@ export default function AppTabs({
 
       <Card className="bg-card p-6 mt-4">
         {tabs.map((tab) => (
-          <>
-            {/* Tabs Content */}
-            <TabsContent
-              key={tab.value}
-              value={tab.value}
-              className={`space-y-3 ${contentClassName}`}
-              >
-              {tab.header}
-              {tab.content}
-            </TabsContent>
-          </>
+          <TabsContent
+            key={tab.value}
+            value={tab.value}
+            className={`space-y-3 ${contentClassName}`}
+          >
+            {tab.header}
+            {tab.content}
+          </TabsContent>
         ))}
       </Card>
     </Tabs>

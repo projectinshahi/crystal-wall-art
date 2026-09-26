@@ -32,6 +32,14 @@ export const contentSchema = z.object({
         .default(0),
 });
 
+// Homepage intro section: heading + description only
+export const homeIntroSchema = z.object({
+    title: z.string().trim().min(1, "Heading is required").max(120, "Heading must be under 120 characters"),
+    description: z.string().trim().min(1, "Description is required").max(1000, "Description must be under 1000 characters"),
+});
+
+export type HomeIntroFormValues = z.infer<typeof homeIntroSchema>;
+
 export const contentApiSchema = contentSchema.extend({
   image: uploadedImageSchema,
 });

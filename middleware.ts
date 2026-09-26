@@ -1,64 +1,33 @@
-import { withAuth } from "next-auth/middleware";
-import { NextResponse } from "next/server";
+import { getToken } from "next-auth/jwt";
+import { NextRequest, NextResponse } from "next/server";
+import { ADMIN_SESSION_COOKIE } from "@/lib/auth-cookies";
 
-const NEXTAUTH_SECRET = process.env.NEXTAUTH_SECRET;
+// Guards the admin panel only. Storefront routes are never redirected, so an admin
+// session (admin cookie) and a customer session (storefront cookie) can coexist.
+export async function middleware(req: NextRequest) {
+  const { pathname } = req.nextUrl;
 
-// ✅ Helper to avoid repeating token.role.name everywhere
-const isAdmin = (token: any) => token?.role?.name === "admin";
-const isUser  = (token: any) => token?.role?.name === "user";
+  const token = await getToken({
+    req,
+    secret: process.env.NEXTAUTH_SECRET,
+    cookieName: ADMIN_SESSION_COOKIE,
+  });
 
-export default withAuth(
-  function middleware(req) {
-    const token = req.nextauth.token;
-    const { pathname } = req.nextUrl;
+  const isAdmin = token?.role?.name === "admin";
 
-    // 🏠 ROOT HANDLING
-    if (pathname === "/") {
-      if (isAdmin(token)) return NextResponse.redirect(new URL("/admin", req.url));
-      if (isUser(token))  return NextResponse.redirect(new URL("/profile", req.url));
-      return NextResponse.next();
-    }
-
-    // =========================
-    // 🔐 ADMIN ROUTES
-    // =========================
-    if (pathname.startsWith("/admin")) {
-      if (pathname === "/admin/login") {
-        if (isAdmin(token)) return NextResponse.redirect(new URL("/admin", req.url));
-        return NextResponse.next();
-      }
-
-      if (!token || !isAdmin(token)) {
-        return NextResponse.redirect(new URL("/admin/login", req.url));
-      }
-    }
-
-    // =========================
-    // 👤 CLIENT ROUTES
-    // =========================
-    if (pathname.startsWith("/profile")) {
-      if (!token) return NextResponse.redirect(new URL("/login", req.url));
-      if (isAdmin(token)) return NextResponse.redirect(new URL("/admin", req.url));
-    }
-
-    // =========================
-    // 🔑 CLIENT LOGIN
-    // =========================
-    if (pathname === "/login") {
-      if (isUser(token))  return NextResponse.redirect(new URL("/profile", req.url));
-      if (isAdmin(token)) return NextResponse.redirect(new URL("/admin", req.url));
-    }
-
-    return NextResponse.next();
-  },
-  {
-    secret: NEXTAUTH_SECRET,
-    callbacks: {
-      authorized: () => true,
-    },
+  if (pathname === "/admin/login") {
+    return isAdmin
+      ? NextResponse.redirect(new URL("/admin", req.url))
+      : NextResponse.next();
   }
-);
+
+  if (!isAdmin) {
+    return NextResponse.redirect(new URL("/admin/login", req.url));
+  }
+
+  return NextResponse.next();
+}
 
 export const config = {
-  matcher: ["/", "/login", "/profile/:path*", "/admin/:path*"],
+  matcher: ["/admin/:path*"],
 };

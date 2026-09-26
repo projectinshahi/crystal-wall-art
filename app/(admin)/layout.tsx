@@ -6,6 +6,7 @@ import AdminLayout from "@/components/Admin/AdminLayout";
 import "./globals.css";
 import { NetworkAlert } from "@/components/Admin/NetworkAlert";
 import Providers from "@/components/Admin/providers";
+import { ADMIN_AUTH_BASE_PATH } from "@/lib/auth-cookies";
 
 const geist = localFont({
   src: [
@@ -86,7 +87,7 @@ export default function AdminRootLayout({
         className={`antialiased ${inter.variable} ${poppins.variable}`}
       >
         <Toaster position="top-right" />
-        <Providers>
+        <Providers basePath={ADMIN_AUTH_BASE_PATH}>
           <AdminLayout>
             {children}
           </AdminLayout>

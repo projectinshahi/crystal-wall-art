@@ -1,5 +1,5 @@
 import { getServerSession } from "next-auth";
-import { authOptions } from "@/app/api/auth/[...nextauth]/route";
+import { adminAuthOptions, authOptions } from "@/lib/auth-options";
 
 export async function requireAuth() {
   const session = await getServerSession(authOptions);
@@ -8,7 +8,8 @@ export async function requireAuth() {
 }
 
 export async function requireAdmin() {
-  const session = await requireAuth();
+  const session = await getServerSession(adminAuthOptions);
+  if (!session) throw new Error("Unauthorized");
   if (session.user.role.name !== "admin") throw new Error("Forbidden");
   return session;
 }

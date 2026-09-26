@@ -4,7 +4,7 @@ import React from 'react'
 import { SidebarProvider, SidebarTrigger } from '../ui/sidebar'
 import { AdminSidebar } from './AdminSidebar'
 import { getServerSession } from 'next-auth';
-import { authOptions } from '@/app/api/auth/[...nextauth]/route';
+import { adminAuthOptions } from '@/lib/auth-options';
 import { LoadingProvider } from '@/providers/loading-provider';
 
 interface AdminLayoutProps {
@@ -13,7 +13,7 @@ interface AdminLayoutProps {
 
 const AdminLayout = async ({ children }: AdminLayoutProps) => {
 
-    const session = await getServerSession(authOptions);
+    const session = await getServerSession(adminAuthOptions);
 
     if (!session || session.user.role?.name !== 'admin') {
         return (
