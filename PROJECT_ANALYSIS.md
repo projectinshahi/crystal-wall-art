@@ -4,6 +4,8 @@
 > Analysis date: 2026-09-25 · Branch analysed: `main` @ `91404fb` · Method: static code reading only (no `.env`, no DB access, app not run).
 >
 > Every statement below is derived from the code in this repository. Where something cannot be known from the code it is marked **"Cannot be determined from the current codebase."**
+>
+> **Revision note (2026-09-26):** this first-pass document has been reconciled with the verified findings in `DEEP_PROJECT_ANALYSIS.md` (live read-only database catalog, both `globals.css` files, Git diff of `feature/firebase-auth`). Statements proven wrong were corrected and are marked **⟲ Corrected**; open questions that are now answered are marked **✔ Verified**. For full schema detail and confidence labels, see `DEEP_PROJECT_ANALYSIS.md` §11.5–11.7 and "Analysis Confidence".
 
 ---
 
@@ -114,7 +116,7 @@ Files **not present**: `.env*`, `.env.example`, `Dockerfile`, `docker-compose*`,
 | **bcrypt** | 6.0 | Signup, login, password change/reset | Password hashing (cost 10). |
 | **Razorpay** (Node SDK + Checkout.js) | razorpay 2.9.6 | `app/api/razorpay/create-order`, `app/api/orders/verify-payment`, `lib/payment.service.ts`, client layout `<Script>` | Online payments in INR (UPI/cards/netbanking/wallets). Uses `one_click_checkout: true` (Magic Checkout). |
 | **Cloudinary** | 2.9.0 | `lib/cloudinary.service.ts`, `app/api/coudinary/*` | Stores product, category and content (banner) images. |
-| **Tailwind CSS** | 4.2 via `@tailwindcss/postcss` | `app/(client)/globals.css`, `app/(admin)/globals.css` | Styling. No `tailwind.config.*` (Tailwind v4 CSS-first config). |
+| **Tailwind CSS** | 4.2 via `@tailwindcss/postcss` | `app/(client)/globals.css`, `app/(admin)/globals.css` | Styling. No `tailwind.config.*` (Tailwind v4 CSS-first config). ✔ Two independent themes: storefront **light** (`#15BCC9` teal, `#1E1E1E` text) and admin **dark** (HSL tokens). Storefront declares Inter/Poppins but loads no font files (system fallback); the admin loads them via `next/font/local`. |
 | **shadcn/ui + Radix UI** | radix-ui 1.4.3, shadcn 4.0.8 | `components/ui/*`, `components.json` (style `radix-nova`) | UI primitives (dialog, sheet, select, sidebar, tabs…). |
 | **Zustand** (+ `persist`) | 5.0.12 | `store/cartStore.ts` | Cart state, persisted to `localStorage` key `crystal-cart`. |
 | **react-hook-form + zod** | 7.72 / 4.3 | Admin forms, profile form, checkout validation | Form state & validation (`@hookform/resolvers`). |
@@ -174,7 +176,7 @@ Admin pages are client components that `fetch('/api/admin/...')` with the NextAu
 ### 4.4 Data storage
 
 - **PostgreSQL** holds everything (users, roles, products, variants, images refs, categories, contents, cart, addresses, orders, items, timeline, shipments).
-- **Cloudinary** holds image binaries; DB stores JSON `{ "url": "...", "public_id": "..." }` (as text/JSON — exact column type cannot be determined).
+- **Cloudinary** holds image binaries; DB stores JSON `{ "url": "...", "public_id": "..." }` — ✔ Verified: the image columns are `text` holding that JSON string.
 - **Browser `localStorage`** holds the cart (`crystal-cart`) for everyone; logged-in users additionally sync it to `cart_items`.
 
 ### 4.5 Payments & orders (summary — details in §10–11)
@@ -194,7 +196,7 @@ Root layout: `app/(client)/layout.tsx`
 
 | Route | File | Rendering | Auth | Purpose |
 |---|---|---|---|---|
-| `/` | `app/(client)/page.tsx` | Server (`force-dynamic`) | Public (see issue: middleware redirects logged-in users) | Home: Hero carousel, About, Categories, Premium photos, "Shop the look", 3D frames slider. |
+| `/` | `app/(client)/page.tsx` | Server (`force-dynamic`) | Public. Middleware redirects a logged-in **admin** to `/admin` (404). ⟲ Customers are **not** redirected (role `customer` ≠ `'user'`). | Home: Hero carousel, About, Categories, Premium photos, "Shop the look", 3D frames slider. |
 | `/products?category=<id>` | `app/(client)/products/page.tsx` | Server + client list | Public | Products of one category. |
 | `/product/[id]` | `app/(client)/product/[id]/page.tsx` | Server fetch + client detail | Public | Product details, option selection, add to cart. |
 | `/checkout` | `app/(client)/checkout/page.tsx` | Server guard + client | Logged-in (server `getServerSession`, redirect `/auth/login`) | Address, email, payment, place order. |
@@ -207,7 +209,7 @@ Root layout: `app/(client)/layout.tsx`
 | `/privacy-policies`, `/terms-and-conditions`, `/refund-policy`, `/shipping-policy`, `/photo-upload-policy` | `app/(client)/*/page.tsx` | Static | Public | Legal/policy content (hard-coded text). |
 | (special) `error.tsx`, `not-found.tsx`, several `loading.tsx` | `app/(client)/` | — | — | Error boundary, 404, loading screens. |
 
-Links in the UI that point to **routes that do not exist**: `/login` and `/profile` (middleware + NextAuth `pages.signIn`), `/admin` (middleware), `/products` with no `category` (mobile drawer "Shop" link). `/contact`, `/wishlist`, `/offers`, `/blogs`, `/faq`, `/store` are commented out in menus.
+Links in the UI that point to **routes that do not exist**: `/login` and `/profile` (middleware + NextAuth `pages.signIn`; ⟲ the `/`→`/profile` customer redirect never fires in practice), `/admin` (middleware; affects admins), `/products` with no `category` (mobile drawer "Shop" link). `/contact`, `/wishlist`, `/offers`, `/blogs`, `/faq`, `/store` are commented out in menus.
 
 ### 5.2 Important pages in detail
 
@@ -247,7 +249,7 @@ Links in the UI that point to **routes that do not exist**: `/login` and `/profi
 
 **Order details (`/order/[id]`)** — `GET /api/orders/<id>`, `/api/orders/<id>/itemsData`, `/api/orders/<id>/timelineData`.
 
-**Track order (`/track-order`)** — `GET /api/track-orders?orderNumber=...`; shows status stepper with keys `pending → processing → shipping → delivered` (note: `processing`/`shipping` are never written by the backend; see §20).
+**Track order (`/track-order`)** — `GET /api/track-orders?orderNumber=...`; shows status stepper with keys `pending → processing → shipping → delivered`. ⟲ Corrected: the live status values are `pending → confirmed → partially_shipped → shipped → delivered`. The last three are set by database triggers (see §20), and nothing writes `processing` or `shipping`. So the stepper can't place `confirmed`, `partially_shipped` or `shipped` orders on a step.
 
 **Login / Signup / Forgot (`/auth/login`)**
 - Login → `signIn('client-login', {email, password, redirect:false})` → `router.push('/')`.
@@ -271,6 +273,8 @@ Links in the UI that point to **routes that do not exist**: `/login` and `/profi
 
 Root layout: `app/(admin)/layout.tsx` → `components/Admin/AdminLayout.tsx` (server). If there is no admin session it renders children without sidebar (used for the login page); otherwise renders `AdminSidebar` + content inside `LoadingProvider`.
 
+Theme: ✔ Verified from `app/(admin)/globals.css` — the admin panel uses a **dark theme by default**. `:root` holds dark HSL tokens (background `220 25% 8%`, teal primary `185 80% 45%`, violet focus ring/sidebar accents), and there is no light admin palette and no theme switcher. The storefront (`app/(client)/globals.css`) is a separate **light** theme with teal `#15BCC9`. Admin fonts Inter + Poppins are loaded via `next/font/local`. See `DEEP_PROJECT_ANALYSIS.md` §16–17.
+
 Protection: `middleware.ts` redirects any `/admin/*` (except `/admin/login`) to `/admin/login` unless `token.role.name === 'admin'`. API routes under `/api/admin/*` enforce `access: 'admin'` via `withHandler` — **except `/api/admin/content/[id]` PUT/PATCH/DELETE** (see Security).
 
 Sidebar menu (`components/Admin/AdminSidebar.tsx`): **Products, Categories, Orders, Content**. Dashboard, Frames, Inventory, Customers, Discounts, Coupons, Reports, Admin Users, Shipping, Settings are commented out — **those modules do not exist.**
@@ -285,8 +289,8 @@ Sidebar menu (`components/Admin/AdminSidebar.tsx`): **Products, Categories, Orde
 | **Categories** | `/admin/categories` | `CategoryPage/*` | `GET/POST /api/admin/category`, `PUT/PATCH/DELETE /api/admin/category/[id]` | `categories` | Multipart form with image (≤5 MB, jpeg/png/webp) → Cloudinary folder `categories`. Delete = soft delete. Duplicate title check. |
 | **Content (banners/hero)** | `/admin/content` | `ContentPage/*` | `GET/POST /api/admin/content`, `PUT/PATCH/DELETE /api/admin/content/[id]` | `contents` | Types offered in UI: `banner`, `hero_section`. `hero_section` items feed the home carousel. |
 | **Orders – list** | `/admin/orders` | `OrderManagement/*` | `GET /api/admin/orders?page&limit&status&payment&search` | `orders` | Search by name/email/phone/order number. |
-| **Orders – detail** | `/admin/orders/[id]` | `OrderManagementDetails/*` | `GET /api/admin/orders?id=`, `GET .../[id]/items`, `.../shipments`, `.../timeline`, `.../shipment-items?shipment_ids=` | `orders`, `order_items`, `order_timeline`, `shipments`, `shipment_items` | Shows customer, summary, items, timeline. **No way to change order status, cancel or refund.** |
-| **Shipments** | inside order detail | `OrderedItemsDetails/Shipments.tsx` | `POST/PATCH/DELETE /api/admin/orders/[id]/shipments` | `shipments`, `shipment_items` | Split an order into shipments (choose items + qty, courier, tracking ID). Update shipment status (`pending, packed, shipped, out_for_delivery, delivered, cancelled`) — sets `shipped_at`/`delivered_at` client-side. |
+| **Orders – detail** | `/admin/orders/[id]` | `OrderManagementDetails/*` | `GET /api/admin/orders?id=`, `GET .../[id]/items`, `.../shipments`, `.../timeline`, `.../shipment-items?shipment_ids=` | `orders`, `order_items`, `order_timeline`, `shipments`, `shipment_items` | Shows customer, summary, items, timeline. **No UI/API to change order status manually, cancel or refund.** ⟲ Corrected: order status is still updated **automatically by database triggers** when shipments change (see Shipments row). |
+| **Shipments** | inside order detail | `OrderedItemsDetails/Shipments.tsx` | `POST/PATCH/DELETE /api/admin/orders/[id]/shipments` | `shipments`, `shipment_items` | Split an order into shipments (choose items + qty, courier, tracking ID). Update shipment status (`pending, packed, shipped, out_for_delivery, delivered, cancelled`) — sets `shipped_at`/`delivered_at` client-side. ✔ Live DB triggers `trg_sync_order_from_shipment` / `trg_sync_order_from_shipment_items` then set `orders.status` to `partially_shipped` / `shipped` / `delivered` (see §20). |
 | **Shipping labels** | inside order detail | `components/Admin/ShippingLabel.tsx` | — | — | Opens a print window with A4/A6 labels and a Code128 barcode of the tracking ID (sender shown as "Crystal Art"). |
 
 Customers, users, reports, coupons, settings, inventory: **not implemented.**
@@ -348,7 +352,7 @@ Response conventions:
 | POST | `/api/cart/delete` | option keys | Delete one line. (Not called by UI.) |
 | POST | `/api/cart/clear` | — | Delete all. (Not called by UI.) |
 
-`CartRepository` runs its **write** statements through `readQuery` (reader pool). Whether that works depends on the reader DB user's privileges — cannot be determined.
+`CartRepository` runs its **write** statements through `readQuery` (reader pool). ✔ Verified: `app_reader` has INSERT/UPDATE/DELETE/TRUNCATE on `cart_items`, so these writes **do work** (even though the `.env` comment calls the reader role "read-only").
 
 ### 7.6 `/api/orders`, `/api/razorpay`, `/api/track-orders`
 
@@ -408,13 +412,19 @@ Used by `hooks/useCloudinaryUpload.ts` / `useCloudinaryDelete.ts`; no component 
 
 ## 8. Database Analysis
 
-**Technology:** PostgreSQL (driver `pg`). Host defaults to port `25060` and the SSL helper mentions a DigitalOcean CA → very likely **DigitalOcean Managed PostgreSQL**, but the actual host cannot be determined.
+**Technology:** PostgreSQL (driver `pg`). ✔ Verified: **DigitalOcean Managed PostgreSQL 18.6** (Bangalore region), database `defaultdb`, port 25060, single schema `public`.
 
-**There is no schema file, migration or seed in the repository.** The table list below is reconstructed from the SQL statements in the code. Column **types, constraints, defaults, indexes and foreign keys cannot be determined from the current codebase** except where SQL implies them.
+**There is no schema file, migration or seed in the repository.** The table list below was reconstructed from the SQL in the code; ✔ it has since been **verified against the live database** (read-only catalog queries). Exact types, defaults, constraints and indexes are in `DEEP_PROJECT_ANALYSIS.md` §11.5. Key verified facts:
+- All 15 tables below exist; IDs are `uuid DEFAULT gen_random_uuid()`.
+- Image fields (`categories.image_url`, `contents.image`, `product_images.image_url`, `products.thumbnail`) are **`text` containing JSON** — so the code's `JSON.parse` calls are valid.
+- Enums: `order_status` (pending, confirmed, processing, shipped, delivered, cancelled, returned, refunded, **partially_shipped**), `payment_status` (pending, paid, failed, refunded), `product_status` (a literal `"NULL"` label, active, inactive, draft), `shipment_status` (pending, packed, shipped, out_for_delivery, delivered, cancelled).
+- Unique constraints: `auth_users.email`, `auth_users.phone`, `auth_users.firebase_uid`, `orders.order_number`, `roles.name`, `shipment_items (shipment_id, order_item_id)`; CHECK `shipment_items.quantity > 0`.
+- **Triggers:** `updated_at` triggers on most tables, and **order-status triggers on `shipments` / `shipment_items`** (see §10 and §20).
+- Extra columns not used by `main` code: `auth_users.firebase_uid` (from the Firebase experiment), `cart_items.price` (integer, always 0).
 
-**Row-Level Security hint:** `lib/db.ts#withUserSession` sets `app.current_user_id` for RLS, but it is **never called**. Whether RLS policies exist in the database cannot be determined.
+**Row-Level Security:** `lib/db.ts#withUserSession` sets `app.current_user_id` for RLS, but it is **never called**. ✔ Verified: RLS is **disabled on every table and no policies exist**, so the helper would have no effect anyway.
 
-**Two DB users:** `APP_READER_DB_USER` (read pool) and `APP_WRITER_DB_USER` (write pool) → the database has at least two roles with different privileges.
+**Two DB users:** `APP_READER_DB_USER` (read pool) and `APP_WRITER_DB_USER` (write pool). ✔ Verified privileges: `app_reader` has SELECT on all tables (including `auth_users.password_hash`) **plus full INSERT/UPDATE/DELETE/TRUNCATE on `cart_items`**; `app_writer` has SELECT/INSERT/UPDATE/DELETE on most tables, and only SELECT/INSERT/UPDATE on `auth_users`, `user_profiles` and `roles`.
 
 ### 8.1 Tables
 
@@ -422,31 +432,33 @@ Used by `hooks/useCloudinaryUpload.ts` / `useCloudinaryDelete.ts`; no component 
 |---|---|---|---|---|
 | `auth_users` | id, email, phone, password_hash, is_active, is_email_verified, is_phone_verified, last_login_at, created_at, updated_at | Login identity | 1–1 `user_profiles.user_id` | NextAuth authorize, signup, forgot/change password, profile |
 | `user_profiles` | user_id, first_name, last_name, user_name, avatar_url, role_id, metadata, created_at, updated_at | Profile + role | `user_id → auth_users.id`, `role_id → roles.id` | Auth, signup, profile |
-| `roles` | id, name | Roles; code checks names `'admin'` and `'user'` | referenced by `user_profiles.role_id` | Auth / authorization |
+| `roles` | id, name | Roles. Code checks names `'admin'` and `'user'`; ⟲ Corrected: the live table contains **`admin` and `customer`** (no `user`). The signup default role id `d45bfdd1-…` is `customer`. | referenced by `user_profiles.role_id` | Auth / authorization |
 | `categories` | id, title, description, image_url (JSON {url, public_id}), priority, is_active, deleted, created_at, updated_at | Product categories | 1–N `products.category_id` | Storefront, admin |
 | `products` | id, title, description, price, discount_price, stock_quantity, category_id, status (`draft`/`active`/`inactive`), sizes[], thickness[], mounting_methods[], orientations[], thumbnail (JSON or URL), deleted, created_at, updated_at | Products; option arrays are Postgres arrays | `category_id → categories.id`; 1–N images, variants | Storefront, admin, cart join |
 | `product_images` | id, product_id, image_url (JSON string {url, public_id}) | Gallery images | `product_id → products.id` | Product page, admin |
 | `product_variants` | id, product_id, size, thickness, price, discount_price, orientation, stock_quantity, created_at, updated_at | Price per size × thickness (× orientation) | `product_id → products.id` | Product page price, admin |
 | `contents` | id, type (`banner`, `hero_section`, …), title, description, link_url, image (JSON), priority, is_active, deleted, created_at, updated_at | Homepage CMS blocks | — | Home hero, admin content |
-| `cart_items` | id, user_id, product_id, variant_id, size, thickness, mounting_method, orientation, quantity, created_at, updated_at | Server-side cart | `user_id → auth_users.id`, `product_id → products.id`. `ON CONFLICT (user_id, product_id, size, thickness, mounting_method, orientation)` in an **unused** upsert implies a unique constraint may exist. | Cart sync |
-| `saved_addresses` | id, user_id, type (`Home`/`Work`/`Other`), name, phone, address, city, state, pincode, is_default | Address book | `user_id → auth_users.id` | Checkout |
-| `orders` | id, order_number, user_id, customer_name, customer_email, customer_phone, shipping_address (jsonb — cast `::jsonb` in SQL), billing_address (jsonb), status, payment_status, subtotal, tax, shipping_cost, total, notes, payment_method, razorpay_order_id, razorpay_payment_id, created_at, updated_at | Orders | `user_id → auth_users.id`; 1–N items, timeline, shipments | Checkout, account, admin, tracking |
+| `cart_items` | id, user_id, product_id, variant_id, size, thickness, mounting_method, orientation, quantity, created_at, updated_at | Server-side cart | ✔ FKs `user_id → user_profiles.user_id`, `product_id → products.id`, `variant_id → product_variants.id` (all ON DELETE RESTRICT). ⟲ Corrected: **no** unique constraint matches the unused upsert's `ON CONFLICT (…)` (PK is `(id, user_id)`), so that upsert would fail. Live table also has an unused `price integer NOT NULL DEFAULT 0` column. | Cart sync |
+| `saved_addresses` | id, user_id, type (`Home`/`Work`/`Other`), name, phone, address, city, state, pincode, is_default | Address book | ✔ `user_id` has **no foreign key** (linked by convention only) | Checkout |
+| `orders` | id, order_number, user_id, customer_name, customer_email, customer_phone, shipping_address (jsonb — cast `::jsonb` in SQL), billing_address (jsonb), status, payment_status, subtotal, tax, shipping_cost, total, notes, payment_method, razorpay_order_id, razorpay_payment_id, created_at, updated_at | Orders | ✔ `user_id → user_profiles.user_id` (ON DELETE SET NULL); `order_number` UNIQUE; 1–N items, timeline, shipments | Checkout, account, admin, tracking |
 | `order_items` | id, order_id, product_id (nullable), variant_id, product_title, product_image, size, thickness, mounting_method, orientation, quantity, unit_price, total_price, options (JSON), created_at | Snapshot of purchased lines | `order_id → orders.id`, `product_id → products.id` | Orders, shipments |
 | `order_timeline` | id, order_id, status, note, created_at | Status history | `order_id → orders.id` | Order detail, admin |
 | `shipments` | id (uuid — `::uuid[]` cast), order_id, shipment_number, courier, tracking_id, status, notes, shipped_at, delivered_at, created_at, updated_at | Physical shipments | `order_id → orders.id` | Admin |
 | `shipment_items` | id, shipment_id, order_item_id, quantity, created_at | Which items/qty in which shipment | `shipment_id → shipments.id`, `order_item_id → order_items.id` | Admin |
 
-IDs appear to be **UUIDs** (hard-coded role UUID, `::uuid[]` cast for shipments).
+✔ IDs are **UUIDs** (`gen_random_uuid()`), verified in the live DB.
 
 ### 8.2 Relationships
+
+`orders.user_id` and `cart_items.user_id` reference `user_profiles(user_id)` (the same UUID as `auth_users.id`); `saved_addresses.user_id` has no FK (dotted below as a convention-only link).
 
 ```mermaid
 erDiagram
     auth_users ||--|| user_profiles : has
     roles ||--o{ user_profiles : assigned
-    auth_users ||--o{ saved_addresses : owns
-    auth_users ||--o{ cart_items : owns
-    auth_users ||--o{ orders : places
+    auth_users ||..o{ saved_addresses : "owns (no FK)"
+    user_profiles ||--o{ cart_items : owns
+    user_profiles |o--o{ orders : places
     categories ||--o{ products : contains
     products ||--o{ product_images : has
     products ||--o{ product_variants : has
@@ -475,7 +487,7 @@ erDiagram
 
 ### 9.1 Registration
 1. `AuthForm` (signup mode) → `POST /api/auth/signup { firstName, lastName, email, password }`.
-2. Server checks duplicate email, bcrypt-hashes (cost 10), inserts `auth_users` and `user_profiles` with default role id `d45bfdd1-…` (the role's name is not in code; it must be `'user'` for the middleware user checks to apply).
+2. Server checks duplicate email, bcrypt-hashes (cost 10), inserts `auth_users` and `user_profiles` with default role id `d45bfdd1-…`. ⟲ Corrected: that role is named **`customer`** in the live DB — not `'user'` — so the middleware's `isUser()` checks never match customers.
 3. Browser immediately calls `signIn('client-login')`.
 
 ### 9.2 Login
@@ -488,7 +500,7 @@ erDiagram
 Both providers run the **same query**; neither restricts by role. Role separation is enforced later by middleware and API guards.
 
 ### 9.3 Token verification
-- **Pages**: `middleware.ts` (matcher `/`, `/login`, `/profile/:path*`, `/admin/:path*`) reads the JWT via `withAuth`.
+- **Pages**: `middleware.ts` (matcher `/`, `/login`, `/profile/:path*`, `/admin/:path*`) reads the JWT via `withAuth`. Its customer branches test `role.name === 'user'`, which ⟲ never matches because live customers have role `customer`. In practice only the **admin** branches take effect: admins are redirected from `/` and `/admin/login` to `/admin` (a missing page → 404), and non-admins are kept out of `/admin/*`. An unauthenticated visit to `/profile/*` still redirects to the missing `/login`.
 - **APIs**: `lib/api/auth.ts#getAuthUser` → `getToken({ req, secret: NEXTAUTH_SECRET })`; `requireAdmin` → `token.role.name === 'admin'`.
 - **Server components**: `getServerSession(authOptions)` in `AdminLayout`; `getServerSession()` (without options) in `/checkout`.
 - `lib/session.ts#requireAuth/requireAdmin` exist but are **unused**.
@@ -504,6 +516,7 @@ Both providers run the **same query**; neither restricts by role. Role separatio
 | Area | Guard |
 |---|---|
 | `/admin/*` pages | middleware: admin role required (else → `/admin/login`) |
+| `/` (home) | middleware: logged-in **admin** → `/admin` (404); customers (role `customer`) pass through unchanged |
 | `/checkout` page | server `getServerSession` → `/auth/login` |
 | `/account` page | client-side redirect only |
 | `/order/[id]`, `/track-order` | none |
@@ -545,7 +558,7 @@ Feature status (only what exists):
 | Feature | Status |
 |---|---|
 | Product variants | Yes — `product_variants` keyed by size × thickness (+ orientation stored). Mounting method & orientation are selectable but do not change price. |
-| Stock management | `stock_quantity` stored on products and variants and editable in admin, but **never checked or decremented** on add-to-cart or order. |
+| Stock management | `stock_quantity` stored on products and variants and editable in admin, but **never checked or decremented** on add-to-cart or order. ✔ No stock triggers or functions exist in the live DB either. |
 | Pricing | Effective price = variant/product `discount_price` if set, else `price`. Computed **in the browser** and trusted by the server. |
 | Discounts | Only per-product/variant `discount_price`. |
 | Coupons | **Not implemented** (UI input without handler; `/api/coupons/use` does not exist). |
@@ -556,6 +569,7 @@ Feature status (only what exists):
 | Order cancellation | Not implemented. |
 | Refunds | Not implemented (policy page only; `payment_status` type allows `refunded`, nothing sets it). |
 | Order tracking | Yes — timeline + shipments; public lookup by order number. |
+| Order status progression | ⟲ Corrected: app code sets `pending` → `confirmed` (on payment). The **live DB triggers** then advance the status to `partially_shipped` → `shipped` → `delivered` based on shipment statuses. They don't write timeline entries and don't check payment status. |
 | COD | Code exists (`handleCODSubmit`) but the option is hidden in UI. If re-enabled it would send `total: 0` and redirect to `/order-success/<order.id>`. |
 | Guest checkout | No — `/api/orders/create` requires login. |
 | Emails / notifications | None. |
@@ -568,7 +582,7 @@ Feature status (only what exists):
 
 **Files:** `lib/payment.service.ts` (client orchestration), `lib/razorpay.ts` (script loader), `app/(client)/layout.tsx` (script tag), `app/api/razorpay/create-order/route.ts`, `app/api/orders/verify-payment/route.ts`, `types/razorpay.d.ts`.
 
-**Config from `.env`:** `RAZORPAY_KEY_ID` (returned to browser as `key_id`), `RAZORPAY_KEY_SECRET` (server only; used by SDK and for HMAC verification). Whether they are test (`rzp_test_…`) or live (`rzp_live_…`) keys cannot be determined.
+**Config from `.env`:** `RAZORPAY_KEY_ID` (returned to browser as `key_id`), `RAZORPAY_KEY_SECRET` (server only; used by SDK and for HMAC verification). Cannot be determined from the code alone; ✔ the `.env` provided later contains a **test-mode** key (`rzp_test_…` prefix).
 
 ### Flow
 
@@ -620,7 +634,15 @@ sequenceDiagram
 
 ## 13. Environment Variables
 
-Found by searching the whole codebase for `process.env` / `import.meta.env` (no `import.meta.env` usage; no `.env*` file exists).
+Found by searching the whole codebase for `process.env` / `import.meta.env` (no `import.meta.env` usage; no `.env*` file existed at the time of this first pass).
+
+> ✔ **Update:** a local `.env` has since been provided (git-ignored). The "Current status" column below reflects the first pass. Actual status now:
+> - **Set:** DB, `NEXTAUTH_SECRET`, `NEXT_PUBLIC_URL`, `ALLOWED_ORIGINS`, Razorpay (**test** keys).
+> - **Empty:** all Cloudinary values.
+> - **Absent:** `NEXTAUTH_URL`.
+> - **Unexpected extras:** `NODE_ENV=production`, unused Supabase keys (including a service-role key), empty Firebase variables.
+>
+> See `DEEP_PROJECT_ANALYSIS.md` §23–23.1 (no values are reproduced).
 
 | Variable | Used where | Purpose | Required? | Expected format | Current status |
 |---|---|---|---|---|---|
@@ -686,7 +708,7 @@ CLOUDINARY_API_SECRET=
 Ask the previous developer / client for:
 
 1. **PostgreSQL** — `DB_HOST`, `DB_PORT`, `DB_NAME`, reader user + password, writer user + password, and the **CA certificate** (`DB_SSL_CERT`). Also ask whether a separate staging/dev DB exists, and whether your IP must be added to the DB's trusted sources.
-2. **Database schema** — a `pg_dump --schema-only` (the repo has no schema/migrations), the `roles` table contents (confirm names `admin` / `user` and that id `d45bfdd1-7607-40d8-9146-84596828ab2c` exists), and any RLS policies/grants for the reader/writer roles.
+2. **Database schema** — ✔ now verified read-only from the live DB (`DEEP_PROJECT_ANALYSIS.md` §11.5): roles are `admin` and `customer` (id `d45bfdd1-…` = `customer`), there are no RLS policies, and reader/writer grants are documented. Still ask for a `pg_dump --schema-only` for version control, plus an explanation of **how schema changes and triggers were applied** (there are no migrations in the repo).
 3. **`NEXTAUTH_SECRET`** — the production value (changing it logs everyone out).
 4. **Production URL** for `NEXT_PUBLIC_URL`, `NEXTAUTH_URL`, `ALLOWED_ORIGINS`.
 5. **Razorpay** — `RAZORPAY_KEY_ID` and `RAZORPAY_KEY_SECRET` for **both test and live** modes, and whether Magic Checkout (1CC) is enabled on the account.
@@ -699,7 +721,7 @@ Ask the previous developer / client for:
 
 | Service | Purpose | Used by | Credentials | Env vars | Key files |
 |---|---|---|---|---|---|
-| **PostgreSQL (likely DigitalOcean Managed DB)** | All data | All APIs | 2 DB users + CA cert | `DB_*`, `APP_*_DB_*` | `lib/db.ts`, `lib/db/**` |
+| **PostgreSQL 18 — DigitalOcean Managed DB (✔ verified)** | All data | All APIs | 2 DB users + CA cert | `DB_*`, `APP_*_DB_*` | `lib/db.ts`, `lib/db/**` |
 | **Razorpay** | Online payments | Checkout | Key id + secret | `RAZORPAY_KEY_ID`, `RAZORPAY_KEY_SECRET` | `lib/payment.service.ts`, `app/api/razorpay/create-order/route.ts`, `app/api/orders/verify-payment/route.ts`, `app/(client)/layout.tsx` |
 | **Cloudinary** | Image hosting | Admin product/category/content | Cloud name, key, secret | `CLOUDINARY_*` | `lib/cloudinary.service.ts`, `app/api/coudinary/*`, admin routes |
 | **NextAuth (library, self-hosted)** | Auth | Whole app | Secret | `NEXTAUTH_SECRET`, `NEXTAUTH_URL` | `app/api/auth/[...nextauth]/route.ts`, `middleware.ts` |
@@ -746,7 +768,7 @@ Ask the previous developer / client for:
 - **No deployment configuration exists** in the repository (no Dockerfile, `vercel.json`, Render/Railway config, CI/CD workflows, PM2/nginx config).
 - Clues only:
   - `.gitignore` contains `.vercel` (default create-next-app entry — not proof of Vercel use).
-  - `lib/db.ts` targets a DigitalOcean-style managed Postgres (port 25060, self-signed CA comment).
+  - `lib/db.ts` targets a DigitalOcean-style managed Postgres (port 25060, self-signed CA comment). ✔ The `.env` confirms **DigitalOcean Managed PostgreSQL (Bangalore)** for the database. App hosting is still unknown.
   - `lib/api/security.ts#getClientIp` reads `cf-connecting-ip` → possibly behind Cloudflare.
 - Build/start: `npm run build` then `npm run start` (port 3000 or `PORT`).
 - Production specifics in code: secure cookie name `__Secure-next-auth.session-token`, DB SSL with `rejectUnauthorized:false`, CORS restricted to `ALLOWED_ORIGINS`/`NEXT_PUBLIC_URL`, security headers in `next.config.ts`.
@@ -762,7 +784,7 @@ Ask the previous developer / client for:
 - **Current branch:** `main` (164 commits; 106 by JibiGeorge, 58 merge commits by `projectinshahi`). First commit 2026-03-12, last 2026-09-09.
 - **Local changes at hand-over:** `package-lock.json` and `yarn.lock` modified (from a local install), no other changes.
 - **Branch convention** (README + actual branches): `main` (production), `develop` (integration), `feature/*`, `admin/develop` + `admin-main` + `admin/feature/*` for the admin panel, plus `fix`, `updates`, `main-db`.
-- **All 27 remote branches are fully merged into `main`** (0 commits ahead) **except `origin/feature/firebase-auth`** (1 commit ahead, 2026-05-30, "user login changed to firebase") — an abandoned experiment replacing login with Firebase.
+- **All 27 remote branches are fully merged into `main`** (0 commits ahead) **except `origin/feature/firebase-auth`** (1 commit ahead, 2026-05-30, "user login changed to firebase") — an abandoned experiment replacing login with Firebase. ✔ A read-only diff shows it swaps customer email/password login for **Firebase phone-number OTP**, comments out the password and `is_active` checks, adds reCAPTCHA Enterprise and `firebase`/`firebase-admin`. `main` doesn't use it, but the live DB already contains its `auth_users.firebase_uid` column (see `DEEP_PROJECT_ANALYSIS.md` §27.1).
 - Several branches are far behind `main` and can likely be deleted after confirmation (e.g. `feature/navbar` 158 behind, `main-db` 108 behind).
 - `.next/` exists locally (`.next/dev`) — build artefact, git-ignored.
 
@@ -780,12 +802,13 @@ Ask the previous developer / client for:
 | Stock | — | Stored, never enforced or decremented. |
 | Shipping | `PaymentSummaryCard` | Displays ₹99 below ₹1000 but not charged; effectively free. |
 | Tax | checkout | 0. |
-| Order number | browser | `ORD-` + base36 timestamp, generated client-side; uniqueness in DB cannot be determined. |
-| Order status transitions | backend | Only `pending` (create) → `confirmed` (payment verified). Types allow `processing, shipped, delivered, cancelled, returned` but **no code sets them**. |
+| Order number | browser | `ORD-` + base36 timestamp, generated client-side. ✔ The DB enforces `UNIQUE (order_number)`, so a collision would fail the insert. |
+| Order status transitions | backend + **database** | ⟲ Corrected. App code: `pending` (create) → `confirmed` (payment verified). Then the live DB function `sync_order_status_from_shipments()` (SECURITY DEFINER, fired AFTER INSERT/UPDATE/DELETE on `shipments` and `shipment_items`) sets `orders.status` to:<br>• `delivered` when all ordered quantity is in `delivered` shipments;<br>• `shipped` when all of it is in `shipped` / `out_for_delivery` / `delivered` shipments;<br>• `partially_shipped` when some is.<br>It skips `cancelled`/`returned` orders and never moves status backwards. It ignores `payment_status`, so an unpaid order can become "shipped". It writes no `order_timeline` row. Nothing sets `processing`, `cancelled`, `returned` or `refunded`. |
 | Payment status | backend | `pending` → `paid`. `failed`/`refunded` never set. |
 | Shipment status | admin | `pending → packed → shipped → out_for_delivery → delivered / cancelled`, chosen freely by admin; `shipped_at`/`delivered_at` set from the admin's browser clock. |
 | Shipment quantity | admin UI | UI limits selection to remaining (unshipped) quantity per item; **server does not validate**. |
-| Roles | auth | `admin` vs `user` by `roles.name`. New signups get the hard-coded default role. |
+| Roles | auth | Code compares `roles.name` with `'admin'` and `'user'`. ⟲ Corrected: the live roles are **`admin`** and **`customer`**, and new signups get the hard-coded default role id, which is `customer`. |
+| `updated_at` | database | ✔ BEFORE UPDATE triggers set `updated_at = now()` on categories, products, product_variants, contents, cart_items, shipments, user_profiles and orders. |
 | Password rules | `lib/validation.ts` | 8–72 characters (enforced at login, change and reset; **not** at signup). |
 | Address rules | `schema/address.schema.ts` | Indian phone `^[6-9]\d{9}$`, 6-digit pincode (client-side only). |
 | Image rules | admin category/content APIs | ≤5 MB, jpeg/png/webp (product images unchecked). |
@@ -813,7 +836,7 @@ Severity: **Critical / High / Medium / Low**. All items are backed by the cited 
 | # | Issue | Location | Why it matters | Recommended action | Severity |
 |---|---|---|---|---|---|
 | S1 | Password reset needs only an email address — no token, OTP or email | `app/api/auth/forgot-password/route.ts` | Anyone who knows a customer's **or admin's** email can set a new password and log in → full account/admin takeover. | Disable the endpoint immediately; implement token-by-email (or OTP) reset. | **Critical** |
-| S2 | SQL injection in public content API | `lib/db/content.db.ts` (`type = '${type}'`), reached by `GET /api/content?type=` | Unauthenticated attacker can run arbitrary SQL with the reader DB user (read any table incl. password hashes). | Parameterise the query. | **Critical** |
+| S2 | SQL injection in public content API | `lib/db/content.db.ts` (`type = '${type}'`), reached by `GET /api/content?type=` | Unauthenticated attacker can run arbitrary SQL with the reader DB user. ✔ Live grants confirm the blast radius: `app_reader` can read **every table** (incl. `auth_users.password_hash`, orders, addresses) and can **insert/update/delete/truncate `cart_items`**. RLS is disabled. | Parameterise the query; reduce `app_reader` grants. | **Critical** |
 | S3 | Admin content update/toggle/delete are public | `app/api/admin/content/[id]/route.ts` — `PUT`, `PATCH`, `DELETE` have no `{ access: 'admin' }` | Anyone can change/delete homepage banners and upload images to Cloudinary. | Add `access: 'admin'`. | **High** |
 | S4 | Unauthenticated Cloudinary upload & delete | `app/api/coudinary/upload/route.ts`, `app/api/coudinary/delete/route.ts` | Anyone can upload arbitrary files to your Cloudinary account or delete any product/category image by `public_id`. | Remove (unused) or protect with admin auth + validation. | **High** |
 | S5 | Order totals / Razorpay amount trusted from client | `app/api/orders/create`, `app/api/razorpay/create-order`, `lib/payment.service.ts` | A user can edit the request and pay ₹1 for any order; verify-payment will still mark it `paid`. | Recompute prices server-side from DB; create Razorpay order server-side from DB total; compare amount on verify. | **High** |
@@ -822,7 +845,7 @@ Severity: **Critical / High / Medium / Low**. All items are backed by the cited 
 | S8 | Client can set its own role in the JWT | `jwt` callback: `if (session.role) token.role = session.role` on `trigger === 'update'` | Any logged-in user can call NextAuth's session update endpoint with `{ role: { name: 'admin' } }` and gain admin access to `/admin` and `/api/admin/*`. (NextAuth v4 `update()` posts client-supplied data to the `jwt` callback.) | Never accept role from client; reload from DB. | **Critical** (verify at runtime) |
 | S9 | Track-order exposes order by guessable number | `GET /api/track-orders?orderNumber=` | Order numbers are `ORD-<base36 timestamp>` → enumerable; reveals customer name, items, total. | Require email/phone + order number, rate-limit. | Medium |
 | S10 | Signup lacks validation & rate limit | `app/api/auth/signup/route.ts` (not in `withHandler`) | Weak passwords, un-normalised emails (case duplicates), account spam. | Use `withHandler`, `validateEmail`, `validatePassword`. | Medium |
-| S11 | Profile update can change email without verification / uniqueness | `app/api/user/account/profile/route.ts` | Email takeover conflicts; combined with S1 increases risk. | Validate and verify email changes. | Medium |
+| S11 | Profile update can change email/phone without verification or an app-level uniqueness check | `app/api/user/account/profile/route.ts` | ✔ The DB has `UNIQUE (email)` and `UNIQUE (phone)`, so duplicates are rejected, but as an unhandled DB error (500). Email uniqueness is case-sensitive, so `A@x.com` and `a@x.com` can coexist. There is no verification of the new address. | Validate, normalise and verify email changes; return a proper 409. | Medium |
 | S12 | DB TLS without certificate verification | `lib/db.ts` (`rejectUnauthorized: false` always) | MITM on DB connection possible. | Use `rejectUnauthorized: true` with the provided CA. | Medium |
 | S13 | Sensitive data in logs | `lib/payment.service.ts`, `verify-payment` (logs expected signature), `orders/create`, cart routes, signup | PII and payment data in browser console and server logs. | Remove debug logs. | Medium |
 | S14 | In-memory rate limiting only | `lib/api/rateLimit.ts` | Resets on restart, per instance; no limit on NextAuth login endpoint (brute force). | Use shared store (Redis) and protect login. | Medium |
@@ -830,6 +853,8 @@ Severity: **Critical / High / Medium / Low**. All items are backed by the cited 
 | S16 | Product image upload has no type/size validation | `app/api/admin/product/*` | Admin-only; large base64 payloads could exhaust memory. | Validate MIME/size server-side. | Low |
 | S17 | Deactivated users/role changes not enforced until JWT expiry (7 days) | NextAuth JWT strategy | Removing an admin doesn't revoke access immediately. | Re-check user/role in `jwt` callback periodically. | Low |
 | S18 | Razorpay script loaded `beforeInteractive` on every page; CSP header only on API responses | `app/(client)/layout.tsx`, `lib/api/security.ts` | No page-level CSP. | Add CSP for pages. | Low |
+| S19 | ✔ DB privileges broader than needed (verified live) | table ACLs | `app_reader` (used by public routes) has full DML + TRUNCATE on `cart_items`; `app_writer` can INSERT/UPDATE `roles`; no RLS. | Apply least privilege. | Medium |
+| S20 | ✔ Unused Supabase **service-role** key present in `.env` (found after the `.env` was provided) | `.env` (not referenced by code) | Highly privileged credential with no functional use. | Confirm with client; remove and rotate if unused. | High |
 
 Passwords: bcrypt cost 10 ✔. No hard-coded secrets ✔. `npm audit` was **not run** during this analysis — run it.
 
@@ -842,7 +867,7 @@ Passwords: bcrypt cost 10 ✔. No hard-coded secrets ✔. `npm audit` was **not 
 | Server components call their own API over HTTP (`NEXT_PUBLIC_URL/api/...`) | Home sections, product page, products page, admin pages | Call repository functions directly in server components (removes an HTTP hop, avoids dependency on `NEXT_PUBLIC_URL`). |
 | All public APIs set `Cache-Control: no-store`; home is `force-dynamic` | `app/api/*`, `app/(client)/page.tsx` | Cache categories/products/hero (ISR / `revalidate`). |
 | No pagination on storefront product list / category products | `/api/products/[id]/category` | Add pagination. |
-| `LIKE '%...%'` searches on orders/products | admin repositories | Add trigram indexes if data grows (indexes cannot be verified). |
+| `LIKE '%...%'` searches on orders/products | admin repositories | Add trigram indexes if data grows. ✔ Verified indexes: orders has `created_at`, `order_number`, `status`, `user_id`; order_items/order_timeline have `order_id`. **No** index on `products.category_id`, `product_images.product_id`, `product_variants.product_id`, `shipments.order_id`, `saved_addresses.user_id`. There are duplicate indexes on `auth_users.email/phone/firebase_uid` and `orders.order_number`. |
 | Product images sent as base64 in JSON | `ProductStepperForm.tsx` | ~33 % larger payloads; may exceed host body limits. Use direct/signed Cloudinary uploads or multipart. |
 | Sequential Cloudinary uploads in product PUT; N separate UPDATE/DELETE queries in cart sync/merge | `app/api/admin/product/[id]`, `app/api/cart/sync`, `merge` | Parallelise / batch. |
 | Cart sync posts the **whole cart** after every change (debounced 800 ms) | `hooks/useCartSync.ts` | Acceptable; could send diffs. |
@@ -888,9 +913,13 @@ Security (details in §22): S1 password reset without verification · S2 SQL inj
 Functional bugs:
 
 1. **Missing comma in order-details SQL** — `lib/db/queries/user/order.user.queries.ts` (`billing_address\n  status,`) → `status` is not selected and `billing_address` is returned under the name `status`. Customer order detail page shows wrong status/billing.
-2. **`/profile` and `/login` routes don't exist**, but `middleware.ts` redirects logged-in users with role `user` from `/` to `/profile`, and NextAuth `pages.signIn` is `/login`. After customer login, `AuthForm` pushes to `/` → middleware → `/profile` → **404** (if the default role's name is `user`).
+2. **`/profile` and `/login` routes don't exist**, but `middleware.ts` has branches that redirect role `'user'` to `/profile`, and NextAuth `pages.signIn` is `/login`. ⟲ Corrected: the live roles are `admin` and `customer`, so the customer redirect to `/profile` **never fires**, and customers land on `/` normally after login. What remains is dead middleware code, the missing `/login` target for `pages.signIn`, and unauthenticated `/profile/*` visits redirecting to `/login` (404).
 3. **`/admin` page doesn't exist**, but middleware redirects admins from `/` and `/admin/login` to `/admin` → 404.
-4. **Order status never progresses** beyond `confirmed`; admin has no order-status/cancel/refund API. Track-order UI expects `processing`/`shipping` which are never written.
+4. ⟲ Corrected — **Order status does progress**, but only partly through app code: the app sets `pending` → `confirmed`, and **database triggers** on `shipments`/`shipment_items` then set `partially_shipped` → `shipped` → `delivered`. Remaining issues:
+   - admin has no manual status/cancel/refund API;
+   - trigger-driven changes write no timeline entry;
+   - the trigger ignores payment status;
+   - the track-order UI expects `processing`/`shipping`, which never occur, and doesn't recognise `confirmed`, `partially_shipped` or `shipped`.
 5. **Shipping shown ≠ charged** — checkout card shows ₹99 under ₹1000 but order total and Razorpay amount exclude it; cart says "Free".
 6. **Razorpay amount rounding** — `Math.round(amount) * 100` drops paise.
 7. **COD path** (hidden) would create orders with `total: 0` and redirect to `/order-success/<uuid>` instead of order number.
@@ -899,13 +928,15 @@ Functional bugs:
 10. **Abandoned payments leave `pending` orders** forever; no retry/cleanup/webhook.
 11. **Stock never checked or decremented.**
 12. **Cart price drift** — `GET /api/cart` returns product base `price` (not variant/discount price) and drops `variant_id`, so after login/sync the cart can show and charge a different price than the product page.
-13. **Category update**: `existing` is an array but code checks `existing.deleted` / `!existing` (never true → 404/409 paths dead) and reads old image from `existing.image_url` (undefined) → **old Cloudinary image is never deleted**. `JSON.parse(existing[0].image_url)` will throw if the column returns an object (jsonb).
+13. **Category update**: `existing` is an array but code checks `existing.deleted` / `!existing` (never true → 404/409 paths dead) and reads old image from `existing.image_url` (undefined) → **old Cloudinary image is never deleted**. (✔ The column is `text`, so `JSON.parse(existing[0].image_url)` itself is valid.)
 14. **Same array-vs-object bug** in category PATCH/DELETE and content PATCH/DELETE existence checks; product PATCH is correct.
 15. **DTO mapping bugs** — `toAdminOrderedItemsDTO` sets `order_id: row.id`; `toAdminOrderedShipmentsDTO` sets `notes: row.status`; `toPublicUserDTO` reads `row.profile.*` but `userByEmail` returns flat columns → names always `null`.
 16. **Admin product POST**: on a failed image upload, `err(...)` (a `NextResponse`) is placed into the images array instead of aborting; Cloudinary uploads happen outside the DB transaction (orphans on failure).
 17. **`/api/content` response shape** is double-wrapped (`data.data`) because a `DBResponse` is passed to `okList`; home hero relies on this quirk.
 18. **`/products` without `category`** (mobile drawer "Shop" link) calls `/api/category/undefined` → page renders blank.
-19. **Cart repository writes use the reader pool** (`readQuery`) — works only if the reader DB user has write rights (unused endpoints except `GET`).
+19. **Cart repository writes use the reader pool** (`readQuery`). ⟲ Corrected: they **work**, because `app_reader` has full write rights on `cart_items` (a privilege issue, see S19). The unused `CartUserQueries.upsert` would fail because no unique constraint matches its `ON CONFLICT` columns.
+19a. ✔ **Product edit likely fails if one of its variants is in any cart.** Admin PUT deletes and re-inserts variants, but `cart_items.variant_id` has an FK with `ON DELETE RESTRICT`. Needs a runtime test.
+19b. ✔ **Changing phone/email to one already in use returns a 500** (DB unique constraints, no app-level handling).
 20. **`contents` insert in `lib/db/content.db.ts#addContent`** lists 7 columns with 6 values (unused function, would fail).
 21. **Dead code**: `lib/auth.ts` (calls nonexistent `/api/admin/signin`), `lib/session.ts`, `withUserSession`, `hooks/useCloudinary*`, `config/steps.ts`, unused cart endpoints, `/api/coupons/use` call.
 22. **Coupon UI** in cart has no behaviour.
@@ -915,10 +946,12 @@ Functional bugs:
 
 ### Potential Issues (need runtime confirmation)
 
-- Whether the default role UUID exists and is named `user` (affects signup and issue #2).
-- Whether the reader DB user can execute the cart writes routed through `readQuery`.
-- Column types for image fields (text vs json/jsonb) — affects `JSON.parse` calls in category update and home sections.
-- Whether `order_number` has a unique constraint.
+- ~~Whether the default role UUID exists and is named `user`~~ — ✔ resolved: it exists and is named `customer`.
+- ~~Whether the reader DB user can execute cart writes~~ — ✔ resolved: yes (full rights on `cart_items`).
+- ~~Column types for image fields~~ — ✔ resolved: `text` (JSON strings).
+- ~~Whether `order_number` has a unique constraint~~ — ✔ resolved: yes.
+- Product edit failing when a variant is in a cart (issue 19a).
+- Whether an admin can ship an unpaid order and have the trigger mark it shipped/delivered.
 - `getServerSession()` without `authOptions` in `/checkout` — should still detect a session via `NEXTAUTH_SECRET`, but verify.
 - Next 16 behaviour with `middleware.ts` (renamed to `proxy.ts` in Next 16) and deprecated `images.domains`.
 - Request-body size limits for base64 product images on the production host.
@@ -928,23 +961,24 @@ Functional bugs:
 
 ### Missing Information
 
-- Database schema, indexes, constraints, RLS policies, existing data and admin accounts.
+- ~~Database schema, indexes, constraints, RLS policies~~ — ✔ verified read-only (see `DEEP_PROJECT_ANALYSIS.md` §11.5). Still missing: whether this DB is production, how schema changes were applied (no migrations), existing data quality, and admin accounts.
 - Hosting platform(s), domain/DNS, production env values, CI/CD process.
-- Razorpay account mode (test/live), Magic Checkout enablement, webhooks configured in dashboard (none in code).
+- Razorpay live account (the current `.env` has test keys), Magic Checkout enablement, webhooks configured in dashboard (none in code).
 - Cloudinary account and any upload presets/transformations configured in the dashboard.
 - Whether Cloudflare sits in front (suggested by `cf-connecting-ip`).
 - Business rules for shipping charges, tax/GST, COD availability, refunds — only described in static policy text.
-- Status of the Firebase experiment (`feature/firebase-auth`).
+- Client decision on the Firebase phone-OTP experiment (`feature/firebase-auth`). Its contents are now known; its `firebase_uid` column is already in the live DB.
 
 ---
 
 ## 26. Information I Need From the Previous Developer / Client
 
 - [ ] **`.env` values** for every variable in §13 (production **and** a dev/staging set).
-- [ ] **Database access**: host, port, DB name, reader & writer credentials, CA cert, trusted-IP whitelisting; a **schema dump** and ideally a sanitised data dump; the `roles` rows.
+- [ ] **Database**: confirmation of whether the DB in the provided `.env` is **production**; a separate non-production DB for testing; trusted-IP whitelisting; a `pg_dump --schema-only` for version control and an explanation of how schema/trigger changes were applied (✔ credentials received; schema, roles and grants already verified read-only).
 - [ ] **Admin credentials** (or an agreed way to create an admin user — no UI exists).
 - [ ] **Hosting access**: which platform runs the Next.js app (and how it's built/started), environment-variable settings there, logs.
-- [ ] **Database hosting access** (likely DigitalOcean) — backups, connection pooling settings.
+- [ ] **Database hosting access** (✔ DigitalOcean Managed PostgreSQL) — backups, connection pooling settings.
+- [ ] **Supabase**: why a Supabase project (including a service-role key) is in `.env` although no code uses it; approval to remove/rotate.
 - [ ] **Domain / DNS / Cloudflare** access and the production URL.
 - [ ] **Razorpay dashboard** access (test + live keys, Magic Checkout status, settlement, any webhooks).
 - [ ] **Cloudinary** account access.
@@ -968,8 +1002,8 @@ Once you have the `.env` and credentials:
 7. **Storefront:** open `/` — hero & categories load; open a category and a product.
 8. **Admin:** `/admin/login` → should land on `/admin/products`; open Categories, Content, Orders.
 9. **Product flow:** create a test category + product (checks Cloudinary), view it on the storefront.
-10. **Checkout flow:** sign up a test user at `/auth/login` (note: you may land on a 404 `/profile` — see issue #2; navigate to `/` manually or `/account`), add to cart, checkout with Razorpay test card/UPI, confirm the order turns `paid/confirmed` in admin.
-11. **Shipment flow:** in admin order detail create a shipment, update status, print a label.
+10. **Checkout flow:** sign up a test user at `/auth/login` (⟲ you land on `/` normally — customers have role `customer`, so the `/profile` redirect doesn't apply), add to cart, checkout with Razorpay test card/UPI, confirm the order turns `paid/confirmed` in admin. **Only do this against a non-production database.**
+11. **Shipment flow:** in admin order detail create a shipment, update status, print a label; check that the order status changes to `partially_shipped` / `shipped` / `delivered` (set by DB triggers).
 12. Before any public release, address **S1–S8** in §22.
 
 ---
@@ -978,12 +1012,12 @@ Once you have the `.env` and credentials:
 
 > Crystal Wall Art is a **single Next.js 16 + TypeScript app** that is simultaneously the shop, the admin panel and the API. Pages live in two route groups — `app/(client)` for customers and `app/(admin)/admin` for staff — and the backend is a set of Route Handlers in `app/api`, all wrapped by a small home-grown `withHandler` that does CORS, in-memory rate limiting and role checks.
 >
-> Data lives in **PostgreSQL**, accessed with **raw SQL through `pg`** using two pools (a read user and a write user). SQL strings sit in `lib/db/queries`, are executed by `lib/db/repositories`, and mapped by `lib/db/dto`. There is no ORM and **no schema in the repo** — you need a DB dump to understand the tables (products, variants, images, categories, contents, cart_items, saved_addresses, orders, order_items, order_timeline, shipments, shipment_items, auth_users, user_profiles, roles).
+> Data lives in **PostgreSQL**, accessed with **raw SQL through `pg`** using two pools (a read user and a write user). SQL strings sit in `lib/db/queries`, are executed by `lib/db/repositories`, and mapped by `lib/db/dto`. There is no ORM and **no schema or migrations in the repo**. The live schema (DigitalOcean PostgreSQL 18) has been verified read-only: 15 tables (products, variants, images, categories, contents, cart_items, saved_addresses, orders, order_items, order_timeline, shipments, shipment_items, auth_users, user_profiles, roles), enums, FKs, and **triggers that hold business logic** (`updated_at`, and shipment-driven order status).
 >
-> **Auth** is NextAuth v4 with email/password credentials and a 7-day JWT cookie; the token carries the user's role (`admin` or `user`). `middleware.ts` protects `/admin/*`, and API routes check the token.
+> **Auth** is NextAuth v4 with email/password credentials and a 7-day JWT cookie; the token carries the user's role (`admin` or `customer` in the DB; the code also checks a `'user'` name that doesn't exist). `middleware.ts` protects `/admin/*`, and API routes check the token.
 >
 > **Customers** browse categories and products (managed in admin), choose size/thickness/mount/orientation (price comes from a matching variant), add to a **Zustand cart** stored in localStorage and synced to the DB when logged in, then check out: the browser creates the order in the DB, asks the server to create a **Razorpay** order, opens Razorpay's popup, and posts the payment signature back to be verified, which flips the order to `paid/confirmed`. Customers can see their orders in `/account` or track by order number.
 >
-> **Admins** manage products (images uploaded to **Cloudinary**), categories, homepage hero/banner content, and orders — where they split orders into shipments, enter courier/tracking, update shipment status and print barcode labels.
+> **Admins** use a **dark-themed** panel to manage products (images uploaded to **Cloudinary**), categories, homepage hero/banner content, and orders. In orders they split orders into shipments, enter courier/tracking, update shipment status (which the database turns into `partially_shipped` / `shipped` / `delivered` order status) and print barcode labels. The storefront uses a separate light theme.
 >
-> Missing pieces to know about: no stock control, no coupons, no tax/shipping charges, no order-status management, no emails, no webhooks, no tests, no deployment config — and several **serious security holes** (password reset without verification, SQL injection in `/api/content`, public admin content endpoints, public Cloudinary delete, client-trusted payment amounts) that should be fixed before anything else.
+> Missing pieces to know about: no stock control, no coupons, no tax/shipping charges, no manual order-status/cancel/refund management, no emails, no webhooks, no tests, no deployment config — and several **serious security holes** (password reset without verification, SQL injection in `/api/content`, public admin content endpoints, public Cloudinary delete, client-trusted payment amounts) that should be fixed before anything else.
