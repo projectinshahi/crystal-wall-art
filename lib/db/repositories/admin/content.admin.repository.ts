@@ -112,6 +112,7 @@ export async function createContent(client: PoolClient, data: ContentFormInput):
             data.link_url,
             data.image,
             data.priority,
+            data.mobile_image ?? null,
         ]
     );
 
@@ -146,7 +147,8 @@ export async function updateContent(id: string, data: ContentFormInput): Promise
             data.description,
             data.link_url,
             data.image,
-            data.priority
+            data.priority,
+            data.mobile_image ?? null
         ]
     );
 

@@ -16,6 +16,8 @@ const ALLOWED_IMAGE_TYPES = [
   "image/webp",
 ];
 
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 export const POST =
   withHandler(
     async ({
@@ -49,6 +51,25 @@ export const POST =
       const folder = sanitizeString(String(formData.get("folder") || "categories"), 50);
 
       const file = formData.get("file") as File | null;
+
+      // PARENT (optional): creates a subcategory under a main category. Checked before any upload.
+      const parentId = String(formData.get("parent_id") || "").trim() || null;
+
+      if (parentId) {
+        if (!UUID_RE.test(parentId)) {
+          return err("Invalid parent category", 400);
+        }
+
+        const [parent] = await getAdminCategories({ id: parentId });
+
+        if (!parent) {
+          return err("Parent category not found", 404);
+        }
+
+        if (parent.parent_id) {
+          return err("Subcategories can only be created under a main category", 400);
+        }
+      }
 
       // IMAGE REQUIRED
       if (!file || file.size <= 0) {
@@ -117,17 +138,18 @@ export const POST =
           async (
             client
           ): Promise<AdminCategoryDTO> => {
-            // DUPLICATE CHECK
+            // DUPLICATE CHECK (within the same parent: main categories, or one category's subcategories)
             const existing =
               await getAdminCategories(
                 {
                   title:
                     parsed.data
                       .title,
+                  parentId,
                 }
               );
 
-            if (existing.length > 0 && existing[0].title === parsed.data.title) {
+            if (existing.some((c) => c.title === parsed.data.title)) {
               throw new ApiError(
                 "Category already exists",
                 409
@@ -135,7 +157,7 @@ export const POST =
             }
 
             // INSERT
-            return createCategory(client, parsed.data);
+            return createCategory(client, parsed.data, parentId);
           }
         );
 
@@ -163,9 +185,21 @@ export const POST =
 
 export const GET =
   withHandler(
-    async (): Promise<NextResponse> => {
+    async ({ req }): Promise<NextResponse> => {
+      // ?parent=root → main categories, ?parent=<id> → its subcategories, ?id=<id> → one category, none → all
+      const searchParams = req.nextUrl.searchParams;
+      const parent = searchParams.get("parent");
+      const id = searchParams.get("id") || undefined;
+
+      if ((parent && parent !== "root" && !UUID_RE.test(parent)) || (id && !UUID_RE.test(id))) {
+        return err("Invalid category id", 400);
+      }
+
       const categories =
-        await getAdminCategories();
+        await getAdminCategories({
+          id,
+          parentId: parent === "root" ? null : parent || undefined,
+        });
 
       const response =
         okList(

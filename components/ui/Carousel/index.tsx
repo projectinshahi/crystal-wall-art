@@ -33,6 +33,7 @@ type PropType = {
   showArrow?: boolean
   showDots?: boolean
   autoplayDelay?: number
+  autoplay?: boolean
   contentClassName?: string
   dotPosition?: DotPosition        // ← new
   dotClassName?: string            // ← optional extra styles on each dot
@@ -61,6 +62,7 @@ const ImageSlider = ({
   showArrow = true,
   showDots = true,
   autoplayDelay = 4000,
+  autoplay: autoplayEnabled = true,
   contentClassName,
   dotPosition = 'outside-bottom-center',  // sensible default
   dotClassName,
@@ -72,7 +74,7 @@ const ImageSlider = ({
     stopOnMouseEnter: true,
   })
 
-  const [emblaRef, emblaApi] = useEmblaCarousel(options, [autoplay])
+  const [emblaRef, emblaApi] = useEmblaCarousel(options, autoplayEnabled ? [autoplay] : [])
   const { selectedIndex, scrollSnaps, onDotButtonClick } = useDotButton(emblaApi)
   const { prevBtnDisabled, nextBtnDisabled, onPrevButtonClick, onNextButtonClick } = usePrevNextButtons(emblaApi)
 

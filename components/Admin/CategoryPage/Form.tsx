@@ -47,6 +47,8 @@ interface Props {
     setCategories: React.Dispatch<React.SetStateAction<CategoryTypes[]>>;
     formState: FormState<CategoryFormInput>;
     setError: UseFormSetError<CategoryFormInput>;
+    // Set when creating/editing subcategories of this category
+    parentId?: string;
 }
 
 const CategoryForm = ({
@@ -60,8 +62,10 @@ const CategoryForm = ({
     handleSubmit,
     setCategories,
     formState,
-    setError
+    setError,
+    parentId
 }: Props) => {
+    const noun = parentId ? "Subcategory" : "Category";
     const { deleteFile } = useCloudinaryDelete();
     const { startLoading, stopLoading } = useGlobalLoading();
     const [saving, setSaving] = useState(false);
@@ -83,9 +87,9 @@ const CategoryForm = ({
             if (!image) {
                 setError("image_url", {
                     type: "manual",
-                    message: "Category image is required",
+                    message: `${noun} image is required`,
                 });
-                toast.error("Category image is required");
+                toast.error(`${noun} image is required`);
                 return;
             }
 
@@ -96,6 +100,7 @@ const CategoryForm = ({
             fd.append("description", formData.description ?? "");
             fd.append("priority", String(formData.priority));
             fd.append("is_active", String(formData.is_active));
+            if (parentId && !editCat?.id) fd.append("parent_id", parentId);
 
             // ✅ Handle image
             if ("__pendingFile" in formData.image_url) {
@@ -117,7 +122,7 @@ const CategoryForm = ({
             });
 
             const result = await res.json();
-            if (!res.ok) throw new Error(result?.message || "Save failed");
+            if (!res.ok) throw new Error(result?.error || result?.message || "Save failed");
 
             // ✅ Update UI
             if (editCat?.id) {
@@ -158,7 +163,7 @@ const CategoryForm = ({
             <DialogContent>
                 <DialogHeader>
                     <DialogTitle className="font-display">
-                        {editCat ? "Edit Category" : "Add Category"}
+                        {editCat ? `Edit ${noun}` : `Add ${noun}`}
                     </DialogTitle>
                 </DialogHeader>
 
@@ -179,7 +184,7 @@ const CategoryForm = ({
 
                     <div className="space-y-2">
                         <Typography variant="body">
-                            Category Image <span className="text-red-500 ml-1">*</span>
+                            {noun} Image <span className="text-red-500 ml-1">*</span>
                         </Typography>
 
                         {isUploadedImage(image_url) ? (

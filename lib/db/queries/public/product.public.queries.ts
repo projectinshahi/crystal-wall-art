@@ -29,6 +29,7 @@ export const ProductPublicQueries = {
             p.mounting_methods,
             p.orientations,
             p.thumbnail,
+            p.size_images,
             COALESCE(
                 json_agg(
                     json_build_object(
@@ -54,6 +55,7 @@ export const ProductPublicQueries = {
             product_id,
             size,
             thickness,
+            mounting_method,
             price,
             discount_price,
             orientation

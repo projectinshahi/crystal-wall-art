@@ -55,8 +55,9 @@ export async function getAdminProducts(
   }
 
   if (filters?.category) {
+    // A main category also matches products in its subcategories
     values.push(filters.category);
-    conditions.push(`category_id = $${values.length}`);
+    conditions.push(`(category_id = $${values.length} OR category_id IN (SELECT id FROM categories WHERE parent_id = $${values.length}))`);
   }
 
   if (filters?.status) {
@@ -144,7 +145,8 @@ export const createProduct = async (client: PoolClient, data: ProductFormValues)
       data.thickness,
       data.mounting_methods,
       data.orientation,
-      data.thumbnail
+      data.thumbnail,
+      data.size_images ?? {}
     ]
   );
 
@@ -179,6 +181,7 @@ export const insertProductVariants = async (
     product_id: string,
     size: string,
     thickness: string,
+    mounting_method: string | null,
     price: number,
     discount_price: number | null,
     orientation: string,
@@ -192,13 +195,13 @@ export const insertProductVariants = async (
   const placeholders: string[] = [];
 
   variants.forEach((variant, index) => {
-    values.push(variant.product_id, variant.size, variant.thickness, variant.price, variant.discount_price, variant.orientation, variant.stock_quantity);
-    const baseIndex = index * 7;
-    placeholders.push(`($${baseIndex + 1}, $${baseIndex + 2}, $${baseIndex + 3}, $${baseIndex + 4}, $${baseIndex + 5}, $${baseIndex + 6}, $${baseIndex + 7})`);
+    values.push(variant.product_id, variant.size, variant.thickness, variant.mounting_method, variant.price, variant.discount_price, variant.orientation, variant.stock_quantity);
+    const baseIndex = index * 8;
+    placeholders.push(`($${baseIndex + 1}, $${baseIndex + 2}, $${baseIndex + 3}, $${baseIndex + 4}, $${baseIndex + 5}, $${baseIndex + 6}, $${baseIndex + 7}, $${baseIndex + 8})`);
   });
 
   const query = `
-        INSERT INTO product_variants (product_id, size, thickness, price, discount_price, orientation, stock_quantity)
+        INSERT INTO product_variants (product_id, size, thickness, mounting_method, price, discount_price, orientation, stock_quantity)
         VALUES ${placeholders.join(", ")}
     `;
 

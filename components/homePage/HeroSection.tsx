@@ -13,24 +13,31 @@ const HeroSection = async () => {
 
     const slidesData = slidesRes?.data?.data || [];
 
-    const slides =
+    const parseUrl = (raw: string | null) => {
+        try {
+            return raw ? JSON.parse(raw).url : null;
+        } catch {
+            return null;
+        }
+    };
+
+    const items =
         slidesData
             ?.sort((a: any, b: any) => a.priority - b.priority) // ✅ sort by priority ASC
-            .map((item: any) => {
-                try {
-                    const img = JSON.parse(item.image);
-                    return img.url;
-                } catch {
-                    return null;
-                }
-            })
-            .filter(Boolean) || [];
+            .map((item: any) => ({ desktop: parseUrl(item.image), mobile: parseUrl(item.mobile_image) }))
+            .filter((item: any) => item.desktop) || [];
+
+    const slides = items.map((item: any) => item.desktop);
+    const mobileSlides = items.map((item: any) => item.mobile);
+    // With mobile banners, height follows the image below lg (no crop); desktop unchanged
+    const hasMobile = mobileSlides.some(Boolean);
 
     return (
         <HomeContentWrapper containerClassName='px-4 sm:px-6 lg:px-8 py-8 sm:py-14 lg:py-20'>
             <Carousel
-                viewPortClassName='rounded-[20px] h-[236px] sm:h-[400px]'
+                viewPortClassName={`rounded-[20px] ${hasMobile ? 'lg:h-[400px]' : 'h-[236px] sm:h-[400px]'}`}
                 slides={slides}
+                mobileSlides={mobileSlides}
                 autoplay
                 autoplayDelay={5000}
                 showDots

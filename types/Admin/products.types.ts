@@ -19,6 +19,7 @@ export type ProductTypes = {
   mounting_methods: string[];
   orientations: string[];
   thumbnail: string;
+  size_images?: Record<string, { url: string; public_id?: string }>; // one optional image per size label
   images?: ProductImage[];
 };
 
@@ -27,6 +28,7 @@ export type ProductVariantTypes = {
   product_id: string;
   size: string;
   thickness: number;
+  mounting_method: string | null; // null → applies to every mounting method
   price: number;
   discount_price: number;
   stock_quantity: number;

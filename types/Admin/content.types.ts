@@ -13,6 +13,7 @@ export interface ContentFormOutput {
     title: string;
     description: string | null;
     image: string | null;
+    mobile_image: string | null;
     link_url: string | null;
     priority: number;
     is_active: boolean;

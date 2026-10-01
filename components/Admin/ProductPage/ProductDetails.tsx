@@ -174,6 +174,7 @@ const ProductDetails = ({ product }: { product: AdminProductDetailsDTO }) => {
                                         <tr>
                                             <th className="px-3 py-3">Size</th>
                                             <th className="px-3 py-3">Thickness</th>
+                                            <th className="px-3 py-3">Mounting</th>
                                             <th className="px-3 py-3">Orientation</th>
                                             <th className="px-3 py-3">Price</th>
                                             <th className="px-3 py-3">Sale</th>
@@ -182,9 +183,10 @@ const ProductDetails = ({ product }: { product: AdminProductDetailsDTO }) => {
                                     </thead>
                                     <tbody>
                                         {product.variants.map((variant: ProductVariantTypes) => (
-                                            <tr key={variant.id ?? `${variant.size}-${variant.thickness}-${variant.orientation}`} className="border-t border-slate-200 even:bg-slate-50/10">
+                                            <tr key={variant.id ?? `${variant.size}-${variant.thickness}-${variant.mounting_method}-${variant.orientation}`} className="border-t border-slate-200 even:bg-slate-50/10">
                                                 <td className="px-3 py-3">{variant.size || '—'}</td>
                                                 <td className="px-3 py-3">{variant.thickness || '—'}</td>
+                                                <td className="px-3 py-3">{variant.mounting_method || 'Any'}</td>
                                                 <td className="px-3 py-3 capitalize">{variant.orientation || '—'}</td>
                                                 <td className="px-3 py-3">₹{Number(variant.price).toLocaleString('en-IN')}</td>
                                                 <td className="px-3 py-3 text-destructive">{variant.discount_price ? `₹${Number(variant.discount_price).toLocaleString('en-IN')}` : '—'}</td>

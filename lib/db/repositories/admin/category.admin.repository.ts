@@ -10,6 +10,8 @@ interface GetAdminCategoriesParams {
   id?: string;
   title?: string;
   is_active?: boolean;
+  // null → main categories only; string → subcategories of that category; undefined → all
+  parentId?: string | null;
 }
 
 export async function getAdminCategories(
@@ -46,6 +48,14 @@ export async function getAdminCategories(
       LOWER(title)
       LIKE LOWER($${values.length})
     `);
+  }
+
+  // PARENT FILTER
+  if (filters?.parentId === null) {
+    conditions.push(`parent_id IS NULL`);
+  } else if (typeof filters?.parentId === "string") {
+    values.push(filters.parentId);
+    conditions.push(`parent_id = $${values.length}`);
   }
 
   // ACTIVE FILTER
@@ -92,7 +102,8 @@ export async function getAdminCategories(
 
 export async function createCategory(
   client: PoolClient,
-  data: CategoryApiInput
+  data: CategoryApiInput,
+  parentId: string | null = null
 ): Promise<AdminCategoryDTO> {
   const result =
     await client.query<CategoryTypes>(
@@ -103,6 +114,7 @@ export async function createCategory(
         data.image_url,
         data.priority,
         data.is_active,
+        parentId,
       ]
     );
 
@@ -167,4 +179,15 @@ export async function updateCategory(
   return toAdminCategoryDTO(
     rows[0]
   );
+}
+
+// Products may only be attached to a subcategory: an existing (non-deleted) category that has a parent.
+export async function isSubcategory(id: unknown): Promise<boolean> {
+  if (typeof id !== "string" || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)) {
+    return false;
+  }
+
+  const [category] = await getAdminCategories({ id });
+
+  return !!category?.parent_id;
 }

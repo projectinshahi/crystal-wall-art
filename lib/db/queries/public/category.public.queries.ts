@@ -5,7 +5,8 @@ export const CategoryPublicQueries = {
           title,
           description,
           image_url,
-          priority
+          priority,
+          parent_id
         FROM categories
     `,
 
@@ -15,7 +16,8 @@ export const CategoryPublicQueries = {
           title,
           description,
           image_url,
-          priority
+          priority,
+          parent_id
         FROM categories
         WHERE id = $1 AND deleted = FALSE AND is_active = TRUE
     `

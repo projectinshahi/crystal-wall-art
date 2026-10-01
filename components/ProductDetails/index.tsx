@@ -33,6 +33,8 @@ const ProductDetails = ({ title, data }: { title: string, data: ProductTypes }) 
 
     const height = useNavbarHeight();
 
+    const sizeImage = sizes?.selected ? data.size_images?.[sizes.selected]?.url : undefined;
+
     useEffect(() => {
         const el = document.getElementById("product-header");
         if (!el) return;
@@ -126,11 +128,15 @@ const ProductDetails = ({ title, data }: { title: string, data: ProductTypes }) 
         useMemo(() => {
             const normalize = (v?: string) => v?.trim().toLowerCase();
 
-            const variant = variants.find(
+            const sizeThickness = variants.filter(
                 v =>
                     normalize(v.size) === normalize(sizes?.selected) &&
                     normalize(v.thickness) === normalize(thickness?.selected)
             );
+            // A variant priced for the selected mounting method wins; one without a mounting method applies to all
+            const variant =
+                sizeThickness.find(v => v.mounting_method && normalize(v.mounting_method) === normalize(mounting_methods?.selected)) ??
+                sizeThickness.find(v => !v.mounting_method);
 
             const basePrice = Number(data?.price ?? 0);
             const baseDiscount = data?.discount_price
@@ -214,8 +220,8 @@ const ProductDetails = ({ title, data }: { title: string, data: ProductTypes }) 
                 <PageHeader title={title || 'All Products'} handleBack={() => router.back()} />
             </section>
             <Container className='max-w-7xl mx-auto'>
-                <div className='w-full relative grid grid-cols-5 gap-4 mb-6'>
-                    <div className='col-span-5 lg:col-span-3'>
+                <div className='w-full relative grid grid-cols-5 lg:grid-cols-[minmax(0,11fr)_minmax(0,9fr)] gap-4 lg:gap-8 mb-6'>
+                    <div className='col-span-5 lg:col-span-1'>
                         <div
                             className="sticky pt-3"
                             style={{
@@ -224,10 +230,15 @@ const ProductDetails = ({ title, data }: { title: string, data: ProductTypes }) 
                                 overflow: "auto"
                             }}
                         >
-                            <ProductGallery images={data.images || []} />
+                            {/* Selected size's image (if any) leads the gallery and stays put until the size changes */}
+                            <ProductGallery
+                                key={sizeImage || "gallery"}
+                                images={sizeImage ? [{ id: `size-${sizes?.selected}`, image_url: sizeImage }, ...(data.images || [])] : data.images || []}
+                                autoplay={!sizeImage}
+                            />
                         </div>
                     </div>
-                    <div className='flex flex-col gap-2 col-span-5 lg:col-span-2'>
+                    <div className='flex flex-col gap-2 col-span-5 lg:col-span-1'>
                         <ProductInfo title={data.title} price={effectivePrice.toLocaleString("en-IN")} finalPrice={displayDiscountPrice && displayPrice.toLocaleString("en-IN")} />
                         <ProductOptions
                             size={sizes || undefined}

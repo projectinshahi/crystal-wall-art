@@ -2,6 +2,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { CategoryTypes } from '@/types/Admin/categories.types';
+import { categoryLabel } from '@/lib/utils/categoryOptions';
 import { ProductTypes } from '@/types/Admin/products.types';
 import { Edit, Eye, ImageOff } from 'lucide-react';
 import { useRouter } from 'next/navigation';
@@ -146,7 +147,7 @@ const DesktopData = ({ products, meta, categories, setData }: Props) => {
                                                 <Switch checked={p.status === "active"} onCheckedChange={(val) => toggleStatus(p.id, val)} className="scale-75" />
                                             </div>
                                         </td>
-                                        <td className="p-3 text-sm text-muted-foreground">{cat?.title || "—"}</td>
+                                        <td className="p-3 text-sm text-muted-foreground">{cat ? categoryLabel(cat, categories) : "—"}</td>
                                         <td className="p-3 text-right">
                                             <div className="flex items-center justify-end gap-1">
                                                 <Button size="icon" variant="ghost" onClick={() => router.push(`/admin/products/${p.id}`)}>

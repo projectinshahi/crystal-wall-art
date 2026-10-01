@@ -1,11 +1,11 @@
 import { ApiError } from "@/lib/api/errors";
 import { err, ok, okList, withHandler } from "@/lib/api/handler";
-import { uploadToCloudinary } from "@/lib/cloudinary.service";
+import { deleteFromCloudinary, uploadToCloudinary } from "@/lib/cloudinary.service";
 import { withTransaction } from "@/lib/db";
 import { AdminContentDTO } from "@/lib/db/dto/contents.dto";
 import { createContent, getAdminContents } from "@/lib/db/repositories/admin/content.admin.repository";
 import { sanitizeString } from "@/lib/validation";
-import { contentApiSchema } from "@/schema/content.schema";
+import { contentApiSchema, HERO_MOBILE_IMAGE_REQUIRED } from "@/schema/content.schema";
 import { NextResponse } from "next/server";
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024;
@@ -20,7 +20,7 @@ export const POST = withHandler(
     async ({ req }): Promise<NextResponse> => {
         const contentLength = Number(req.headers.get("content-length") || 0);
 
-        if (contentLength > 6 * 1024 * 1024) {
+        if (contentLength > 11 * 1024 * 1024) { // desktop + mobile image
             return err(
                 "Payload too large",
                 413
@@ -42,6 +42,12 @@ export const POST = withHandler(
         const priority = Number(formData.get("priority") || 0);
         const folder = sanitizeString(String(formData.get("folder") || "categories"), 50);
         const file = formData.get("file") as File | null;
+        const mobileFile = formData.get("mobile_file") as File | null;
+
+        // A Hero Section must have a mobile banner (checked before any upload)
+        if (type === "hero_section" && !(mobileFile && mobileFile.size > 0)) {
+            return err(HERO_MOBILE_IMAGE_REQUIRED, 400);
+        }
 
         // IMAGE REQUIRED
         if (!file || file.size <= 0) {
@@ -67,6 +73,10 @@ export const POST = withHandler(
             );
         }
 
+        if (mobileFile && mobileFile.size > 0 && (mobileFile.size > MAX_FILE_SIZE || !ALLOWED_IMAGE_TYPES.includes(mobileFile.type))) {
+            return err("Invalid mobile image (JPEG/PNG/WebP, max 5MB)", 400);
+        }
+
         // UPLOAD IMAGE
         let uploadedImage: {
             url: string;
@@ -84,6 +94,25 @@ export const POST = withHandler(
             );
         }
 
+        let mobileImage = null;
+        if (mobileFile && mobileFile.size > 0) {
+            try {
+                mobileImage = await uploadToCloudinary(mobileFile, folder);
+            } catch (uploadError) {
+                console.error("[CONTENT_MOBILE_IMAGE_UPLOAD_ERROR]", uploadError);
+                // Don't leave the just-uploaded desktop image orphaned in Cloudinary
+                await deleteFromCloudinary(uploadedImage.public_id).catch((e) => console.warn("[CLOUDINARY_DELETE_FAILED]", e));
+                throw new ApiError("Mobile image upload failed", 500);
+            }
+        }
+
+        // Remove assets uploaded by this request if it fails before the row is saved
+        const discardUploads = () => Promise.all(
+            [uploadedImage.public_id, mobileImage?.public_id]
+                .filter((id): id is string => Boolean(id))
+                .map((id) => deleteFromCloudinary(id).catch((e) => console.warn("[CLOUDINARY_DELETE_FAILED]", e)))
+        );
+
         // VALIDATION
         const parsed = contentApiSchema.safeParse(
             {
@@ -92,11 +121,13 @@ export const POST = withHandler(
                 description,
                 link_url,
                 image: uploadedImage,
+                mobile_image: mobileImage,
                 priority,
             }
         );
 
         if (parsed.success === false) {
+            await discardUploads();
             return err(
                 "Validation failed",
                 400
@@ -120,7 +151,11 @@ export const POST = withHandler(
                 return createContent(client, parsed.data);
 
             }
-        )
+        ).catch(async (error) => {
+            // Duplicate (409) or insert failure: nothing references the new uploads
+            await discardUploads();
+            throw error;
+        })
 
         const response = ok({
             message: "Content created successfully",

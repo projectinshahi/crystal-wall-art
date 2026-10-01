@@ -7,6 +7,7 @@ export type AdminContentDTO = {
     description: string | null;
     link_url: string | null;
     image: string | null;
+    mobile_image: string | null;
     priority: number;
     is_active: boolean;
     deleted: boolean;
@@ -24,6 +25,7 @@ export function toAdminContentDTO(
     description: row.description,
     link_url: row.link_url,
     image: row.image,
+    mobile_image: row.mobile_image,
     priority: row.priority,
     is_active: row.is_active,
     deleted: row.deleted,

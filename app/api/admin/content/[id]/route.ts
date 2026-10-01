@@ -4,7 +4,7 @@ import { deleteFromCloudinary, uploadToCloudinary } from "@/lib/cloudinary.servi
 import { withTransaction } from "@/lib/db";
 import { getAdminContents, softDeleteContent, updateContent, updateContentStatus } from "@/lib/db/repositories/admin/content.admin.repository";
 import { sanitizeString } from "@/lib/validation";
-import { contentApiSchema } from "@/schema/content.schema";
+import { contentApiSchema, HERO_MOBILE_IMAGE_REQUIRED } from "@/schema/content.schema";
 import { ContentFormInput } from "@/types/Admin/content.types";
 import { NextResponse } from "next/server";
 
@@ -100,6 +100,53 @@ export const PUT = withHandler(
             image_url = null;
         }
 
+        // Check a new desktop file first, so nothing is uploaded for a request that will be rejected
+        if (file && file.size > 0) {
+            if (file.size > MAX_FILE_SIZE) {
+                return err("Image size exceeds 5MB limit", 400);
+            }
+            if (!ALLOWED_IMAGE_TYPES.includes(file.type)) {
+                return err("Invalid image type", 400);
+            }
+        }
+
+        // MOBILE IMAGE (hero only; required for hero_section): keep / remove / replace.
+        // Validated and uploaded BEFORE the desktop image is replaced, so a bad or failed
+        // mobile upload can never leave the row pointing at an already-deleted desktop image.
+        const parseImage = (v: any) => {
+            try { return typeof v === "string" ? JSON.parse(v) : v ?? null; } catch { return null; }
+        };
+        const oldMobileImage = parseImage(existing.mobile_image);
+        let mobile_image = oldMobileImage;
+        const mobileRemove = String(formData.get("remove_mobile_image") || "");
+        if (mobileRemove === "1" || mobileRemove === "true") {
+            mobile_image = null;
+        }
+        const mobileFile = formData.get("mobile_file") as File | null;
+
+        // A Hero Section must keep a mobile banner: either the existing one or a new file (checked before any upload)
+        if (type === "hero_section" && !mobile_image && !(mobileFile && mobileFile.size > 0)) {
+            return err(HERO_MOBILE_IMAGE_REQUIRED, 400);
+        }
+        if (mobileFile && mobileFile.size > 0) {
+            if (mobileFile.size > MAX_FILE_SIZE || !ALLOWED_IMAGE_TYPES.includes(mobileFile.type)) {
+                return err("Invalid mobile image (JPEG/PNG/WebP, max 5MB)", 400);
+            }
+            try {
+                mobile_image = await uploadToCloudinary(mobileFile, folder);
+            } catch (uploadError) {
+                console.error("[CONTENT_MOBILE_IMAGE_UPLOAD_ERROR]", uploadError);
+                throw new ApiError("Mobile image upload failed", 500);
+            }
+        }
+
+        // If the request fails after this point, delete the mobile image uploaded above (the row never references it)
+        const discardNewMobile = () => {
+            if (mobile_image?.public_id && mobile_image.public_id !== oldMobileImage?.public_id) {
+                deleteFromCloudinary(mobile_image.public_id).catch((e) => console.warn("[CLOUDINARY_DELETE_FAILED]", e));
+            }
+        };
+
         // NEW IMAGE UPLOAD
         if (file && file.size > 0) {
             if (file.size > MAX_FILE_SIZE) {
@@ -149,6 +196,7 @@ export const PUT = withHandler(
                     uploadError
                 );
 
+                discardNewMobile();
                 throw new ApiError(
                     "Image upload failed",
                     500
@@ -167,6 +215,7 @@ export const PUT = withHandler(
                 description,
                 link_url,
                 image: image_url,
+                mobile_image,
                 priority,
             });
         } else {
@@ -176,11 +225,13 @@ export const PUT = withHandler(
                 description,
                 link_url,
                 image: image_url,
+                mobile_image,
                 priority,
             });
         }
 
         if (parsed.success === false) {
+            discardNewMobile();
             return err(
                 "Validation failed",
                 400
@@ -196,7 +247,13 @@ export const PUT = withHandler(
             );
         } catch (updateError) {
             console.error("[admin/content PUT] updateContent failed:", updateError);
+            discardNewMobile();
             throw updateError;
+        }
+
+        // Remove the replaced/removed mobile image only once the row no longer references it
+        if (oldMobileImage?.public_id && mobile_image?.public_id !== oldMobileImage.public_id) {
+            deleteFromCloudinary(oldMobileImage.public_id).catch((e) => console.warn("[CLOUDINARY_DELETE_FAILED]", e));
         }
 
         const response = ok({

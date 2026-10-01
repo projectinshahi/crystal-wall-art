@@ -197,7 +197,7 @@ const MobileDrawerMenus = ({ open, close }: { open: boolean; close: (open: boole
                     icon: <LayoutGrid className="h-5 w-5" />,
                     expandable: true,
                     children: categories.map(c => ({
-                        to: `/products?category=${c.id}`,
+                        to: `/category/${c.id}`,
                         label: c.title,
                     })),
                 },

@@ -5,7 +5,7 @@ import AdminFormTextarea from '../inputs/FormTextArea'
 import AdminImageUpload from '../inputs/ImageUpload'
 import { Button } from '@/components/ui/button'
 import { Loader2 } from 'lucide-react'
-import { Control, UseFormHandleSubmit, UseFormSetError } from 'react-hook-form'
+import { Control, UseFormHandleSubmit, UseFormSetError, useWatch } from 'react-hook-form'
 import { CONTENT_TYPES } from '@/lib/constants/content.constants'
 import { toast } from 'sonner'
 import { ContentFormInput, ContentFormOutput } from '@/types/Admin/content.types'
@@ -39,6 +39,7 @@ const ContectForm = ({
             }
             disableOutsideClose
             onOpenChange={closeDialog}
+            className="max-h-[90vh] overflow-y-auto"
         />
     )
 }
@@ -55,6 +56,7 @@ const Form = ({ control, formSubmit, setError, editContent, closeDialog, setCont
 }) => {
 
     const [isSaving, setIsSaving] = useState<boolean>(false);
+    const isHero = useWatch({ control, name: 'type' }) === 'hero_section';
 
     const handleSave = async (formData: ContentFormInput) => {
         try {
@@ -101,6 +103,16 @@ const Form = ({ control, formSubmit, setError, editContent, closeDialog, setCont
                 // Case 3: existing image
                 fd.append("image_url", JSON.stringify(image));
                 console.log("[ContentForm] keeping existing image", image);
+            }
+
+            // Mobile banner (hero only, optional)
+            const mobileImage = isHero ? formData.mobile_image : null;
+            if (mobileImage && "__pendingFile" in mobileImage) {
+                fd.append("mobile_file", mobileImage.__pendingFile);
+                // Mobile-only change: send the folder too, otherwise the server falls back to "categories"
+                if (!fd.has("folder")) fd.append("folder", mobileImage.__folder);
+            } else if (!mobileImage && editContent) {
+                fd.append("remove_mobile_image", "1");
             }
 
             const url = editContent && editContent.id
@@ -156,7 +168,12 @@ const Form = ({ control, formSubmit, setError, editContent, closeDialog, setCont
             <AdminFormSelect control={control} name='type' label='Type' options={CONTENT_TYPES} required />
             <AdminFormInput control={control} name='title' label='Title' required />
             <AdminFormTextarea control={control} name='description' label='Description' />
-            <AdminImageUpload control={control} name='image' label='Image' folder='content' required />
+            <AdminImageUpload control={control} name='image' label={isHero ? 'Desktop Banner Image' : 'Image'} folder='content' required />
+            {/* Kept mounted (hidden) for non-hero types so a picked file's preview isn't revoked when toggling type; ignored on save unless hero */}
+            <div className={isHero ? "grid gap-1" : "hidden"}>
+                <AdminImageUpload control={control} name='mobile_image' label='Mobile Banner Image' folder='content' required />
+                <p className="text-xs text-muted-foreground">Required for Hero Section. Shown on mobile &amp; tablet (below 1024px), uncropped at its own ratio — recommended portrait 4:5 (e.g. 1080×1350) or 1:1.</p>
+            </div>
             <AdminFormInput control={control} name='link_url' label='Link URL' />
             <AdminFormInput control={control} name='priority' label='Priority' type='number' />
 
