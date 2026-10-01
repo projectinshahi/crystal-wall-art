@@ -162,3 +162,13 @@
     padding: 1.5rem;
   }
 }
+
+/* Two-column product page (Tailwind lg and up): a taller, square image that never exceeds the screen height.
+   Placed last so it also wins at exactly 1024px. object-fit: cover keeps the aspect ratio (no stretching). */
+@media (min-width: 1024px) {
+  .embla__slide__content {
+    height: auto;
+    aspect-ratio: 1 / 1;
+    max-height: max(24rem, calc(100vh - 11rem));
+  }
+}

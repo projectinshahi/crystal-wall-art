@@ -32,7 +32,8 @@ export const ProductAdminQueries = {
             thickness,
             mounting_methods,
             orientations,
-            thumbnail
+            thumbnail,
+            size_images
         )
         VALUES (
             $1,
@@ -46,7 +47,8 @@ export const ProductAdminQueries = {
             $9,
             $10,
             $11,
-            $12
+            $12,
+            $13
         )
         RETURNING *
     `,
@@ -68,6 +70,7 @@ export const ProductAdminQueries = {
             p.mounting_methods,
             p.orientations,
             p.thumbnail,
+            p.size_images,
             COALESCE(
                 (
                     SELECT json_agg(
@@ -89,6 +92,7 @@ export const ProductAdminQueries = {
                             'product_id', pv.product_id,
                             'size', pv.size,
                             'thickness', pv.thickness,
+                            'mounting_method', pv.mounting_method,
                             'price', pv.price,
                             'discount_price', pv.discount_price,
                             'orientation', pv.orientation,
@@ -100,9 +104,10 @@ export const ProductAdminQueries = {
                 ),
                 '[]'
             ) AS variants,
-            c.title AS category_title
+            COALESCE(pc.title || ' › ', '') || c.title AS category_title
         FROM products p
         LEFT JOIN categories c ON c.id = p.category_id
+        LEFT JOIN categories pc ON pc.id = c.parent_id
         WHERE p.id = $1
             AND p.deleted = FALSE
         LIMIT 1

@@ -3,10 +3,12 @@
 import React, { useEffect, useState, useCallback } from "react"
 import useEmblaCarousel from "embla-carousel-react"
 import { ChevronLeft, ChevronRight } from "lucide-react"
-import Image, { StaticImageData } from "next/image"
+import Image, { StaticImageData, getImageProps } from "next/image"
 
 interface CarouselProps {
   slides: StaticImageData[];
+  // Optional per-slide art direction: shown below lg (1024px) at its natural ratio
+  mobileSlides?: (string | null)[];
   showButtons?: boolean
   showDots?: boolean
   autoplay?: boolean
@@ -23,6 +25,7 @@ interface CarouselProps {
 
 export default function Carousel({
   slides,
+  mobileSlides,
   showButtons = true,
   showDots = true,
   autoplay = false,
@@ -122,13 +125,17 @@ export default function Carousel({
               }}
               className="min-w-0 h-full relative"
             >
-              <Image
-                src={slide}
-                alt={`slide-${index}`}
-                width={1200}
-                height={600}
-                className="w-full h-full object-cover"
-              />
+              {mobileSlides?.some(Boolean) ? (
+                <ArtDirectedSlide desktop={slide} mobile={mobileSlides[index]} alt={`slide-${index}`} />
+              ) : (
+                <Image
+                  src={slide}
+                  alt={`slide-${index}`}
+                  width={1200}
+                  height={600}
+                  className="w-full h-full object-cover"
+                />
+              )}
             </div>
           ))}
 
@@ -171,5 +178,19 @@ export default function Carousel({
       )}
 
     </div>
+  )
+}
+
+// <picture> so the browser downloads only the image for the current breakpoint
+function ArtDirectedSlide({ desktop, mobile, alt }: { desktop: StaticImageData | string; mobile?: string | null; alt: string }) {
+  const { props: { srcSet: desktopSrcSet } } = getImageProps({ src: desktop, alt, width: 1200, height: 600 })
+  // Reserve the box of the image actually shown below lg (portrait mobile, or the 2:1 desktop fallback) to avoid layout shift
+  const { props: mobileProps } = getImageProps({ src: mobile || desktop, alt, width: mobile ? 1080 : 1200, height: mobile ? 1350 : 600 })
+
+  return (
+    <picture>
+      <source media="(min-width: 1024px)" srcSet={desktopSrcSet} />
+      <img {...mobileProps} className="w-full h-auto lg:h-full object-cover" />
+    </picture>
   )
 }

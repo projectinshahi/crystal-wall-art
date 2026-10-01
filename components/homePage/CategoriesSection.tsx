@@ -58,7 +58,7 @@ const CategoriesSection = async () => {
                         className="flex flex-col items-center w-[140px] sm:w-[170px] lg:w-[200px]"
                     >
                         <Link
-                            href={`/products?category=${encodeURIComponent(item.id as string)}`}
+                            href={`/category/${encodeURIComponent(item.id as string)}`}
                             className="group w-full rounded-[28px] border-2 border-lightBackground hover:border-primary/40 hover:shadow-lg transition-all overflow-hidden"
                         >
                             <div className="relative w-full aspect-square rounded-xl bg-muted overflow-hidden">

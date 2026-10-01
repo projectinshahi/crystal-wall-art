@@ -281,6 +281,16 @@ export const DELETE = withHandler(
             );
           }
 
+          // A main category can't be deleted while it still has subcategories
+          const subcategories = await getAdminCategories({ parentId: categoryId });
+
+          if (subcategories.length > 0) {
+            throw new ApiError(
+              "Delete its subcategories first",
+              409
+            );
+          }
+
           // SOFT DELETE
           return softDeleteCategory(
             client,

@@ -16,11 +16,14 @@ import {
   categorySchema,
 } from "@/schema/category.schema";
 
-const CategoryPage = () => {
+// Without parentId: main categories. With parentId: the subcategories of that category.
+const CategoryPage = ({ parentId }: { parentId?: string }) => {
   const [editCat, setEditCat] = useState<CategoryFormInput | null>(null);
   const [dialogOpen, setDialogOpen] = useState<boolean>(false);
   const [loading, setLoading] = useState<boolean>(true);
   const [categories, setCategories] = useState<CategoryTypes[]>([]);
+  const [parent, setParent] = useState<CategoryTypes | null>(null);
+  const isSub = !!parentId;
 
   const form = useForm<CategoryFormInput, any, CategoryFormOutput>({
     resolver: zodResolver(categorySchema),
@@ -40,16 +43,25 @@ const CategoryPage = () => {
     setLoading(true);
 
     try {
-      const res = await fetch("/api/admin/category", {
-        method: "GET",
-        credentials: "include",
-      });
+      // Load the list (and, for subcategories, the parent's name) together
+      const [res, parentRes] = await Promise.all([
+        fetch(`/api/admin/category?parent=${parentId ?? "root"}`, {
+          method: "GET",
+          credentials: "include",
+        }),
+        parentId ? fetch(`/api/admin/category?id=${parentId}`, { credentials: "include" }) : null,
+      ]);
 
       if (!res.ok) {
         throw new Error("Failed to fetch categories");
       }
 
       const data = await res.json();
+
+      if (parentRes) {
+        const parentData = parentRes.ok ? await parentRes.json() : null;
+        setParent(parentData?.data?.[0] ?? null);
+      }
 
       setCategories(data.data || []);
     } catch (err) {
@@ -81,16 +93,17 @@ const CategoryPage = () => {
   return (
     <>
       <AdminPageHeader
-        title="Categories"
-        subTitle="Organize your wall art collection"
+        title={isSub ? (parent ? `${parent.title} · Subcategories` : "Subcategories") : "Categories"}
+        subTitle={isSub ? "Products are added under these subcategories" : "Organize your wall art collection"}
+        showBackButton={isSub}
       >
-        <AddCategoryButton handleAction={openAdd} />
+        <AddCategoryButton handleAction={openAdd} label={isSub ? "Add Subcategory" : "Add Category"} />
       </AdminPageHeader>
 
       {loading && <Spinner />}
 
       {!loading && categories.length === 0 ? (
-        <NoCategory />
+        <NoCategory isSub={isSub} />
       ) : (
         <CategoriesListing
           setEditCat={setEditCat}
@@ -98,6 +111,7 @@ const CategoryPage = () => {
           data={categories}
           resetForm={reset}
           setCategories={setCategories}
+          isSub={isSub}
         />
       )}
 
@@ -114,6 +128,7 @@ const CategoryPage = () => {
         setCategories={setCategories}
         formState={formState}
         setError={setError}
+        parentId={parentId}
       />
     </>
   );

@@ -3,14 +3,23 @@ import { PublicCategoryDTO, toPublicCategoryDTO } from "../../dto/category.dto";
 import { CategoryPublicQueries } from "../../queries/public/category.public.queries";
 import { CategoryTypes } from "@/types/Admin/categories.types";
 
-export async function getPublicCategories(): Promise<PublicCategoryDTO[]> {
+// Default: main categories. With parentId: the active subcategories of that category.
+export async function getPublicCategories(parentId: string | null = null): Promise<PublicCategoryDTO[]> {
 
     try {
 
         const conditions: string[] = [];
+        const values: unknown[] = [];
 
         conditions.push(`deleted = FALSE`);
         conditions.push(`is_active = TRUE`);
+
+        if (parentId) {
+            values.push(parentId);
+            conditions.push(`parent_id = $${values.length}`);
+        } else {
+            conditions.push(`parent_id IS NULL`);
+        }
 
         const whereClause = `
             WHERE ${conditions.join(" AND ")}
@@ -24,7 +33,7 @@ export async function getPublicCategories(): Promise<PublicCategoryDTO[]> {
             ORDER BY priority ASC, created_at DESC
         `;
 
-        const rows = await readQuery<CategoryTypes>(query);
+        const rows = await readQuery<CategoryTypes>(query, values);
 
         const categories = rows.map(toPublicCategoryDTO);
 

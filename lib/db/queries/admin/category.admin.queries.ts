@@ -6,6 +6,7 @@ export const CategoryAdminQueries = {
       description,
       image_url,
       priority,
+      parent_id,
       is_active,
       created_at,
       updated_at
@@ -18,15 +19,17 @@ export const CategoryAdminQueries = {
       description,
       image_url,
       priority,
-      is_active
+      is_active,
+      parent_id
     )
-    VALUES ($1, $2, $3, $4, $5)
+    VALUES ($1, $2, $3, $4, $5, $6)
     RETURNING
       id,
       title,
       description,
       image_url,
       priority,
+      parent_id,
       is_active,
       created_at,
       updated_at
@@ -44,6 +47,7 @@ export const CategoryAdminQueries = {
       description,
       image_url,
       priority,
+      parent_id,
       is_active,
       deleted,
       created_at,
@@ -61,6 +65,7 @@ export const CategoryAdminQueries = {
       description,
       image_url,
       priority,
+      parent_id,
       is_active,
       deleted,
       created_at,
@@ -83,6 +88,7 @@ export const CategoryAdminQueries = {
       description,
       image_url,
       priority,
+      parent_id,
       is_active,
       deleted,
       created_at,

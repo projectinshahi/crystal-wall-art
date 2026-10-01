@@ -5,7 +5,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { CategoryTypes } from "@/types/Admin/categories.types";
-import { Edit, Trash2 } from "lucide-react";
+import { Edit, FolderTree, Trash2 } from "lucide-react";
+import Link from "next/link";
 import Image from "next/image";
 import { UseFormReset } from "react-hook-form";
 import { CategoryFormInput } from "@/schema/category.schema";
@@ -27,6 +28,7 @@ interface Props {
   data: CategoryTypes[];
   resetForm: UseFormReset<CategoryFormInput>;
   setCategories: React.Dispatch<React.SetStateAction<CategoryTypes[]>>;
+  isSub?: boolean;
 }
 
 const CategoriesListing = ({
@@ -34,8 +36,11 @@ const CategoriesListing = ({
   setDialogOpen,
   data,
   resetForm,
-  setCategories
+  setCategories,
+  isSub = false
 }: Props) => {
+
+  const noun = isSub ? "Subcategory" : "Category";
 
   const { startLoading, stopLoading } = useGlobalLoading();
 
@@ -95,14 +100,14 @@ const CategoriesListing = ({
       }
 
       if (!res.ok) {
-        throw new Error(data?.message || "Delete failed");
+        throw new Error(data?.error || data?.message || "Delete failed");
       }
 
       // ✅ Update state AFTER success
       setCategories((prev) => prev.filter((cat) => cat.id !== id));
 
       // ✅ Success toast
-      toast.success("Category deleted successfully");
+      toast.success(`${noun} deleted successfully`);
       setDeleteOpen(false);
 
     } catch (error: any) {
@@ -137,7 +142,7 @@ const CategoriesListing = ({
       }
 
       if (!res.ok) {
-        throw new Error(data?.message || "Failed to update status");
+        throw new Error(data?.error || data?.message || "Failed to update status");
       }
 
       // ✅ Update state ONLY after success
@@ -149,7 +154,7 @@ const CategoriesListing = ({
 
       // ✅ Success toast
       toast.success(
-        value ? "Category activated" : "Category deactivated"
+        value ? `${noun} activated` : `${noun} deactivated`
       );
 
     } catch (error: any) {
@@ -216,6 +221,16 @@ const CategoriesListing = ({
 
                   <div className="flex gap-1">
 
+                    {/* Main categories: manage their subcategories */}
+                    {!isSub && (
+                      <Button asChild size="sm" variant="ghost">
+                        <Link href={`/admin/categories/${c.id}`}>
+                          <FolderTree className="h-4 w-4 mr-1" />
+                          Subcategories
+                        </Link>
+                      </Button>
+                    )}
+
                     {/* Button for Edit */}
                     <Button
                       size="icon"
@@ -247,11 +262,11 @@ const CategoriesListing = ({
                         </Button>
                       }
                       showClose={false}
-                      title="Delete Category"
+                      title={`Delete ${noun}`}
                       description="This action cannot be undone."
                       content={
                         <Typography>
-                          Do you want to delete this category permanently?
+                          Do you want to delete this {noun.toLowerCase()} permanently?
                         </Typography>
                       }
                       footer={

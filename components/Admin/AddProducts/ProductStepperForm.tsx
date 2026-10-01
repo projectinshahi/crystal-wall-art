@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import AppTabs, { TabItem } from "../Common/AppTabs";
 import { useForm, Control } from "react-hook-form";
 import {
@@ -18,8 +18,10 @@ import { Button } from "@/components/ui/button";
 import { CardTitle } from "@/components/ui/card";
 import { Plus, Trash2, X, Loader2 } from "lucide-react";
 import AdminImageUpload from "../inputs/ImageUpload";
+import SizeImagesField from "./SizeImagesField";
 import SucessScreen from "./SucessScreen";
 import { CategoryTypes } from "@/types/Admin/categories.types";
+import { subcategoryOptions } from "@/lib/utils/categoryOptions";
 import { toast } from "sonner";
 import { blobUrlToBase64 } from "@/lib/utils/imageUtils";
 import AdminFormInput from "../inputs/FormInput/AdminFormInput";
@@ -63,11 +65,15 @@ export type Variant = {
   id?: string;
   size: string;
   thickness: string;
+  mounting_method: string; // "" → applies to every mounting method
   price: number;
   discount_price: number | null;
   orientation: string;
   stock_quantity: number;
 };
+
+// Select value for a variant without a mounting method (Radix Select can't use "")
+const ANY_MOUNTING = "__any__";
 
 interface ProductStepperFormProps {
   productId?: string;
@@ -85,7 +91,7 @@ const ProductStepperForm = ({ productId }: ProductStepperFormProps) => {
     ProductFormValues["orientation"]
   >([]);
   const [variants, setVariants] = useState<Variant[]>([]);
-  const [categories, setCategories] = useState<CategoryTypes[]>([]);
+  const [categories, setCategories] = useState<{ label: string; value: string }[]>([]);
   const [isLoading, setIsLoading] = useState(!!productId);
 
   // Provide all three generics explicitly:
@@ -128,28 +134,52 @@ const ProductStepperForm = ({ productId }: ProductStepperFormProps) => {
 
   const watchedSizes = watch("sizes");
   const watchedThickness = watch("thickness");
+  const watchedMounting = watch("mounting_methods");
   const watchedPrice = watch("price");
   const watchedImages = watch("images") || [];
   const watchedThumbnail = watch("thumbnail");
+  const watchedSizeImages = watch("size_images") || {};
 
   // -- Generate Variants
-  const generateVariants = () => {
-    if (watchedSizes.length === 0 && watchedThickness.length === 0) {
-      setVariants(prev => [...prev, { size: "", thickness: "", price: Number(watchedPrice) || 0, discount_price: null, orientation: '', stock_quantity: 0 }]);
-      return;
-    }
+  // Every Size × Thickness × Mounting Method combination from the Details tab
+  const combinations = () => {
     const sizes = watchedSizes.length > 0 ? watchedSizes : [""];
     const thicks = watchedThickness.length > 0 ? watchedThickness : [""];
-    const newVariants: Variant[] = [];
-    for (const s of sizes) {
-      for (const t of thicks) {
-        if (!variants.find(v => v.size === s && v.thickness === t)) {
-          newVariants.push({ size: s, thickness: t, price: Number(watchedPrice) || 0, discount_price: null, orientation: '', stock_quantity: 0 });
-        }
-      }
-    }
-    setVariants(prev => [...prev, ...newVariants]);
+    const mountings = watchedMounting.length > 0 ? watchedMounting : [""];
+    return sizes.flatMap(s => thicks.flatMap(t => mountings.map(m => ({ s, t, m }))));
   };
+
+  const generateVariants = () => {
+    if (watchedSizes.length === 0 && watchedThickness.length === 0 && watchedMounting.length === 0) {
+      setVariants(prev => [...prev, { size: "", thickness: "", mounting_method: "", price: Number(watchedPrice) || 0, discount_price: null, orientation: '', stock_quantity: 0 }]);
+      return;
+    }
+    // A Size + Thickness row without a mounting method (e.g. priced before mounting methods existed):
+    // the first method takes over that row and the other methods start from a copy of its prices
+    const anyMounting = new Map(variants.filter(v => !v.mounting_method).map(v => [`${v.size}|${v.thickness}`, v]));
+    const next = [...variants];
+    for (const { s, t, m } of combinations()) {
+      if (next.some(v => v.size === s && v.thickness === t && v.mounting_method === m)) continue;
+      const base = m ? anyMounting.get(`${s}|${t}`) : undefined;
+      if (base && next.includes(base)) next[next.indexOf(base)] = { ...base, mounting_method: m };
+      else if (base) next.push({ ...base, id: undefined, mounting_method: m });
+      else next.push({ size: s, thickness: t, mounting_method: m, price: Number(watchedPrice) || 0, discount_price: null, orientation: '', stock_quantity: 0 });
+    }
+    setVariants(next);
+  };
+
+  // Combinations with no price yet (a row for that mounting method, or one that applies to every method)
+  const unpricedCount = variants.length === 0 ? 0 : combinations().filter(({ s, t, m }) =>
+    !variants.some(v => v.size === s && v.thickness === t && (v.mounting_method === m || !v.mounting_method))
+  ).length;
+
+  // Removing a mounting method in Details removes its price variants
+  const prevMounting = useRef<string[]>([]);
+  useEffect(() => {
+    const removed = prevMounting.current.filter(m => !watchedMounting.includes(m));
+    prevMounting.current = watchedMounting;
+    if (removed.length) setVariants(prev => prev.filter(v => !removed.includes(v.mounting_method)));
+  }, [watchedMounting]);
 
   // ── Step content ─────────────────────────────────────────────────────────────
   const detailsContent = (
@@ -164,9 +194,9 @@ const ProductStepperForm = ({ productId }: ProductStepperFormProps) => {
         <AdminFormSelect
           name="category"
           control={typedControl}
-          label="Category"
+          label="Subcategory"
           required
-          options={categories as any}
+          options={categories}
         />
       </div>
 
@@ -266,19 +296,25 @@ const ProductStepperForm = ({ productId }: ProductStepperFormProps) => {
 
   const priceContent = (
     <div className="space-y-4">
-      <Typography variant="body-sm" className="text-muted-foreground">Set different prices for size and thickness combinations. If no variants are defined, the base price is used.</Typography>
+      <Typography variant="body-sm" className="text-muted-foreground">Set different prices for size, thickness and mounting method combinations. If no variants are defined, the base price is used.</Typography>
+
+      {unpricedCount > 0 && (
+        <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-md px-3 py-2">
+          {unpricedCount} combination{unpricedCount === 1 ? " has" : "s have"} no price yet. Click &quot;Generate Variants&quot; to add {unpricedCount === 1 ? "it" : "them"}.
+        </p>
+      )}
 
       {variants.length === 0 ? (
         <p className="text-xs text-muted-foreground italic py-4 text-center">
-          No variants yet. Add sizes and thickness in Details tab first, then click "Generate Variants".
+          No variants yet. Add sizes, thickness and mounting methods in Details tab first, then click "Generate Variants".
         </p>
       ) : (
         <div className="space-y-2">
-          <div className="grid grid-cols-[1fr_1fr_100px_100px_200px_80px_32px] gap-2 text-xs font-medium text-muted-foreground px-1">
-            <span>Size</span><span>Thickness</span><span>Price (₹)</span><span>Sale (₹)</span><span>Orientations</span><span>Stock</span><span />
+          <div className="grid grid-cols-[1fr_1fr_1fr_100px_100px_200px_80px_32px] gap-2 text-xs font-medium text-muted-foreground px-1">
+            <span>Size</span><span>Thickness</span><span>Mounting</span><span>Price (₹)</span><span>Sale (₹)</span><span>Orientations</span><span>Stock</span><span />
           </div>
           {variants.map((v, i) => (
-            <div key={i} className="grid grid-cols-[1fr_1fr_100px_100px_200px_80px_32px] gap-2 items-center">
+            <div key={i} className="grid grid-cols-[1fr_1fr_1fr_100px_100px_200px_80px_32px] gap-2 items-center">
 
               <AdminFormInput
                 value={v.size}
@@ -296,6 +332,16 @@ const ProductStepperForm = ({ productId }: ProductStepperFormProps) => {
                 onChange={(val) => {
                   const u = [...variants];
                   u[i] = { ...v, thickness: val };
+                  setVariants(u);
+                }}
+              />
+
+              <AdminFormSelect
+                value={v.mounting_method || ANY_MOUNTING}
+                options={[{ label: "Any", value: ANY_MOUNTING }, ...watchedMounting.map((m) => ({ label: m, value: m }))]}
+                onChange={(val) => {
+                  const u = [...variants];
+                  u[i] = { ...v, mounting_method: val === ANY_MOUNTING ? "" : val };
                   setVariants(u);
                 }}
               />
@@ -445,6 +491,13 @@ const ProductStepperForm = ({ productId }: ProductStepperFormProps) => {
         multiple
         hideUploadedImages
       />
+
+      {/* One optional image per size (from the Details step) */}
+      <SizeImagesField
+        sizes={watchedSizes || []}
+        value={watchedSizeImages}
+        onChange={(next) => setValue("size_images", next, { shouldDirty: true })}
+      />
     </div>
   );
 
@@ -521,6 +574,16 @@ const ProductStepperForm = ({ productId }: ProductStepperFormProps) => {
         })
         : data.thumbnail;
 
+      // Size images: new files → base64 (uploaded by the server); existing ones pass through
+      const sizeImagesPayload: Record<string, string | { url: string; public_id?: string }> = {};
+      for (const size of data.sizes) {
+        const img = data.size_images?.[size];
+        if (!img) continue;
+        sizeImagesPayload[size] = "__pendingFile" in img
+          ? await fileToBase64(img.__pendingFile)
+          : { url: img.url, public_id: img.public_id };
+      }
+
       // ── 2. Build payload ─────────────────────────────────────────────────
       const payload = {
         title: data.title.trim(),
@@ -536,6 +599,7 @@ const ProductStepperForm = ({ productId }: ProductStepperFormProps) => {
         status: data.status,
         images: convertedImages,
         thumbnail: convertedThumbnail,
+        size_images: sizeImagesPayload,
       };
 
       // ── 3. Send to API ───────────────────────────────────────────────────
@@ -657,12 +721,8 @@ const ProductStepperForm = ({ productId }: ProductStepperFormProps) => {
     try {
       const res = await fetch('/api/admin/category', { method: 'GET' });
       const data = await res.json();
-      setCategories(
-        data.data.map((item: CategoryTypes) => ({
-          label: item.title,
-          value: item.id,
-        })) || []
-      );
+      // Products are added under a subcategory, never directly under a main category
+      setCategories(subcategoryOptions((data.data || []) as CategoryTypes[]));
     } catch (err) {
       console.error("Failed to load categories:", err);
       toast.error("Failed to load categories");
@@ -731,6 +791,7 @@ const ProductStepperForm = ({ productId }: ProductStepperFormProps) => {
         status: product.status,
         images: normalizedImages,
         thumbnail: normalizedThumbnail,
+        size_images: product.size_images || {},
       });
 
       // Set orientations
@@ -742,6 +803,7 @@ const ProductStepperForm = ({ productId }: ProductStepperFormProps) => {
           id: v.id,
           size: v.size || "",
           thickness: v.thickness || "",
+          mounting_method: v.mounting_method || "",
           price: v.price,
           discount_price: v.discount_price || null,
           orientation: v.orientation || "",

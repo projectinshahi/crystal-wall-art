@@ -2,6 +2,8 @@ import { err, ok, withHandler } from "@/lib/api/handler";
 import { getAdminProductById, getAdminProducts, updateProductStatus } from "@/lib/db/repositories/admin/products.admin.repository";
 import { uploadBase64ToCloudinary, deleteFromCloudinary } from "@/lib/cloudinary.service";
 import { withTransaction } from "@/lib/db";
+import { isSubcategory } from "@/lib/db/repositories/admin/category.admin.repository";
+import { discardImages, resolveSizeImages, SizeImages, unusedSizeImages } from "@/lib/productSizeImages";
 import { NextResponse } from "next/server";
 
 export const GET = withHandler(
@@ -45,6 +47,21 @@ export const PUT = withHandler(
 
     if (!existing) {
       return err("Product not found", 404);
+    }
+
+    // Products belong to a subcategory, never directly to a main category (checked before any upload)
+    if (!(await isSubcategory(product_details.category))) {
+      return err("Select a subcategory — products can't be added directly to a main category", 400);
+    }
+
+    // ── Size images (optional, one per size) — resolved before the gallery is touched
+    const existingSizeImages: SizeImages = existing.size_images ?? {};
+    let sizeImages: SizeImages;
+    let uploadedSizeImages: string[];
+    try {
+      ({ sizeImages, uploaded: uploadedSizeImages } = await resolveSizeImages(product_details.size_images, product_details.sizes, existingSizeImages));
+    } catch (error) {
+      return err(`Size image upload failed: ${(error as Error).message}`, 400);
     }
 
     // ── 2. Process images ────────────────────────────────────────────────
@@ -158,6 +175,7 @@ export const PUT = withHandler(
           productImages.push(normalized);
         } catch (error) {
           console.error("[PUT product] Image upload failed:", error);
+          await discardImages(uploadedSizeImages);
           return err(`Image upload failed: ${(error as Error).message}`, 500);
         }
       }
@@ -199,8 +217,9 @@ export const PUT = withHandler(
             mounting_methods = $10,
             orientations = $11,
             thumbnail = $12,
+            size_images = $13,
             updated_at = NOW()
-          WHERE id = $13
+          WHERE id = $14
           RETURNING *
         `;
 
@@ -230,6 +249,7 @@ export const PUT = withHandler(
           product_details.mounting_methods || [],
           product_details.orientation || [],
           thumbnailValue,
+          sizeImages,
           productId,
         ]);
 
@@ -250,32 +270,57 @@ export const PUT = withHandler(
           );
         }
 
-        // Handle variants
+        // Handle variants: rows the form already had are updated in place (keeping their ids, so carts and
+        // past orders stay linked), new rows are inserted, and only the rows the admin removed are deleted
         if (Array.isArray(product_variants) && product_variants.length > 0) {
-          // Delete existing variants
-          await client.query(`DELETE FROM product_variants WHERE product_id = $1`, [productId]);
-          
-          // Insert new variants
-          const variantPlaceholders = product_variants.map((_, i) => {
-            const baseIndex = i * 7;
-            return `($${baseIndex + 1}, $${baseIndex + 2}, $${baseIndex + 3}, $${baseIndex + 4}, $${baseIndex + 5}, $${baseIndex + 6}, $${baseIndex + 7})`;
-          }).join(',');
+          const existingIds = new Set<string>(
+            (await client.query(`SELECT id FROM product_variants WHERE product_id = $1`, [productId])).rows.map((r) => r.id)
+          );
+          const keptIds = new Set<string>();
 
-          const variantValues: any[] = [];
-          product_variants.forEach((v: any) => {
-            variantValues.push(productId, v.size || null, v.thickness || null, v.price, v.discount_price || null, v.orientation, v.stock_quantity || 0);
+          const rows = product_variants.map((v: any) => {
+            const keep = existingIds.has(v.id) && !keptIds.has(v.id);
+            if (keep) keptIds.add(v.id);
+            return {
+              id: keep ? v.id : null,
+              size: v.size || null,
+              thickness: v.thickness || null,
+              mounting_method: v.mounting_method || null,
+              price: v.price,
+              discount_price: v.discount_price || null,
+              orientation: v.orientation,
+              stock_quantity: v.stock_quantity || 0,
+            };
           });
 
-          const variantQuery = `
-            INSERT INTO product_variants (product_id, size, thickness, price, discount_price, orientation, stock_quantity)
-            VALUES ${variantPlaceholders}
-          `;
-          await client.query(variantQuery, variantValues);
+          await client.query(
+            `DELETE FROM product_variants WHERE product_id = $1 AND id <> ALL($2::uuid[])`,
+            [productId, [...keptIds]]
+          );
+
+          const variantRows = `jsonb_to_recordset($2::jsonb) AS v(id uuid, size text, thickness text, mounting_method text, price numeric, discount_price numeric, orientation text, stock_quantity integer)`;
+
+          await client.query(`
+            UPDATE product_variants pv
+            SET size = v.size, thickness = v.thickness, mounting_method = v.mounting_method, price = v.price,
+                discount_price = v.discount_price, orientation = v.orientation, stock_quantity = v.stock_quantity
+            FROM ${variantRows}
+            WHERE pv.id = v.id AND pv.product_id = $1
+          `, [productId, JSON.stringify(rows.filter((r) => r.id))]);
+
+          await client.query(`
+            INSERT INTO product_variants (product_id, size, thickness, mounting_method, price, discount_price, orientation, stock_quantity)
+            SELECT $1, v.size, v.thickness, v.mounting_method, v.price, v.discount_price, v.orientation, v.stock_quantity
+            FROM ${variantRows}
+          `, [productId, JSON.stringify(rows.filter((r) => !r.id))]);
         }
 
         // Fetch and return updated product with all relations
         return getAdminProductById(productId);
       });
+
+      // Remove size images that were replaced or removed, now that the row no longer uses them
+      await discardImages(unusedSizeImages(existingSizeImages, sizeImages));
 
       const response = ok({
         message: "Product updated successfully",
@@ -287,6 +332,11 @@ export const PUT = withHandler(
       return response;
     } catch (error) {
       console.error("[PUT product] Update failed:", error);
+      await discardImages(uploadedSizeImages);
+      // cart_items → product_variants is ON DELETE RESTRICT
+      if ((error as { constraint?: string }).constraint === "cart_items_variant_id_fkey") {
+        return err("A price variant you removed is in a customer's cart, so it can't be deleted yet. Keep that variant and try again.", 409);
+      }
       return err(`Update failed: ${(error as Error).message}`, 500);
     }
   },

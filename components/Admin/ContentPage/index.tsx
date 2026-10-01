@@ -6,7 +6,7 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import AddContentButton from './AddCategoryButton'
 import ContectForm from './Form'
-import { contentSchema } from '@/schema/content.schema'
+import { contentFormSchema } from '@/schema/content.schema'
 import { ContentFormOutput, ContentFormInput } from '@/types/Admin/content.types'
 import ContentsListing from './ContentsListing'
 import { PaginationMeta } from '@/lib/db/content.db'
@@ -18,7 +18,7 @@ interface Props {
     metaData: PaginationMeta;
 }
 
-const ContentPage = ({data,metaData}: Props) => {
+const ContentPage = ({ data, metaData }: Props) => {
 
     const [editContent, setEditContent] = useState<ContentFormOutput | null>(null)
     const [dialogOpen, setDialogOpen] = useState<boolean>(false);
@@ -28,16 +28,17 @@ const ContentPage = ({data,metaData}: Props) => {
     const [contentsData, setContentsData] = useState<ContentFormOutput[]>((data || []).filter((c) => c.type !== HOME_INTRO_CONTENT_TYPE))
 
     const form = useForm<ContentFormInput>({
-    resolver: zodResolver(contentSchema),
-    defaultValues: {
-        type: undefined,
-        title: "",
-        description: "",
-        image: undefined,
-        link_url: "",
-        priority: 0
-    }
-});
+        resolver: zodResolver(contentFormSchema),
+        defaultValues: {
+            type: undefined,
+            title: "",
+            description: "",
+            image: undefined,
+            mobile_image: null,
+            link_url: "",
+            priority: 0
+        }
+    });
 
     const { control, handleSubmit, setValue, reset, watch, formState, setError } = form;
 
@@ -49,6 +50,7 @@ const ContentPage = ({data,metaData}: Props) => {
             title: "",
             description: "",
             image: undefined,
+            mobile_image: null,
             link_url: "",
             priority: 0
         });
@@ -67,6 +69,7 @@ const ContentPage = ({data,metaData}: Props) => {
             title: content.title || "",
             description: content.description ?? "",
             image: parsedImage,
+            mobile_image: content.mobile_image ? JSON.parse(content.mobile_image) : null,
             link_url: content.link_url ?? "",
             priority: content.priority ?? 0,
         });
@@ -82,6 +85,7 @@ const ContentPage = ({data,metaData}: Props) => {
             title: "",
             description: "",
             image: undefined,
+            mobile_image: null,
             link_url: "",
             priority: 0
         });
@@ -91,7 +95,7 @@ const ContentPage = ({data,metaData}: Props) => {
         <div>
             <AdminPageHeader
                 title="Content Management"
-                subTitle="Manage banners, featured items, and sections"
+                subTitle="Manage banners, featured un items, and sections"
             >
                 <AddContentButton handleAction={openAddDialog} />
             </AdminPageHeader>

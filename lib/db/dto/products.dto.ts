@@ -17,6 +17,7 @@ export type AdminProductDTO = {
     orientations: string[];
     thumbnail: string;
     images?: string[];
+    size_images?: Record<string, { url: string; public_id?: string }>;
 
 };
 
@@ -41,6 +42,7 @@ export type PublicProductDTO = {
     orientations: string[];
     thumbnail: string;
     images?: ProductImage[];
+    size_images: Record<string, { url: string }>; // size label → image (no public_id on the storefront)
 };
 
 export type PublicProductVariantDTO = {
@@ -48,6 +50,7 @@ export type PublicProductVariantDTO = {
     product_id: string;
     size: string;
     thickness: number;
+    mounting_method: string | null; // null → applies to every mounting method
     price: number;
     discount_price: number;
     orientation: string;
@@ -71,7 +74,8 @@ export function toAdminProductDTO(
         thickness: row.thickness,
         mounting_methods: row.mounting_methods,
         orientations: row.orientations,
-        thumbnail: row.thumbnail
+        thumbnail: row.thumbnail,
+        size_images: row.size_images ?? {}
     };
 }
 
@@ -90,7 +94,12 @@ export function toPublicProductDTO(
         mounting_methods: row.mounting_methods,
         orientations: row.orientations,
         thumbnail: row.thumbnail,
-        images: row.images?.map(image => image) ?? []
+        images: row.images?.map(image => image) ?? [],
+        size_images: Object.fromEntries(
+            Object.entries(row.size_images ?? {})
+                .filter(([, img]) => typeof img?.url === "string")
+                .map(([size, img]) => [size, { url: img.url }])
+        )
     };
 }
 
@@ -102,6 +111,7 @@ export function toPublicProductVariantDTO(
         product_id: row.product_id,
         size: row.size,
         thickness: row.thickness,
+        mounting_method: row.mounting_method,
         price: row.price,
         discount_price: row.discount_price,
         orientation: row.orientation

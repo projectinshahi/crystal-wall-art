@@ -6,6 +6,7 @@ export type AdminCategoryDTO = {
   description: string | null;
   image_url: string | null;
   priority: number;
+  parent_id: string | null;
   is_active: boolean;
   deleted: boolean
   created_at: string;
@@ -18,6 +19,7 @@ export type PublicCategoryDTO = {
   description: string | null;
   image_url: string | null;
   priority: number;
+  parent_id: string | null;
 };
 
 export function toAdminCategoryDTO(
@@ -29,6 +31,7 @@ export function toAdminCategoryDTO(
     description: row.description,
     image_url: row.image_url,
     priority: row.priority,
+    parent_id: row.parent_id ?? null,
     is_active: row.is_active,
     deleted: row.deleted,
     created_at: row.created_at,
@@ -44,6 +47,7 @@ export function toPublicCategoryDTO(
     title: row.title,
     description: row.description,
     image_url: row.image_url,
-    priority: row.priority
+    priority: row.priority,
+    parent_id: row.parent_id ?? null,
   };
 }

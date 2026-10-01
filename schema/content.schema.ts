@@ -22,6 +22,9 @@ export const contentSchema = z.object({
         .optional()
         .refine((val) => !!val, "Content image is required"),
 
+    // Hero only: image shown on mobile/tablet. Required for hero_section (see contentFormSchema + API checks)
+    mobile_image: imageFieldSchema.nullable().optional(),
+
     link_url: z.string().optional(),
 
     priority: z.coerce
@@ -30,6 +33,16 @@ export const contentSchema = z.object({
         .min(0, "Priority must be 0 or greater")
         .max(999, "Priority must be under 999")
         .default(0),
+});
+
+export const HERO_MOBILE_IMAGE_REQUIRED = "Mobile banner image is required for Hero Section";
+
+// Admin content form: a Hero Section must have a mobile banner (the API enforces the same rule).
+// Kept separate from contentSchema, which is extended into contentApiSchema.
+export const contentFormSchema = contentSchema.superRefine((val, ctx) => {
+    if (val.type === "hero_section" && !val.mobile_image) {
+        ctx.addIssue({ code: "custom", path: ["mobile_image"], message: HERO_MOBILE_IMAGE_REQUIRED });
+    }
 });
 
 // Homepage intro section: heading + description only
@@ -42,4 +55,5 @@ export type HomeIntroFormValues = z.infer<typeof homeIntroSchema>;
 
 export const contentApiSchema = contentSchema.extend({
   image: uploadedImageSchema,
+  mobile_image: uploadedImageSchema.nullable().optional(),
 });

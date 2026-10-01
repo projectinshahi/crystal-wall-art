@@ -7,6 +7,7 @@ export const ContentAdminQueries = {
           description,
           link_url,
           image,
+          mobile_image,
           priority,
           deleted,
           is_active,
@@ -22,8 +23,9 @@ export const ContentAdminQueries = {
           description,
           link_url,
           image,
-          priority
-        ) VALUES ($1, $2, $3, $4, $5, $6)
+          priority,
+          mobile_image
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7)
         RETURNING
           id,
           type,
@@ -31,6 +33,7 @@ export const ContentAdminQueries = {
           description,
           link_url,
           image,
+          mobile_image,
           priority,
           deleted,
           is_active,
@@ -51,6 +54,7 @@ export const ContentAdminQueries = {
           description,
           link_url,
           image,
+          mobile_image,
           priority,
           deleted,
           is_active,
@@ -70,6 +74,7 @@ export const ContentAdminQueries = {
           description,
           link_url,
           image,
+          mobile_image,
           priority,
           deleted,
           is_active,
@@ -85,7 +90,8 @@ export const ContentAdminQueries = {
           description = $4,
           link_url = $5,
           image = $6,
-          priority = $7
+          priority = $7,
+          mobile_image = $8
         WHERE id = $1
         RETURNING
           id,
@@ -94,6 +100,7 @@ export const ContentAdminQueries = {
           description,
           link_url,
           image,
+          mobile_image,
           priority,
           deleted,
           is_active,

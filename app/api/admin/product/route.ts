@@ -3,6 +3,8 @@ import { uploadBase64ToCloudinary } from "@/lib/cloudinary.service";
 import { withTransaction } from "@/lib/db";
 import { AdminProductDTO } from "@/lib/db/dto/products.dto";
 import { createProduct, getAdminProducts, insertProductImages, insertProductVariants } from "@/lib/db/repositories/admin/products.admin.repository";
+import { isSubcategory } from "@/lib/db/repositories/admin/category.admin.repository";
+import { discardImages, resolveSizeImages, SizeImages } from "@/lib/productSizeImages";
 import { NextResponse } from "next/server";
 
 export const POST = withHandler(
@@ -27,6 +29,11 @@ export const POST = withHandler(
 
         if (!Array.isArray(product_details.images) || product_details.images.length === 0) {
             return err(`At least one product image is required.`, 400);
+        }
+
+        // Products belong to a subcategory, never directly to a main category (checked before any upload)
+        if (!(await isSubcategory(product_details.category))) {
+            return err("Select a subcategory — products can't be added directly to a main category", 400);
         }
 
         const uploadedImages = await Promise.all(
@@ -61,6 +68,15 @@ export const POST = withHandler(
             }
         }
 
+        // ── Size images (optional, one per size) ──────────────────
+        let sizeImages: SizeImages;
+        let uploadedSizeImages: string[];
+        try {
+            ({ sizeImages, uploaded: uploadedSizeImages } = await resolveSizeImages(product_details.size_images, product_details.sizes));
+        } catch (error) {
+            return err(`Size image upload failed: ${(error as Error).message}`, 400);
+        }
+
         // ── 4. Clean product payload ───────────────────────────────
         const { images, thumbnail, category, ...rest } = product_details;
 
@@ -73,6 +89,7 @@ export const POST = withHandler(
                 : null,
             stock_quantity: Number(rest.stock_quantity),
             thumbnail: thumbnailUrl,
+            size_images: sizeImages,
         };
 
         const product = await withTransaction(
@@ -93,6 +110,7 @@ export const POST = withHandler(
                         product_id: productId,
                         size: v.size || null,
                         thickness: v.thickness || null,
+                        mounting_method: v.mounting_method || null,
                         price: Number(v.price),
                         discount_price: v.discount_price
                             ? Number(v.discount_price)
@@ -106,7 +124,11 @@ export const POST = withHandler(
 
                 return insertedProduct;
             }
-        )
+        ).catch(async (error) => {
+            // Nothing references the new size images if the product wasn't saved
+            await discardImages(uploadedSizeImages);
+            throw error;
+        })
 
         const response = ok({
             message: "Product created successfully",

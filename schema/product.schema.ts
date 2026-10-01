@@ -25,7 +25,7 @@ export const productSchema = z
     // Basic Info
     title: z.string().min(2, "Title must be at least 2 characters").max(120).trim(),
     description: z.string().max(2000).trim(),
-    category: z.string().min(1, "Category is required"),
+    category: z.string().min(1, "Subcategory is required"),
 
     // Pricing — cast to ZodType<number> so TypeScript sees `number`, not `unknown`
     price: z.coerce.number().positive("Price must be greater than 0") as z.ZodType<number>,
@@ -69,6 +69,9 @@ export const productSchema = z
         message: "At least one valid image is required",
       }),
     thumbnail: z.string().url(),
+
+    // Optional image per size label: pending upload or an existing {url, public_id}
+    size_images: z.record(z.string(), z.any()).optional().default({}),
   })
   .refine(
     (data) => data.discount_price === undefined || data.discount_price < data.price,
@@ -77,6 +80,11 @@ export const productSchema = z
       path: ["discount_price"],
     }
   );
+
+// A size image in the form: a newly picked file, or an existing uploaded image
+export type SizeImageValue =
+  | { __pendingFile: File; previewUrl: string }
+  | { url: string; public_id?: string };
 
 type ImageValue = {
   previewUrl?: string;
@@ -100,6 +108,7 @@ export type ProductFormValues = {
   status: "draft" | "active" | "inactive";
   images?: ImageValue[];
   thumbnail: string;
+  size_images?: Record<string, SizeImageValue | null>;
 };
 
 // ─── Default Values ───────────────────────────────────────────────────────────
@@ -117,7 +126,8 @@ export const productDefaultValues: ProductFormValues = {
   orientation: [],
   status: "draft",
   images: [],
-  thumbnail: ""
+  thumbnail: "",
+  size_images: {}
 };
 
 // ─── Per-Step Field Keys ──────────────────────────────────────────────────────

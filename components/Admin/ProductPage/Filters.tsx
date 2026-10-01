@@ -9,6 +9,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { CategoryTypes } from "@/types/Admin/categories.types";
+import { categoryTreeOptions } from "@/lib/utils/categoryOptions";
 import { Search } from "lucide-react";
 import { useEffect, useState } from "react";
 
@@ -84,7 +85,7 @@ const Filters = ({
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All Categories</SelectItem>
-            {categories.map(c => <SelectItem key={c.id} value={c.id}>{c.title}</SelectItem>)}
+            {categoryTreeOptions(categories).map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}
           </SelectContent>
         </Select>
       </div>
