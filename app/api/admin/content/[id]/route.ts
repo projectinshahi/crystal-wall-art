@@ -6,15 +6,8 @@ import { getAdminContents, softDeleteContent, updateContent, updateContentStatus
 import { sanitizeString } from "@/lib/validation";
 import { contentApiSchema, HERO_MOBILE_IMAGE_REQUIRED } from "@/schema/content.schema";
 import { ContentFormInput } from "@/types/Admin/content.types";
+import { validateContentMedia } from "@/lib/utils/media";
 import { NextResponse } from "next/server";
-
-const MAX_FILE_SIZE = 5 * 1024 * 1024;
-
-const ALLOWED_IMAGE_TYPES = [
-    "image/jpeg",
-    "image/png",
-    "image/webp",
-];
 
 export const PUT = withHandler(
     async ({ req, params }): Promise<NextResponse> => {
@@ -102,11 +95,9 @@ export const PUT = withHandler(
 
         // Check a new desktop file first, so nothing is uploaded for a request that will be rejected
         if (file && file.size > 0) {
-            if (file.size > MAX_FILE_SIZE) {
-                return err("Image size exceeds 5MB limit", 400);
-            }
-            if (!ALLOWED_IMAGE_TYPES.includes(file.type)) {
-                return err("Invalid image type", 400);
+            const fileError = validateContentMedia(file, "Banner");
+            if (fileError) {
+                return err(fileError, 400);
             }
         }
 
@@ -129,11 +120,12 @@ export const PUT = withHandler(
             return err(HERO_MOBILE_IMAGE_REQUIRED, 400);
         }
         if (mobileFile && mobileFile.size > 0) {
-            if (mobileFile.size > MAX_FILE_SIZE || !ALLOWED_IMAGE_TYPES.includes(mobileFile.type)) {
-                return err("Invalid mobile image (JPEG/PNG/WebP, max 5MB)", 400);
+            const mobileError = validateContentMedia(mobileFile, "Mobile banner");
+            if (mobileError) {
+                return err(mobileError, 400);
             }
             try {
-                mobile_image = await uploadToCloudinary(mobileFile, folder);
+                mobile_image = await uploadToCloudinary(mobileFile, folder, { allowVideo: true });
             } catch (uploadError) {
                 console.error("[CONTENT_MOBILE_IMAGE_UPLOAD_ERROR]", uploadError);
                 throw new ApiError("Mobile image upload failed", 500);
@@ -143,35 +135,15 @@ export const PUT = withHandler(
         // If the request fails after this point, delete the mobile image uploaded above (the row never references it)
         const discardNewMobile = () => {
             if (mobile_image?.public_id && mobile_image.public_id !== oldMobileImage?.public_id) {
-                deleteFromCloudinary(mobile_image.public_id).catch((e) => console.warn("[CLOUDINARY_DELETE_FAILED]", e));
+                deleteFromCloudinary(mobile_image.public_id, mobile_image.resource_type).catch((e) => console.warn("[CLOUDINARY_DELETE_FAILED]", e));
             }
         };
 
-        // NEW IMAGE UPLOAD
+        // NEW IMAGE / VIDEO UPLOAD (already validated above)
         if (file && file.size > 0) {
-            if (file.size > MAX_FILE_SIZE) {
-                return err(
-                    "Image size exceeds 5MB limit",
-                    400
-                );
-            }
-
-            // MIME TYPE VALIDATION
-            if (!ALLOWED_IMAGE_TYPES.includes(file.type)) {
-                return err(
-                    "Invalid image type",
-                    400
-                );
-            }
-
             try {
-                // UPLOAD NEW IMAGE
-                const uploaded = await uploadToCloudinary(file, folder);
-
-                image_url = {
-                    url: uploaded.url,
-                    public_id: uploaded.public_id,
-                };
+                // UPLOAD NEW IMAGE / VIDEO
+                image_url = await uploadToCloudinary(file, folder, { allowVideo: true });
 
                 // DELETE OLD IMAGE
                 try {
@@ -180,7 +152,7 @@ export const PUT = withHandler(
                             : existing.image;
 
                     if (oldImage?.public_id) {
-                        await deleteFromCloudinary(oldImage.public_id);
+                        await deleteFromCloudinary(oldImage.public_id, oldImage.resource_type);
                     }
 
                 } catch (cloudinaryDeleteError) {
@@ -253,7 +225,7 @@ export const PUT = withHandler(
 
         // Remove the replaced/removed mobile image only once the row no longer references it
         if (oldMobileImage?.public_id && mobile_image?.public_id !== oldMobileImage.public_id) {
-            deleteFromCloudinary(oldMobileImage.public_id).catch((e) => console.warn("[CLOUDINARY_DELETE_FAILED]", e));
+            deleteFromCloudinary(oldMobileImage.public_id, oldMobileImage.resource_type).catch((e) => console.warn("[CLOUDINARY_DELETE_FAILED]", e));
         }
 
         const response = ok({
@@ -269,7 +241,7 @@ export const PUT = withHandler(
 
         return response;
 
-    }
+    }, { access: "admin" }
 )
 
 export const PATCH = withHandler(
@@ -315,7 +287,7 @@ export const PATCH = withHandler(
             data: updated,
         })
 
-    }
+    }, { access: "admin" }
 )
 
 export const DELETE = withHandler(
@@ -370,5 +342,5 @@ export const DELETE = withHandler(
 
         return response;
 
-    }
+    }, { access: "admin" }
 )

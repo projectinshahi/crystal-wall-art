@@ -81,16 +81,19 @@ export const getContents = async ({
     try {
 
         const conditions: string[] = [];
+        const values: unknown[] = [];
 
         conditions.push(`deleted = false`);
 
-        // Filters
+        // Filters (parameterized — `type` comes straight from the public query string)
         if (type) {
-            conditions.push(`type = '${type}'`);
+            values.push(type);
+            conditions.push(`type = $${values.length}`);
         }
 
         if (is_active !== undefined) {
-            conditions.push(`is_active = ${is_active}`);
+            values.push(is_active);
+            conditions.push(`is_active = $${values.length}`);
         }
 
         const whereClause = `
@@ -142,8 +145,8 @@ export const getContents = async ({
         `;
 
         const [rows, countRows] = await Promise.all([
-            readQuery<any>(query),
-            readQuery<{ total: number }>(countQuery),
+            readQuery<any>(query, values),
+            readQuery<{ total: number }>(countQuery, values),
         ]);
 
         const total = countRows?.[0]?.total ?? 0;

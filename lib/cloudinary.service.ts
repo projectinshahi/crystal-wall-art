@@ -9,16 +9,20 @@ cloudinary.config({
 export type CloudinaryUploadResult = {
   url: string;
   public_id: string;
+  resource_type?: "image" | "video";
 };
 
 export async function uploadToCloudinary(
   file: File,
-  folder: string = "general"
+  folder: string = "general",
+  options: { allowVideo?: boolean } = {}
 ): Promise<CloudinaryUploadResult> {
   if (!file) throw new Error("File is required");
 
-  if (!file.type.startsWith("image/")) {
-    throw new Error("Only image files are allowed");
+  const isVideo = options.allowVideo === true && file.type.startsWith("video/");
+
+  if (!isVideo && !file.type.startsWith("image/")) {
+    throw new Error(options.allowVideo ? "Only image or video files are allowed" : "Only image files are allowed");
   }
 
   const bytes = await file.arrayBuffer();
@@ -29,7 +33,7 @@ export async function uploadToCloudinary(
       .upload_stream(
         {
           folder,
-          resource_type: "image",
+          resource_type: isVideo ? "video" : "image",
         },
         (error, result) => {
           if (error) reject(error);
@@ -42,13 +46,16 @@ export async function uploadToCloudinary(
   return {
     url: result.secure_url,
     public_id: result.public_id,
+    // Only videos are tagged, so image records keep their existing { url, public_id } shape
+    ...(isVideo ? { resource_type: "video" as const } : {}),
   };
 }
 
-export async function deleteFromCloudinary(public_id: string) {
+// Videos must be destroyed with resource_type "video", otherwise Cloudinary reports "not found"
+export async function deleteFromCloudinary(public_id: string, resource_type: "image" | "video" = "image") {
   if (!public_id) return;
 
-  await cloudinary.uploader.destroy(public_id);
+  await cloudinary.uploader.destroy(public_id, { resource_type });
 }
 
 // Upload a base64 data URI (sent from client)

@@ -10,6 +10,7 @@ import { CONTENT_TYPES } from '@/lib/constants/content.constants'
 import { toast } from 'sonner'
 import { ContentFormInput, ContentFormOutput } from '@/types/Admin/content.types'
 import AdminFormInput from '../inputs/FormInput/AdminFormInput'
+import { validateContentMedia } from '@/lib/utils/media'
 
 interface Props {
     control: Control<ContentFormInput>
@@ -56,7 +57,9 @@ const Form = ({ control, formSubmit, setError, editContent, closeDialog, setCont
 }) => {
 
     const [isSaving, setIsSaving] = useState<boolean>(false);
-    const isHero = useWatch({ control, name: 'type' }) === 'hero_section';
+    const selectedType = useWatch({ control, name: 'type' });
+    const isHero = selectedType === 'hero_section';
+    const isShopNow = selectedType === 'shop_now_banner';
 
     const handleSave = async (formData: ContentFormInput) => {
         try {
@@ -74,6 +77,16 @@ const Form = ({ control, formSubmit, setError, editContent, closeDialog, setCont
                 });
                 toast.error("Content image is required");
                 return;
+            }
+
+            // Check type/size before uploading, so a too-large video fails fast instead of after a long upload
+            const mobileToCheck = isHero ? formData.mobile_image : null;
+            for (const [media, label] of [[image, "Banner"], [mobileToCheck, "Mobile banner"]] as const) {
+                const mediaError = media && "__pendingFile" in media ? validateContentMedia(media.__pendingFile, label) : null;
+                if (mediaError) {
+                    toast.error(mediaError);
+                    return;
+                }
             }
 
             // Validate basic shape before sending
@@ -168,13 +181,16 @@ const Form = ({ control, formSubmit, setError, editContent, closeDialog, setCont
             <AdminFormSelect control={control} name='type' label='Type' options={CONTENT_TYPES} required />
             <AdminFormInput control={control} name='title' label='Title' required />
             <AdminFormTextarea control={control} name='description' label='Description' />
-            <AdminImageUpload control={control} name='image' label={isHero ? 'Desktop Banner Image' : 'Image'} folder='content' required />
+            <div className="grid gap-1">
+                <AdminImageUpload control={control} name='image' label={isHero ? 'Desktop Banner (Image or Video)' : 'Banner (Image or Video)'} folder='content' required allowVideo />
+                <p className="text-xs text-muted-foreground">Images: JPEG/PNG/WebP up to 5MB. Videos: MP4/WebM/MOV up to 30MB — they play muted on loop.</p>
+            </div>
             {/* Kept mounted (hidden) for non-hero types so a picked file's preview isn't revoked when toggling type; ignored on save unless hero */}
             <div className={isHero ? "grid gap-1" : "hidden"}>
-                <AdminImageUpload control={control} name='mobile_image' label='Mobile Banner Image' folder='content' required />
-                <p className="text-xs text-muted-foreground">Required for Hero Section. Shown on mobile &amp; tablet (below 1024px), uncropped at its own ratio — recommended portrait 4:5 (e.g. 1080×1350) or 1:1.</p>
+                <AdminImageUpload control={control} name='mobile_image' label='Mobile Banner (Image or Video)' folder='content' required allowVideo />
+                <p className="text-xs text-muted-foreground">Required for Hero Section. Shown on mobile &amp; tablet (below 1024px) in a short banner (240px tall on phones, cropped to fill) — recommended landscape 3:2 (e.g. 1080×720), keep the subject centered.</p>
             </div>
-            <AdminFormInput control={control} name='link_url' label='Link URL' />
+            <AdminFormInput control={control} name='link_url' label={isShopNow ? 'Shop Now Button Link (e.g. /products)' : 'Link URL'} />
             <AdminFormInput control={control} name='priority' label='Priority' type='number' />
 
             <Button type='submit'>

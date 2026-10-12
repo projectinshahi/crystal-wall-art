@@ -5,6 +5,7 @@ import { Control, FieldValues, Path, useController } from "react-hook-form";
 import { Upload, X } from "lucide-react";
 import { Typography } from "@/components/ui/Typography";
 import { cn } from "@/lib/utils";
+import { CONTENT_MEDIA_ACCEPT, isVideoUrl } from "@/lib/utils/media";
 
 type PendingImage = {
   __pendingFile: File;
@@ -15,6 +16,7 @@ type PendingImage = {
 type UploadedImage = {
   url: string;
   public_id: string;
+  resource_type?: "image" | "video";
 };
 
 // Field value is either a pending file, an uploaded image, or arrays of both
@@ -30,6 +32,8 @@ type Props<T extends FieldValues> = {
   required?: boolean;
   multiple?: boolean;
   hideUploadedImages?: boolean
+  // Single mode only: also accept a video (content banners)
+  allowVideo?: boolean;
 };
 
 // ── type guards ──────────────────────────────────────────────
@@ -54,7 +58,8 @@ const AdminImageUpload = <T extends FieldValues>({
   folder = "general",
   required = false,
   multiple = false,
-  hideUploadedImages = false
+  hideUploadedImages = false,
+  allowVideo = false
 }: Props<T>) => {
   const {
     field: { value, onChange },
@@ -203,6 +208,9 @@ const AdminImageUpload = <T extends FieldValues>({
     : isUploaded(single)
       ? single.url
       : null;
+  const isVideo = isPending(single)
+    ? single.__pendingFile.type.startsWith("video/")
+    : isUploaded(single) && (single.resource_type === "video" || isVideoUrl(single.url));
 
   return (
     <div className="space-y-2">
@@ -215,11 +223,22 @@ const AdminImageUpload = <T extends FieldValues>({
 
       {displayUrl ? (
         <div className="relative group w-full">
-          <img
-            src={displayUrl}
-            alt="Preview"
-            className="w-full h-32 object-cover rounded border"
-          />
+          {isVideo ? (
+            <video
+              src={displayUrl}
+              className="w-full h-32 object-cover rounded border"
+              autoPlay
+              muted
+              loop
+              playsInline
+            />
+          ) : (
+            <img
+              src={displayUrl}
+              alt="Preview"
+              className="w-full h-32 object-cover rounded border"
+            />
+          )}
           <button
             type="button"
             onClick={handleRemoveSingle}
@@ -234,11 +253,11 @@ const AdminImageUpload = <T extends FieldValues>({
           error && "border-red-500"
         )}>
           <Upload className="h-4 w-4" />
-          Choose Image
+          {allowVideo ? "Choose Image or Video" : "Choose Image"}
           <input
             ref={inputRef}
             type="file"
-            accept="image/*"
+            accept={allowVideo ? CONTENT_MEDIA_ACCEPT : "image/*"}
             className="hidden"
             onChange={handleSelectSingle}
           />

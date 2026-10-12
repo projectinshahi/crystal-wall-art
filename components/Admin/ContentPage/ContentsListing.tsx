@@ -12,6 +12,7 @@ import AppDialog from '../Common/AppDialog'
 import { Typography } from '@/components/ui/Typography'
 import { DialogClose } from '@/components/ui/dialog'
 import { useGlobalLoading } from '@/providers/loading-provider'
+import { isVideoUrl } from '@/lib/utils/media'
 
 interface Props {
     contentsData: ContentFormOutput[];
@@ -116,15 +117,18 @@ const ContentsListing = ({ contentsData, setContentsData, onEdit }: Props) => {
         <div className='space-y-2'>
             <div className="space-y-3">
                 {contentsData.map((c: ContentFormOutput) => {
-                    let image: { url: string; public_id: string } | null = null;
+                    let image: { url: string; public_id: string; resource_type?: string } | null = null;
                     image = c.image ? JSON.parse(c.image) : null;
+                    const isVideo = image?.resource_type === "video" || isVideoUrl(image?.url);
 
                     const typeOf = CONTENT_TYPES.find((content) => content.value === c.type)?.label || "";
 
                     return (
                         <Card key={c.id}>
                             <CardContent className="p-4 flex items-center gap-4">
-                                {(image && image.url) && <img src={image.url} alt="" className="h-16 w-24 object-cover rounded shrink-0" />}
+                                {(image && image.url) && (isVideo
+                                    ? <video src={image.url} className="h-16 w-24 object-cover rounded shrink-0" muted loop autoPlay playsInline />
+                                    : <img src={image.url} alt="" className="h-16 w-24 object-cover rounded shrink-0" />)}
                                 <div className="flex-1 min-w-0">
                                     <div className="flex items-center gap-2">
                                         <Badge variant="outline" className='text-primary'>{typeOf}</Badge>

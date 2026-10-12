@@ -4,9 +4,16 @@ import React, { useEffect, useState, useCallback } from "react"
 import useEmblaCarousel from "embla-carousel-react"
 import { ChevronLeft, ChevronRight } from "lucide-react"
 import Image, { StaticImageData, getImageProps } from "next/image"
+import { isVideoUrl } from "@/lib/utils/media"
+
+type Slide = StaticImageData | string
+
+const isVideoSlide = (slide?: Slide | null): slide is string =>
+  typeof slide === "string" && isVideoUrl(slide)
 
 interface CarouselProps {
-  slides: StaticImageData[];
+  // Image (static import or URL) or video URL
+  slides: Slide[];
   // Optional per-slide art direction: shown below lg (1024px) at its natural ratio
   mobileSlides?: (string | null)[];
   showButtons?: boolean
@@ -115,7 +122,7 @@ export default function Carousel({
 
       {/* Viewport */}
       <div className={`overflow-hidden ${viewPortClassName}`} ref={emblaRef}>
-        <div className="flex">
+        <div className="flex h-full">
 
           {slides.map((slide, index) => (
             <div
@@ -127,6 +134,8 @@ export default function Carousel({
             >
               {mobileSlides?.some(Boolean) ? (
                 <ArtDirectedSlide desktop={slide} mobile={mobileSlides[index]} alt={`slide-${index}`} />
+              ) : isVideoSlide(slide) ? (
+                <SlideVideo src={slide} className="w-full h-full object-cover" />
               ) : (
                 <Image
                   src={slide}
@@ -181,16 +190,39 @@ export default function Carousel({
   )
 }
 
+function SlideVideo({ src, className }: { src: string; className: string }) {
+  return <video src={src} className={className} autoPlay muted loop playsInline preload="metadata" />
+}
+
 // <picture> so the browser downloads only the image for the current breakpoint
-function ArtDirectedSlide({ desktop, mobile, alt }: { desktop: StaticImageData | string; mobile?: string | null; alt: string }) {
+function ArtDirectedSlide({ desktop, mobile, alt }: { desktop: Slide; mobile?: string | null; alt: string }) {
+  // A video on either breakpoint: render each breakpoint separately (videos can't go in <picture>)
+  if (isVideoSlide(desktop) || isVideoSlide(mobile)) {
+    const mobileSlide = mobile || desktop
+    return (
+      <>
+        <div className="hidden lg:block h-full">
+          {isVideoSlide(desktop)
+            ? <SlideVideo src={desktop} className="w-full h-full object-cover" />
+            : <Image src={desktop} alt={alt} width={1200} height={600} className="w-full h-full object-cover" />}
+        </div>
+        <div className="lg:hidden h-full">
+          {isVideoSlide(mobileSlide)
+            ? <SlideVideo src={mobileSlide} className="w-full h-full object-cover" />
+            : <Image src={mobileSlide} alt={alt} width={mobile ? 1080 : 1200} height={mobile ? 1350 : 600} className="w-full h-full object-cover" />}
+        </div>
+      </>
+    )
+  }
+
   const { props: { srcSet: desktopSrcSet } } = getImageProps({ src: desktop, alt, width: 1200, height: 600 })
-  // Reserve the box of the image actually shown below lg (portrait mobile, or the 2:1 desktop fallback) to avoid layout shift
+  // Mobile image (or the desktop fallback) below lg; the fixed-height viewport crops it to fill
   const { props: mobileProps } = getImageProps({ src: mobile || desktop, alt, width: mobile ? 1080 : 1200, height: mobile ? 1350 : 600 })
 
   return (
-    <picture>
+    <picture className="block h-full">
       <source media="(min-width: 1024px)" srcSet={desktopSrcSet} />
-      <img {...mobileProps} className="w-full h-auto lg:h-full object-cover" />
+      <img {...mobileProps} className="w-full h-full object-cover" />
     </picture>
   )
 }

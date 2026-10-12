@@ -5,6 +5,8 @@ export const contentSchema = z.object({
     type: z.enum([
         "banner",
         "hero_section",
+        "find_art_section",
+        "shop_now_banner",
         "featured_category",
         "featured_product",
         "section"

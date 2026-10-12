@@ -5,6 +5,8 @@ import { z } from "zod";
 export const uploadedImageSchema = z.object({
   url: z.string().url("Invalid image URL"),
   public_id: z.string().min(1, "Invalid image"),
+  // Set only for videos (content banners); absent means image
+  resource_type: z.enum(["image", "video"]).optional(),
 });
 
 export const pendingImageSchema = z.object({

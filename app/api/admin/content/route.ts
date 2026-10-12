@@ -6,21 +6,14 @@ import { AdminContentDTO } from "@/lib/db/dto/contents.dto";
 import { createContent, getAdminContents } from "@/lib/db/repositories/admin/content.admin.repository";
 import { sanitizeString } from "@/lib/validation";
 import { contentApiSchema, HERO_MOBILE_IMAGE_REQUIRED } from "@/schema/content.schema";
+import { MAX_CONTENT_VIDEO_SIZE, validateContentMedia } from "@/lib/utils/media";
 import { NextResponse } from "next/server";
-
-const MAX_FILE_SIZE = 5 * 1024 * 1024;
-
-const ALLOWED_IMAGE_TYPES = [
-    "image/jpeg",
-    "image/png",
-    "image/webp",
-];
 
 export const POST = withHandler(
     async ({ req }): Promise<NextResponse> => {
         const contentLength = Number(req.headers.get("content-length") || 0);
 
-        if (contentLength > 11 * 1024 * 1024) { // desktop + mobile image
+        if (contentLength > 2 * MAX_CONTENT_VIDEO_SIZE + 1024 * 1024) { // desktop + mobile media (image or video)
             return err(
                 "Payload too large",
                 413
@@ -49,42 +42,32 @@ export const POST = withHandler(
             return err(HERO_MOBILE_IMAGE_REQUIRED, 400);
         }
 
-        // IMAGE REQUIRED
+        // IMAGE / VIDEO REQUIRED
         if (!file || file.size <= 0) {
             return err(
-                "Category image required",
+                "Image or video is required",
                 400
             );
         }
 
-        // FILE SIZE
-        if (file.size > MAX_FILE_SIZE) {
-            return err(
-                "Image too large",
-                400
-            );
+        // MIME + SIZE VALIDATION (images 5MB, videos 30MB)
+        const fileError = validateContentMedia(file, "Banner");
+        if (fileError) {
+            return err(fileError, 400);
         }
 
-        // MIME VALIDATION
-        if (!ALLOWED_IMAGE_TYPES.includes(file.type)) {
-            return err(
-                "Invalid image type",
-                400
-            );
+        if (mobileFile && mobileFile.size > 0) {
+            const mobileError = validateContentMedia(mobileFile, "Mobile banner");
+            if (mobileError) {
+                return err(mobileError, 400);
+            }
         }
 
-        if (mobileFile && mobileFile.size > 0 && (mobileFile.size > MAX_FILE_SIZE || !ALLOWED_IMAGE_TYPES.includes(mobileFile.type))) {
-            return err("Invalid mobile image (JPEG/PNG/WebP, max 5MB)", 400);
-        }
-
-        // UPLOAD IMAGE
-        let uploadedImage: {
-            url: string;
-            public_id: string;
-        };
+        // UPLOAD IMAGE / VIDEO
+        let uploadedImage: Awaited<ReturnType<typeof uploadToCloudinary>>;
 
         try {
-            uploadedImage = await uploadToCloudinary(file, folder);
+            uploadedImage = await uploadToCloudinary(file, folder, { allowVideo: true });
         } catch (uploadError) {
             console.error("[CATEGORY_IMAGE_UPLOAD_ERROR]", uploadError);
 
@@ -97,20 +80,20 @@ export const POST = withHandler(
         let mobileImage = null;
         if (mobileFile && mobileFile.size > 0) {
             try {
-                mobileImage = await uploadToCloudinary(mobileFile, folder);
+                mobileImage = await uploadToCloudinary(mobileFile, folder, { allowVideo: true });
             } catch (uploadError) {
                 console.error("[CONTENT_MOBILE_IMAGE_UPLOAD_ERROR]", uploadError);
                 // Don't leave the just-uploaded desktop image orphaned in Cloudinary
-                await deleteFromCloudinary(uploadedImage.public_id).catch((e) => console.warn("[CLOUDINARY_DELETE_FAILED]", e));
+                await deleteFromCloudinary(uploadedImage.public_id, uploadedImage.resource_type).catch((e) => console.warn("[CLOUDINARY_DELETE_FAILED]", e));
                 throw new ApiError("Mobile image upload failed", 500);
             }
         }
 
         // Remove assets uploaded by this request if it fails before the row is saved
         const discardUploads = () => Promise.all(
-            [uploadedImage.public_id, mobileImage?.public_id]
-                .filter((id): id is string => Boolean(id))
-                .map((id) => deleteFromCloudinary(id).catch((e) => console.warn("[CLOUDINARY_DELETE_FAILED]", e)))
+            [uploadedImage, mobileImage]
+                .filter((media): media is NonNullable<typeof media> => Boolean(media?.public_id))
+                .map((media) => deleteFromCloudinary(media.public_id, media.resource_type).catch((e) => console.warn("[CLOUDINARY_DELETE_FAILED]", e)))
         );
 
         // VALIDATION

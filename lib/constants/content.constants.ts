@@ -1,6 +1,8 @@
 export const CONTENT_TYPES = [
   { value: 'banner', label: 'Banner' },
-  { value: 'hero_section', label: 'Hero Section' },
+  { value: 'hero_section', label: 'Hero Section (Top Slider)' },
+  { value: 'find_art_section', label: 'Find Art For Your Space (Slider)' },
+  { value: 'shop_now_banner', label: 'Shop Now Banner' },
   // { value: 'featured_category', label: 'Featured Category' },
   // { value: 'featured_product', label: 'Featured Product' },
   // { value: 'section', label: 'Section' }
