@@ -17,6 +17,8 @@ import { useCartStore } from '@/store/cartStore'
 import { toast } from 'sonner'
 import { useRouter } from 'next/navigation'
 
+const normalize = (v?: string | null) => v?.trim().toLowerCase();
+
 const ProductDetails = ({ title, data }: { title: string, data: ProductTypes }) => {
 
     const router = useRouter();
@@ -124,10 +126,46 @@ const ProductDetails = ({ title, data }: { title: string, data: ProductTypes }) 
 
     useEffect(() => { if (data) loadProduct(); }, [data]);
 
+    // Admin variants decide which combinations exist: thickness depends on size, mounting on size + thickness.
+    // Without variants every product-level option stays available.
+    const availableOptions = useMemo(() => {
+        if (!variants.length) return null;
+
+        const keep = (opts: ChipsOptionsSelector | undefined, isAvailable: (value: string) => boolean) =>
+            opts ? { ...opts, options: opts.options.filter(o => isAvailable(o.value)) } : opts;
+
+        const forSize = variants.filter(v => normalize(v.size) === normalize(sizes?.selected));
+        const forSizeThickness = forSize.filter(v => normalize(v.thickness) === normalize(thickness?.selected));
+        // A variant without a mounting method applies to every mounting method
+        const anyMounting = forSizeThickness.some(v => !v.mounting_method);
+
+        return {
+            sizes: keep(sizes, val => variants.some(v => normalize(v.size) === normalize(val))),
+            thickness: keep(thickness, val => forSize.some(v => normalize(v.thickness) === normalize(val))),
+            mounting: keep(mounting_methods, val => anyMounting || forSizeThickness.some(v => normalize(v.mounting_method) === normalize(val))),
+        };
+    }, [variants, sizes, thickness, mounting_methods]);
+
+    // Move a selection that is no longer available to the first available option
+    useEffect(() => {
+        if (!availableOptions) return;
+
+        const fix = (
+            opts: ChipsOptionsSelector | undefined,
+            setter: React.Dispatch<React.SetStateAction<ChipsOptionsSelector | undefined>>
+        ) => {
+            if (opts?.options.length && !opts.options.some(o => o.value === opts.selected)) {
+                setter(prev => prev ? { ...prev, selected: opts.options[0].value } : prev);
+            }
+        };
+
+        fix(availableOptions.sizes, setSizes);
+        fix(availableOptions.thickness, setThickness);
+        fix(availableOptions.mounting, setMountingMethods);
+    }, [availableOptions]);
+
     const { activeVariant, displayPrice, displayDiscountPrice, effectivePrice } =
         useMemo(() => {
-            const normalize = (v?: string) => v?.trim().toLowerCase();
-
             const sizeThickness = variants.filter(
                 v =>
                     normalize(v.size) === normalize(sizes?.selected) &&
@@ -241,9 +279,9 @@ const ProductDetails = ({ title, data }: { title: string, data: ProductTypes }) 
                     <div className='flex flex-col gap-2 col-span-5 lg:col-span-1'>
                         <ProductInfo title={data.title} price={effectivePrice.toLocaleString("en-IN")} finalPrice={displayDiscountPrice && displayPrice.toLocaleString("en-IN")} />
                         <ProductOptions
-                            size={sizes || undefined}
-                            thickness={thickness || undefined}
-                            mounting={mounting_methods || undefined}
+                            size={(availableOptions?.sizes ?? sizes) || undefined}
+                            thickness={(availableOptions?.thickness ?? thickness) || undefined}
+                            mounting={(availableOptions?.mounting ?? mounting_methods) || undefined}
                             orientations={orientations || undefined}
                             onChange={handleChangeSelectedOptions}
                         />

@@ -23,7 +23,7 @@ const AboutSection = async () => {
     const { title, description } = await getHomeIntro();
 
     return (
-        <HomeContentWrapper wrapperClassName='bg-secondary'>
+        <HomeContentWrapper wrapperClassName='bg-secondary mt-8 sm:mt-12'>
             <div className='flex flex-col space-y-3'>
                 <Typography className='text-center text-base lg:text-xl font-bold text-white leading-5 tracking-wide'>{title}</Typography>
                 <Typography className='text-center text-sm lg:text-base text-white leading-auto'>{description}</Typography>

@@ -8,7 +8,7 @@ export default function ShopLookSection({ image }: { image: string }) {
     return (
         <HomeContentWrapper containerClassName="py-0 sm:py-0">
 
-            <div className="relative overflow-hidden shadow-md">
+            <div className="relative overflow-hidden rounded-[20px] shadow-md">
 
                 {/* Image */}
                 <Image
