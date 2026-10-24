@@ -127,12 +127,12 @@ const ProductDetails = ({ title, data }: { title: string, data: ProductTypes }) 
     useEffect(() => { if (data) loadProduct(); }, [data]);
 
     // Admin variants decide which combinations exist: thickness depends on size, mounting on size + thickness.
-    // Without variants every product-level option stays available.
+    // Without variants every product-level option stays available. Unavailable options stay visible but disabled.
     const availableOptions = useMemo(() => {
         if (!variants.length) return null;
 
         const keep = (opts: ChipsOptionsSelector | undefined, isAvailable: (value: string) => boolean) =>
-            opts ? { ...opts, options: opts.options.filter(o => isAvailable(o.value)) } : opts;
+            opts ? { ...opts, options: opts.options.map(o => ({ ...o, disabled: !isAvailable(o.value) })) } : opts;
 
         const forSize = variants.filter(v => normalize(v.size) === normalize(sizes?.selected));
         const forSizeThickness = forSize.filter(v => normalize(v.thickness) === normalize(thickness?.selected));
@@ -154,8 +154,9 @@ const ProductDetails = ({ title, data }: { title: string, data: ProductTypes }) 
             opts: ChipsOptionsSelector | undefined,
             setter: React.Dispatch<React.SetStateAction<ChipsOptionsSelector | undefined>>
         ) => {
-            if (opts?.options.length && !opts.options.some(o => o.value === opts.selected)) {
-                setter(prev => prev ? { ...prev, selected: opts.options[0].value } : prev);
+            const enabled = opts?.options.filter(o => !o.disabled) ?? [];
+            if (enabled.length && !enabled.some(o => o.value === opts?.selected)) {
+                setter(prev => prev ? { ...prev, selected: enabled[0].value } : prev);
             }
         };
 

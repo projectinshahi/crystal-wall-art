@@ -3,7 +3,7 @@ import ImageSlider from '../ui/Carousel/index'
 import { ProductImage } from '@/types/Admin/products.types'
 
 const Slider = ({ images, autoplay }: { images?: ProductImage[], autoplay?: boolean }) => {
-    return <ImageSlider slides={images as any} showArrow={false} options={{ loop: true, align: 'start' }} autoplayDelay={2000} autoplay={autoplay} dotPosition="inside-bottom-center" dotClassName='bg-[#D9D9D9]' />
+    return <ImageSlider slides={images as any} showArrow={false} options={{ loop: true, align: 'start' }} autoplayDelay={2000} autoplay={autoplay} dotPosition="inside-bottom-center" dotClassName='bg-[#D9D9D9]' thumbnails />
 }
 
 export default Slider

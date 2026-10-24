@@ -37,6 +37,7 @@ type PropType = {
   contentClassName?: string
   dotPosition?: DotPosition        // ← new
   dotClassName?: string            // ← optional extra styles on each dot
+  thumbnails?: boolean             // small clickable images beside the slider (below it on mobile)
 }
 
 // Maps dotPosition value → Tailwind classes for the dots wrapper
@@ -66,6 +67,7 @@ const ImageSlider = ({
   contentClassName,
   dotPosition = 'outside-bottom-center',  // sensible default
   dotClassName,
+  thumbnails = false,
 }: PropType) => {
 
   const autoplay = Autoplay({
@@ -96,8 +98,32 @@ const ImageSlider = ({
     </div>
   ) : null
 
+  const ThumbnailsNode = thumbnails && slides.length > 1 ? (
+    // On sm+ the column stretches to the slider's height and scrolls inside it
+    <div className="shrink-0 sm:relative sm:w-16 lg:w-20">
+      <div className="flex gap-2 overflow-x-auto sm:absolute sm:inset-0 sm:flex-col sm:overflow-x-hidden sm:overflow-y-auto">
+        {slides.map((slide, index) => (
+          <button
+            type="button"
+            key={slide.id ?? index}
+            onClick={() => onDotButtonClick(index)}
+            aria-label={`Show image ${index + 1}`}
+            className={cn(
+              'relative aspect-square w-16 lg:w-20 shrink-0 overflow-hidden rounded-md border-2 bg-[#f1f5f9] cursor-pointer transition-all',
+              index === selectedIndex ? 'border-black/60' : 'border-transparent opacity-70 hover:opacity-100'
+            )}
+          >
+            <Image src={slide.image_url} alt="" fill sizes="80px" className="object-cover" />
+          </button>
+        ))}
+      </div>
+    </div>
+  ) : null
+
   return (
-    <div className="embla">
+    <div className={cn(ThumbnailsNode && 'flex flex-col-reverse gap-3 sm:flex-row')}>
+    {ThumbnailsNode}
+    <div className="embla min-w-0 flex-1">
 
       {/* Viewport — position:relative so inside dots can anchor to it */}
       <div className="embla__viewport relative" ref={emblaRef}>
@@ -140,6 +166,7 @@ const ImageSlider = ({
         </div>
       )}
 
+    </div>
     </div>
   )
 }
