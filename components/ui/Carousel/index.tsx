@@ -8,7 +8,9 @@ import Autoplay from 'embla-carousel-autoplay'
 import { DotButton, useDotButton } from './EmblaCarouselDotButton'
 import { NextButton, PrevButton, usePrevNextButtons } from './EmblaCarouselArrowButtons'
 import Image from 'next/image'
+import { Play } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { isVideoUrl, videoPosterUrl } from '@/lib/utils/media'
 
 export type SlideData = {
   id?: number
@@ -57,6 +59,32 @@ const dotPositionStyles: Record<DotPosition, string> = {
 
 const isInsidePosition = (pos: DotPosition) => pos.startsWith('inside')
 
+// Plays only while its slide is selected, so off-screen videos don't download or play
+const SlideVideo = ({ src, active }: { src: string; active: boolean }) => {
+  const ref = React.useRef<HTMLVideoElement>(null)
+
+  React.useEffect(() => {
+    const video = ref.current
+    if (!video) return
+    if (active) video.play().catch(() => { /* autoplay blocked: the controls still work */ })
+    else video.pause()
+  }, [active])
+
+  return (
+    <video
+      ref={ref}
+      src={src}
+      poster={videoPosterUrl(src)}
+      className="absolute inset-0 h-full w-full object-cover"
+      muted
+      loop
+      playsInline
+      controls
+      preload="metadata"
+    />
+  )
+}
+
 const ImageSlider = ({
   slides,
   options,
@@ -81,6 +109,25 @@ const ImageSlider = ({
   const { prevBtnDisabled, nextBtnDisabled, onPrevButtonClick, onNextButtonClick } = usePrevNextButtons(emblaApi)
 
   const inside = isInsidePosition(dotPosition)
+
+  // Don't auto-advance away from a video the customer is watching. Autoplay restarts itself after hover
+  // and taps, so it is stopped whenever it arms its timer on a video slide, and resumed on leaving one.
+  React.useEffect(() => {
+    const plugin = emblaApi?.plugins()?.autoplay
+    if (!emblaApi || !plugin || !autoplayEnabled) return
+    if (!slides.some(slide => isVideoUrl(slide.image_url))) return
+
+    const onVideo = () => isVideoUrl(slides[emblaApi.selectedScrollSnap()]?.image_url)
+    const holdOnVideo = () => { if (onVideo()) plugin.stop() }
+    const onSelect = () => {
+      if (onVideo()) plugin.stop()
+      else if (!plugin.isPlaying()) plugin.play()
+    }
+
+    holdOnVideo()
+    emblaApi.on('autoplay:timerset', holdOnVideo).on('select', onSelect)
+    return () => { emblaApi.off('autoplay:timerset', holdOnVideo).off('select', onSelect) }
+  }, [emblaApi, slides, autoplayEnabled])
 
   const DotsNode = showDots ? (
     <div className={cn('flex gap-1.5', dotPositionStyles[dotPosition])}>
@@ -113,7 +160,18 @@ const ImageSlider = ({
               index === selectedIndex ? 'border-black/60' : 'border-transparent opacity-70 hover:opacity-100'
             )}
           >
-            <Image src={slide.image_url} alt="" fill sizes="80px" className="object-cover" />
+            {isVideoUrl(slide.image_url) ? (
+              <>
+                {videoPosterUrl(slide.image_url)
+                  ? <Image src={videoPosterUrl(slide.image_url)!} alt="" fill sizes="80px" className="object-cover" />
+                  : <video src={slide.image_url} className="absolute inset-0 h-full w-full object-cover" muted playsInline preload="metadata" />}
+                <span className="absolute inset-0 flex items-center justify-center bg-black/20">
+                  <Play className="h-5 w-5 fill-white text-white drop-shadow" />
+                </span>
+              </>
+            ) : (
+              <Image src={slide.image_url} alt="" fill sizes="80px" className="object-cover" />
+            )}
           </button>
         ))}
       </div>
@@ -128,17 +186,21 @@ const ImageSlider = ({
       {/* Viewport — position:relative so inside dots can anchor to it */}
       <div className="embla__viewport relative" ref={emblaRef}>
         <div className="embla__container">
-          {slides.map((slide) => (
+          {slides.map((slide, index) => (
             <div className="embla__slide" key={slide.id}>
               <div className={cn('embla__slide__content', contentClassName)}>
-                <Image
-                  src={slide.image_url}
-                  alt="Slide Image"
-                  fill
-                  sizes="(max-width: 768px) 100vw, 800px"
-                  className="embla__slide__img"
-                  priority={slide.id === slides[0].id}
-                />
+                {isVideoUrl(slide.image_url) ? (
+                  <SlideVideo src={slide.image_url} active={index === selectedIndex} />
+                ) : (
+                  <Image
+                    src={slide.image_url}
+                    alt="Slide Image"
+                    fill
+                    sizes="(max-width: 768px) 100vw, 800px"
+                    className="embla__slide__img"
+                    priority={slide.id === slides[0].id}
+                  />
+                )}
                 {slide.content && (
                   <div className="embla__slide__overlay">
                     <div className="embla__slide__dynamic-node">

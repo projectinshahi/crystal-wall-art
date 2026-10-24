@@ -33,7 +33,8 @@ export const ProductAdminQueries = {
             mounting_methods,
             orientations,
             thumbnail,
-            size_images
+            size_images,
+            videos
         )
         VALUES (
             $1,
@@ -48,7 +49,8 @@ export const ProductAdminQueries = {
             $10,
             $11,
             $12,
-            $13
+            $13,
+            $14
         )
         RETURNING *
     `,
@@ -71,6 +73,7 @@ export const ProductAdminQueries = {
             p.orientations,
             p.thumbnail,
             p.size_images,
+            p.videos,
             COALESCE(
                 (
                     SELECT json_agg(

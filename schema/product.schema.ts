@@ -51,7 +51,7 @@ export const productSchema = z
     // Status
     status: productStatusEnum.default("draft"),
 
-    // Image
+    // Images — optional on their own: a product needs at least one image or video (checked below)
     images: z
       .array(
         z.object({
@@ -59,20 +59,29 @@ export const productSchema = z
           previewUrl: z.string().optional(),
         })
       )
-      .min(1, "At least one image is required") // ✅ BEFORE transform
+      .optional()
+      .default([])
       .transform((imgs) =>
         imgs
           .map((img) => img.url || img.previewUrl)
           .filter(Boolean)
-      )
-      .refine((arr) => arr.length > 0, {
-        message: "At least one valid image is required",
-      }),
-    thumbnail: z.string().url(),
+      ),
+    // Empty when the product has only videos (the server then uses a frame of the first video)
+    thumbnail: z.union([z.string().url(), z.literal("")]).optional().default(""),
 
     // Optional image per size label: pending upload or an existing {url, public_id}
     size_images: z.record(z.string(), z.any()).optional().default({}),
+
+    // Optional videos: pending upload or an existing {url, public_id}
+    videos: z.array(z.any()).optional().default([]),
   })
+  .refine(
+    (data) => data.images.length > 0 || data.videos.length > 0,
+    {
+      message: "Add at least one image or video",
+      path: ["images"],
+    }
+  )
   .refine(
     (data) => data.discount_price === undefined || data.discount_price < data.price,
     {
@@ -85,6 +94,11 @@ export const productSchema = z
 export type SizeImageValue =
   | { __pendingFile: File; previewUrl: string }
   | { url: string; public_id?: string };
+
+// A product video in the form: a newly picked file (uploaded on save), or an existing uploaded video
+export type ProductVideoValue =
+  | { __pendingFile: File; previewUrl: string }
+  | { url: string; public_id: string };
 
 type ImageValue = {
   previewUrl?: string;
@@ -109,6 +123,7 @@ export type ProductFormValues = {
   images?: ImageValue[];
   thumbnail: string;
   size_images?: Record<string, SizeImageValue | null>;
+  videos?: ProductVideoValue[];
 };
 
 // ─── Default Values ───────────────────────────────────────────────────────────
@@ -127,7 +142,8 @@ export const productDefaultValues: ProductFormValues = {
   status: "draft",
   images: [],
   thumbnail: "",
-  size_images: {}
+  size_images: {},
+  videos: []
 };
 
 // ─── Per-Step Field Keys ──────────────────────────────────────────────────────

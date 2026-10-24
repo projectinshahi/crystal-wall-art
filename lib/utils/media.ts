@@ -24,3 +24,13 @@ export function isVideoUrl(url?: string | null): boolean {
     if (!url) return false;
     return url.includes("/video/upload/") || /\.(mp4|webm|mov|m4v)(\?|#|$)/i.test(url);
 }
+
+// Product videos (Admin → Products): uploaded straight from the browser to Cloudinary
+export const PRODUCT_VIDEO_TYPES = CONTENT_VIDEO_TYPES;
+export const MAX_PRODUCT_VIDEO_SIZE = 50 * 1024 * 1024;
+
+// Cloudinary renders a still frame of a video when its extension is swapped for .jpg
+export function videoPosterUrl(url: string): string | undefined {
+    if (!url.includes("res.cloudinary.com") || !url.includes("/video/upload/")) return undefined;
+    return url.replace(/\.[a-z0-9]+(\?.*)?$/i, ".jpg");
+}

@@ -18,6 +18,7 @@ export type AdminProductDTO = {
     thumbnail: string;
     images?: string[];
     size_images?: Record<string, { url: string; public_id?: string }>;
+    videos?: { url: string; public_id?: string }[];
 
 };
 
@@ -43,6 +44,7 @@ export type PublicProductDTO = {
     thumbnail: string;
     images?: ProductImage[];
     size_images: Record<string, { url: string }>; // size label → image (no public_id on the storefront)
+    videos: { url: string }[];
 };
 
 export type PublicProductVariantDTO = {
@@ -75,7 +77,8 @@ export function toAdminProductDTO(
         mounting_methods: row.mounting_methods,
         orientations: row.orientations,
         thumbnail: row.thumbnail,
-        size_images: row.size_images ?? {}
+        size_images: row.size_images ?? {},
+        videos: row.videos ?? []
     };
 }
 
@@ -99,7 +102,10 @@ export function toPublicProductDTO(
             Object.entries(row.size_images ?? {})
                 .filter(([, img]) => typeof img?.url === "string")
                 .map(([size, img]) => [size, { url: img.url }])
-        )
+        ),
+        videos: (row.videos ?? [])
+            .filter((video) => typeof video?.url === "string")
+            .map((video) => ({ url: video.url }))
     };
 }
 

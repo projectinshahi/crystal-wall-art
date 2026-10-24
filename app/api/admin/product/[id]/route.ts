@@ -4,6 +4,8 @@ import { uploadBase64ToCloudinary, deleteFromCloudinary } from "@/lib/cloudinary
 import { withTransaction } from "@/lib/db";
 import { isSubcategory } from "@/lib/db/repositories/admin/category.admin.repository";
 import { discardImages, resolveSizeImages, SizeImages, unusedSizeImages } from "@/lib/productSizeImages";
+import { discardVideos, ProductVideo, resolveProductVideos, unusedProductVideos } from "@/lib/productVideos";
+import { videoPosterUrl } from "@/lib/utils/media";
 import { NextResponse } from "next/server";
 
 export const GET = withHandler(
@@ -54,6 +56,16 @@ export const PUT = withHandler(
       return err("Select a subcategory — products can't be added directly to a main category", 400);
     }
 
+    // ── Videos (optional, already uploaded to Cloudinary by the browser) ──
+    const existingVideos = (existing.videos ?? []) as ProductVideo[];
+    let videos: ProductVideo[];
+    let addedVideos: string[];
+    try {
+      ({ videos, added: addedVideos } = resolveProductVideos(product_details.videos, existingVideos));
+    } catch (error) {
+      return err((error as Error).message, 400);
+    }
+
     // ── Size images (optional, one per size) — resolved before the gallery is touched
     const existingSizeImages: SizeImages = existing.size_images ?? {};
     let sizeImages: SizeImages;
@@ -61,6 +73,7 @@ export const PUT = withHandler(
     try {
       ({ sizeImages, uploaded: uploadedSizeImages } = await resolveSizeImages(product_details.size_images, product_details.sizes, existingSizeImages));
     } catch (error) {
+      await discardVideos(addedVideos);
       return err(`Size image upload failed: ${(error as Error).message}`, 400);
     }
 
@@ -176,9 +189,16 @@ export const PUT = withHandler(
         } catch (error) {
           console.error("[PUT product] Image upload failed:", error);
           await discardImages(uploadedSizeImages);
+          await discardVideos(addedVideos);
           return err(`Image upload failed: ${(error as Error).message}`, 500);
         }
       }
+    }
+
+    // A product needs at least one image or video
+    if (productImages.length === 0 && videos.length === 0) {
+      await discardImages(uploadedSizeImages);
+      return err("Add at least one product image or video.", 400);
     }
 
     // ── 3. Delete old images that are no longer in the product ───────────
@@ -218,6 +238,7 @@ export const PUT = withHandler(
             orientations = $11,
             thumbnail = $12,
             size_images = $13,
+            videos = $15,
             updated_at = NOW()
           WHERE id = $14
           RETURNING *
@@ -232,9 +253,12 @@ export const PUT = withHandler(
               }
             : null);
 
-        const thumbnailValue = normalizedThumbnail
-          ? JSON.stringify(normalizedThumbnail)
-          : product_details.thumbnail;
+        // Video-only product: cards and the cart show a still frame of the first video
+        const thumbnailValue = productImages.length === 0
+          ? JSON.stringify({ url: videoPosterUrl(videos[0].url) ?? videos[0].url })
+          : normalizedThumbnail
+            ? JSON.stringify(normalizedThumbnail)
+            : product_details.thumbnail;
 
         const result = await client.query(updateQuery, [
           product_details.title,
@@ -251,6 +275,7 @@ export const PUT = withHandler(
           thumbnailValue,
           sizeImages,
           productId,
+          JSON.stringify(videos),
         ]);
 
         const updatedProduct = result.rows[0];
@@ -321,6 +346,7 @@ export const PUT = withHandler(
 
       // Remove size images that were replaced or removed, now that the row no longer uses them
       await discardImages(unusedSizeImages(existingSizeImages, sizeImages));
+      await discardVideos(unusedProductVideos(existingVideos, videos));
 
       const response = ok({
         message: "Product updated successfully",
@@ -333,6 +359,7 @@ export const PUT = withHandler(
     } catch (error) {
       console.error("[PUT product] Update failed:", error);
       await discardImages(uploadedSizeImages);
+      await discardVideos(addedVideos);
       // cart_items → product_variants is ON DELETE RESTRICT
       if ((error as { constraint?: string }).constraint === "cart_items_variant_id_fkey") {
         return err("A price variant you removed is in a customer's cart, so it can't be deleted yet. Keep that variant and try again.", 409);

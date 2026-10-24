@@ -5,6 +5,8 @@ import { AdminProductDTO } from "@/lib/db/dto/products.dto";
 import { createProduct, getAdminProducts, insertProductImages, insertProductVariants } from "@/lib/db/repositories/admin/products.admin.repository";
 import { isSubcategory } from "@/lib/db/repositories/admin/category.admin.repository";
 import { discardImages, resolveSizeImages, SizeImages } from "@/lib/productSizeImages";
+import { discardVideos, ProductVideo, resolveProductVideos } from "@/lib/productVideos";
+import { videoPosterUrl } from "@/lib/utils/media";
 import { NextResponse } from "next/server";
 
 export const POST = withHandler(
@@ -27,8 +29,10 @@ export const POST = withHandler(
             }
         }
 
-        if (!Array.isArray(product_details.images) || product_details.images.length === 0) {
-            return err(`At least one product image is required.`, 400);
+        if (!Array.isArray(product_details.images)) product_details.images = [];
+        // A product needs at least one image or video (videos are checked again once resolved below)
+        if (product_details.images.length === 0 && !(Array.isArray(product_details.videos) && product_details.videos.length > 0)) {
+            return err(`Add at least one product image or video.`, 400);
         }
 
         // Products belong to a subcategory, never directly to a main category (checked before any upload)
@@ -68,12 +72,28 @@ export const POST = withHandler(
             }
         }
 
+        // ── Videos (optional, already uploaded to Cloudinary by the browser) ──
+        let videos: ProductVideo[];
+        let addedVideos: string[];
+        try {
+            ({ videos, added: addedVideos } = resolveProductVideos(product_details.videos));
+        } catch (error) {
+            return err((error as Error).message, 400);
+        }
+
+        if (uploadedImages.length === 0) {
+            if (videos.length === 0) return err(`Add at least one product image or video.`, 400);
+            // Video-only product: cards and the cart show a still frame of the first video
+            thumbnailUrl = JSON.stringify({ url: videoPosterUrl(videos[0].url) ?? videos[0].url });
+        }
+
         // ── Size images (optional, one per size) ──────────────────
         let sizeImages: SizeImages;
         let uploadedSizeImages: string[];
         try {
             ({ sizeImages, uploaded: uploadedSizeImages } = await resolveSizeImages(product_details.size_images, product_details.sizes));
         } catch (error) {
+            await discardVideos(addedVideos);
             return err(`Size image upload failed: ${(error as Error).message}`, 400);
         }
 
@@ -90,6 +110,7 @@ export const POST = withHandler(
             stock_quantity: Number(rest.stock_quantity),
             thumbnail: thumbnailUrl,
             size_images: sizeImages,
+            videos,
         };
 
         const product = await withTransaction(
@@ -125,8 +146,9 @@ export const POST = withHandler(
                 return insertedProduct;
             }
         ).catch(async (error) => {
-            // Nothing references the new size images if the product wasn't saved
+            // Nothing references the new size images or videos if the product wasn't saved
             await discardImages(uploadedSizeImages);
+            await discardVideos(addedVideos);
             throw error;
         })
 

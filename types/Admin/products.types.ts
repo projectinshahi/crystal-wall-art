@@ -20,6 +20,7 @@ export type ProductTypes = {
   orientations: string[];
   thumbnail: string;
   size_images?: Record<string, { url: string; public_id?: string }>; // one optional image per size label
+  videos?: { url: string; public_id?: string }[]; // shown after the images in the gallery
   images?: ProductImage[];
 };
 

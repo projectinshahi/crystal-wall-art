@@ -146,7 +146,8 @@ export const createProduct = async (client: PoolClient, data: ProductFormValues)
       data.mounting_methods,
       data.orientation,
       data.thumbnail,
-      data.size_images ?? {}
+      data.size_images ?? {},
+      JSON.stringify(data.videos ?? [])
     ]
   );
 

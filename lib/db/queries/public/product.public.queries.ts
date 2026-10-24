@@ -30,6 +30,7 @@ export const ProductPublicQueries = {
             p.orientations,
             p.thumbnail,
             p.size_images,
+            p.videos,
             COALESCE(
                 json_agg(
                     json_build_object(

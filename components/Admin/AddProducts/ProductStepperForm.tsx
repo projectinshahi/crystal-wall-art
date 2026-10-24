@@ -19,6 +19,8 @@ import { CardTitle } from "@/components/ui/card";
 import { Plus, Trash2, X, Loader2 } from "lucide-react";
 import AdminImageUpload from "../inputs/ImageUpload";
 import SizeImagesField from "./SizeImagesField";
+import ProductVideosField from "./ProductVideosField";
+import { uploadProductVideo } from "@/lib/utils/uploadProductVideo";
 import SucessScreen from "./SucessScreen";
 import { CategoryTypes } from "@/types/Admin/categories.types";
 import { subcategoryOptions } from "@/lib/utils/categoryOptions";
@@ -139,6 +141,7 @@ const ProductStepperForm = ({ productId }: ProductStepperFormProps) => {
   const watchedImages = watch("images") || [];
   const watchedThumbnail = watch("thumbnail");
   const watchedSizeImages = watch("size_images") || {};
+  const watchedVideos = watch("videos") || [];
 
   // -- Generate Variants
   // Every Size × Thickness × Mounting Method combination from the Details tab
@@ -417,7 +420,7 @@ const ProductStepperForm = ({ productId }: ProductStepperFormProps) => {
   const imagesContent = (
     <div className="space-y-4">
       <Typography variant="body-sm" className="text-muted-foreground">
-        Upload product photos that customers will see in the catalog.
+        Upload product photos and/or videos that customers will see in the catalog. At least one image or video is required.
       </Typography>
 
       {watchedImages.length > 0 && (
@@ -498,6 +501,16 @@ const ProductStepperForm = ({ productId }: ProductStepperFormProps) => {
         value={watchedSizeImages}
         onChange={(next) => setValue("size_images", next, { shouldDirty: true })}
       />
+
+      {/* Optional videos, shown after the images on the product page */}
+      <ProductVideosField
+        value={watchedVideos}
+        onChange={(next) => {
+          setValue("videos", next, { shouldDirty: true });
+          // "Add at least one image or video" sits on the images field; re-check it when videos change
+          if (errors.images) trigger("images");
+        }}
+      />
     </div>
   );
 
@@ -519,8 +532,8 @@ const ProductStepperForm = ({ productId }: ProductStepperFormProps) => {
       content: priceContent
     },
     {
-      id: "images", label: "Images", header: (
-        <Typography variant="h4" className="font-bold underline underline-offset-4">Product Images</Typography>
+      id: "images", label: "Images & Videos", header: (
+        <Typography variant="h4" className="font-bold underline underline-offset-4">Product Images & Videos</Typography>
       ),
       content: imagesContent
     },
@@ -584,6 +597,29 @@ const ProductStepperForm = ({ productId }: ProductStepperFormProps) => {
           : { url: img.url, public_id: img.public_id };
       }
 
+      // Videos: new files go straight to Cloudinary from the browser; existing ones pass through
+      const videosPayload: { url: string; public_id: string }[] = [];
+      const pendingVideos = (data.videos ?? []).filter((v) => "__pendingFile" in v).length;
+      let uploadedCount = 0;
+      for (const video of data.videos ?? []) {
+        if (!("__pendingFile" in video)) {
+          videosPayload.push({ url: video.url, public_id: video.public_id });
+          continue;
+        }
+        uploadedCount++;
+        const label = `Uploading video ${uploadedCount} of ${pendingVideos}`;
+        toast.loading(`${label}…`, { id: "product-video-upload" });
+        try {
+          videosPayload.push(await uploadProductVideo(video.__pendingFile, (percent) =>
+            toast.loading(`${label} (${percent}%)`, { id: "product-video-upload" })
+          ));
+        } catch (error) {
+          throw new Error(`"${video.__pendingFile.name}": ${(error as Error).message}`);
+        } finally {
+          toast.dismiss("product-video-upload");
+        }
+      }
+
       // ── 2. Build payload ─────────────────────────────────────────────────
       const payload = {
         title: data.title.trim(),
@@ -600,6 +636,7 @@ const ProductStepperForm = ({ productId }: ProductStepperFormProps) => {
         images: convertedImages,
         thumbnail: convertedThumbnail,
         size_images: sizeImagesPayload,
+        videos: videosPayload,
       };
 
       // ── 3. Send to API ───────────────────────────────────────────────────
@@ -792,6 +829,7 @@ const ProductStepperForm = ({ productId }: ProductStepperFormProps) => {
         images: normalizedImages,
         thumbnail: normalizedThumbnail,
         size_images: product.size_images || {},
+        videos: product.videos || [],
       });
 
       // Set orientations

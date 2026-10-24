@@ -37,6 +37,13 @@ const ProductDetails = ({ title, data }: { title: string, data: ProductTypes }) 
 
     const sizeImage = sizes?.selected ? data.size_images?.[sizes.selected]?.url : undefined;
 
+    // Gallery: the selected size's image (if any), then the product images, then the videos
+    const galleryItems = [
+        ...(sizeImage ? [{ id: `size-${sizes?.selected}`, image_url: sizeImage }] : []),
+        ...(data.images || []),
+        ...(data.videos || []).map((video, i) => ({ id: `video-${i}`, image_url: video.url })),
+    ];
+
     useEffect(() => {
         const el = document.getElementById("product-header");
         if (!el) return;
@@ -272,7 +279,7 @@ const ProductDetails = ({ title, data }: { title: string, data: ProductTypes }) 
                             {/* Selected size's image (if any) leads the gallery and stays put until the size changes */}
                             <ProductGallery
                                 key={sizeImage || "gallery"}
-                                images={sizeImage ? [{ id: `size-${sizes?.selected}`, image_url: sizeImage }, ...(data.images || [])] : data.images || []}
+                                images={galleryItems}
                                 autoplay={!sizeImage}
                             />
                         </div>
