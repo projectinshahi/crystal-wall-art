@@ -8,7 +8,7 @@ import Autoplay from 'embla-carousel-autoplay'
 import { DotButton, useDotButton } from './EmblaCarouselDotButton'
 import { NextButton, PrevButton, usePrevNextButtons } from './EmblaCarouselArrowButtons'
 import Image from 'next/image'
-import { Play } from 'lucide-react'
+import { ChevronDown, ChevronLeft, ChevronRight, ChevronUp, Play } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { isVideoUrl, videoPosterUrl } from '@/lib/utils/media'
 
@@ -110,6 +110,50 @@ const ImageSlider = ({
 
   const inside = isInsidePosition(dotPosition)
 
+  // Thumbnail strip scrolls horizontally on mobile and vertically on sm+; track which ends have hidden thumbnails
+  const thumbsRef = React.useRef<HTMLDivElement>(null)
+  const [thumbsMore, setThumbsMore] = React.useState({ start: false, end: false })
+
+  const updateThumbsMore = React.useCallback(() => {
+    const el = thumbsRef.current
+    if (!el) return
+    const vertical = el.scrollHeight > el.clientHeight + 1
+    const pos = vertical ? el.scrollTop : el.scrollLeft
+    const max = vertical ? el.scrollHeight - el.clientHeight : el.scrollWidth - el.clientWidth
+    setThumbsMore({ start: pos > 1, end: pos < max - 1 })
+  }, [])
+
+  React.useEffect(() => {
+    const el = thumbsRef.current
+    if (!el) return
+    updateThumbsMore()
+    const observer = new ResizeObserver(updateThumbsMore)
+    observer.observe(el)
+    return () => observer.disconnect()
+  }, [updateThumbsMore, slides.length])
+
+  const scrollThumbs = (dir: 1 | -1) => {
+    const el = thumbsRef.current
+    if (!el) return
+    if (el.scrollHeight > el.clientHeight + 1) el.scrollBy({ top: dir * el.clientHeight * 0.8, behavior: 'smooth' })
+    else el.scrollBy({ left: dir * el.clientWidth * 0.8, behavior: 'smooth' })
+  }
+
+  // Keep the selected thumbnail in view (scrolls the strip only, never the page)
+  React.useEffect(() => {
+    const el = thumbsRef.current
+    const thumb = el?.children[selectedIndex] as HTMLElement | undefined
+    if (!el || !thumb) return
+    if (el.scrollHeight > el.clientHeight + 1) {
+      if (thumb.offsetTop < el.scrollTop || thumb.offsetTop + thumb.offsetHeight > el.scrollTop + el.clientHeight)
+        el.scrollTo({ top: thumb.offsetTop - (el.clientHeight - thumb.offsetHeight) / 2, behavior: 'smooth' })
+    } else if (thumb.offsetLeft < el.scrollLeft || thumb.offsetLeft + thumb.offsetWidth > el.scrollLeft + el.clientWidth) {
+      el.scrollTo({ left: thumb.offsetLeft - (el.clientWidth - thumb.offsetWidth) / 2, behavior: 'smooth' })
+    }
+  }, [selectedIndex])
+
+  const thumbArrowClass = 'absolute z-10 flex h-7 w-7 items-center justify-center rounded-full bg-white/90 text-black shadow-md cursor-pointer'
+
   // Don't auto-advance away from a video the customer is watching. Autoplay restarts itself after hover
   // and taps, so it is stopped whenever it arms its timer on a video slide, and resumed on leaving one.
   React.useEffect(() => {
@@ -147,8 +191,8 @@ const ImageSlider = ({
 
   const ThumbnailsNode = thumbnails && slides.length > 1 ? (
     // On sm+ the column stretches to the slider's height and scrolls inside it
-    <div className="shrink-0 sm:relative sm:w-16 lg:w-20">
-      <div className="flex gap-2 overflow-x-auto sm:absolute sm:inset-0 sm:flex-col sm:overflow-x-hidden sm:overflow-y-auto">
+    <div className="relative shrink-0 sm:w-16 lg:w-20">
+      <div ref={thumbsRef} onScroll={updateThumbsMore} className="relative flex gap-2 overflow-x-auto sm:absolute sm:inset-0 sm:flex-col sm:overflow-x-hidden sm:overflow-y-auto">
         {slides.map((slide, index) => (
           <button
             type="button"
@@ -175,6 +219,26 @@ const ImageSlider = ({
           </button>
         ))}
       </div>
+      {thumbsMore.start && (
+        <>
+          <button type="button" aria-label="Previous thumbnails" onClick={() => scrollThumbs(-1)} className={cn(thumbArrowClass, 'left-1 top-1/2 -translate-y-1/2 sm:hidden')}>
+            <ChevronLeft className="h-4 w-4" />
+          </button>
+          <button type="button" aria-label="Previous thumbnails" onClick={() => scrollThumbs(-1)} className={cn(thumbArrowClass, 'hidden sm:flex top-1 left-1/2 -translate-x-1/2')}>
+            <ChevronUp className="h-4 w-4" />
+          </button>
+        </>
+      )}
+      {thumbsMore.end && (
+        <>
+          <button type="button" aria-label="More thumbnails" onClick={() => scrollThumbs(1)} className={cn(thumbArrowClass, 'right-1 top-1/2 -translate-y-1/2 sm:hidden')}>
+            <ChevronRight className="h-4 w-4" />
+          </button>
+          <button type="button" aria-label="More thumbnails" onClick={() => scrollThumbs(1)} className={cn(thumbArrowClass, 'hidden sm:flex bottom-1 left-1/2 -translate-x-1/2')}>
+            <ChevronDown className="h-4 w-4" />
+          </button>
+        </>
+      )}
     </div>
   ) : null
 
@@ -212,6 +276,20 @@ const ImageSlider = ({
             </div>
           ))}
         </div>
+
+        {/* Overlay arrows on the image so it's clear there are more photos */}
+        {thumbnails && slides.length > 1 && (
+          <>
+            <button type="button" aria-label="Previous image" onClick={onPrevButtonClick} disabled={prevBtnDisabled}
+              className="absolute left-3 top-1/2 z-10 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full bg-white/80 text-black shadow-md backdrop-blur-sm transition hover:bg-white disabled:opacity-0 cursor-pointer">
+              <ChevronLeft className="h-5 w-5" />
+            </button>
+            <button type="button" aria-label="Next image" onClick={onNextButtonClick} disabled={nextBtnDisabled}
+              className="absolute right-3 top-1/2 z-10 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full bg-white/80 text-black shadow-md backdrop-blur-sm transition hover:bg-white disabled:opacity-0 cursor-pointer">
+              <ChevronRight className="h-5 w-5" />
+            </button>
+          </>
+        )}
 
         {/* Dots rendered INSIDE the viewport */}
         {inside && DotsNode}
