@@ -86,7 +86,9 @@ export const PUT = withHandler(
         const idWithoutExtension = filename.split(".")[0];
         const uploadIndex = segments.findIndex((segment) => segment === "upload");
         if (uploadIndex >= 0) {
-          return [...segments.slice(uploadIndex + 1), idWithoutExtension].join("/");
+          // Drop the version segment (v1234567890) — it isn't part of the public_id
+          const folders = segments.slice(uploadIndex + 1).filter((segment, i) => !(i === 0 && /^v\d+$/.test(segment)));
+          return [...folders, idWithoutExtension].join("/");
         }
         return idWithoutExtension;
       } catch {
@@ -132,7 +134,7 @@ export const PUT = withHandler(
         if (value.startsWith("https://")) {
           return {
             url: value,
-            public_id: value.split("/").slice(-1)[0].split(".")[0],
+            public_id: extractPublicIdFromUrl(value),
           };
         }
 
@@ -177,9 +179,9 @@ export const PUT = withHandler(
           const normalized = normalizeImageObject(img);
           if (!normalized) continue;
 
-          if (!normalized.public_id && existingImageMap.has(normalized.url)) {
-            normalized.public_id = existingImageMap.get(normalized.url)?.public_id;
-          }
+          // A kept image keeps its stored public_id, so step 3 doesn't mistake it for a removed one
+          const kept = existingImageMap.get(normalized.url);
+          if (kept?.public_id) normalized.public_id = kept.public_id;
 
           if (!normalized.public_id && normalized.url.startsWith("https://")) {
             normalized.public_id = extractPublicIdFromUrl(normalized.url);

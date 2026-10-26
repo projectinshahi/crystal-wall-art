@@ -192,7 +192,7 @@ const ImageSlider = ({
   const ThumbnailsNode = thumbnails && slides.length > 1 ? (
     // On sm+ the column stretches to the slider's height and scrolls inside it
     <div className="relative shrink-0 sm:w-16 lg:w-20">
-      <div ref={thumbsRef} onScroll={updateThumbsMore} className="relative flex gap-2 overflow-x-auto sm:absolute sm:inset-0 sm:flex-col sm:overflow-x-hidden sm:overflow-y-auto">
+      <div ref={thumbsRef} onScroll={updateThumbsMore} className="relative flex gap-2 overflow-x-auto no-scrollbar sm:absolute sm:inset-0 sm:flex-col sm:overflow-x-hidden sm:overflow-y-auto">
         {slides.map((slide, index) => (
           <button
             type="button"
