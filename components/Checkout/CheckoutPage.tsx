@@ -11,6 +11,8 @@ import { useCartStore } from '@/store/cartStore'
 import { Loader2 } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { checkoutSchema } from '@/schema/checkout.schema'
+import { toast } from 'sonner'
+import Link from 'next/link'
 
 export type FormInputProps = {
     type: "Home" | "Work" | "Other";
@@ -24,7 +26,7 @@ export type FormInputProps = {
     paymentMethod: 'razorpay' | 'cod';
 };
 
-const CheckoutPage = () => {
+const CheckoutPage = ({ isGuest }: { isGuest: boolean }) => {
 
     const router = useRouter();
 
@@ -61,6 +63,10 @@ const CheckoutPage = () => {
             });
 
             setErrors(fieldErrors);
+            // Only the email error is shown inline; address errors need a nudge
+            if (Object.keys(fieldErrors).some((key) => key !== 'email')) {
+                toast.error('Please add and confirm a delivery address');
+            }
             return;
         }
 
@@ -75,7 +81,16 @@ const CheckoutPage = () => {
         <div className="max-w-5xl mx-auto py-4 sm:py-8">
             <div className="grid md:grid-cols-[1fr_400px] gap-6">
                 <div className="space-y-4">
+                    {isGuest && (
+                        <div className="bg-lightGray border border-grayBorder rounded-xl p-4 text-sm flex flex-wrap items-center justify-between gap-2">
+                            <span>Checking out as a guest</span>
+                            <Link href="/auth/login?callbackUrl=/checkout" className="text-primary font-semibold hover:underline">
+                                Log in for saved addresses
+                            </Link>
+                        </div>
+                    )}
                     <DeliveryAddressSection
+                        isGuest={isGuest}
                         setFormAddress={(address: any) =>
                             setForm((prev) => ({
                                 ...prev,

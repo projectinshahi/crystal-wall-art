@@ -56,10 +56,13 @@ const addresses = [
 ]
 
 interface Props {
+    isGuest: boolean;
     setFormAddress: React.Dispatch<React.SetStateAction<AddressFormValues>>;
 }
 
-const DeliveryAddressSection = ({ setFormAddress }: Props) => {
+const GUEST_ADDRESS_ID = "guest";
+
+const DeliveryAddressSection = ({ isGuest, setFormAddress }: Props) => {
 
     const [showAddressForm, setShowAddressForm] = useState(false);
     const [savedAddresses, setSavedAddresses] = useState<SavedAddress[]>([]);
@@ -80,6 +83,12 @@ const DeliveryAddressSection = ({ setFormAddress }: Props) => {
     });
 
     useEffect(() => {
+        // Guests have no saved addresses — go straight to the form
+        if (isGuest) {
+            setShowAddressForm(true);
+            return;
+        }
+
         const loadAddresses = async () => {
             try {
                 const res = await fetch("/api/user/address", {
@@ -116,7 +125,7 @@ const DeliveryAddressSection = ({ setFormAddress }: Props) => {
         };
 
         loadAddresses();
-    }, []);
+    }, [isGuest]);
 
     const startEditAddress = (addr: SavedAddress) => {
         setEditingAddressId(addr.id);
@@ -177,6 +186,14 @@ const DeliveryAddressSection = ({ setFormAddress }: Props) => {
     };
 
     const onSubmit = async (data: AddressFormValues) => {
+        // Guests: keep the address for this order only, nothing is saved
+        if (isGuest) {
+            const guestAddress = { ...data, id: GUEST_ADDRESS_ID, is_default: false } as SavedAddress;
+            setSavedAddresses([guestAddress]);
+            selectAddress(guestAddress);
+            return;
+        }
+
         const insertedData = await fetch('/api/user/address', {
             method: 'POST',
             credentials: "include",
@@ -262,7 +279,8 @@ const DeliveryAddressSection = ({ setFormAddress }: Props) => {
                     editingAddressId={editingAddressId}
                     savedAddresses={savedAddresses}
                     setShowAddressForm={setShowAddressForm}
-                    selectAddress={selectAddress} />)}
+                    selectAddress={selectAddress}
+                    submitLabel={isGuest ? "Use This Address" : undefined} />)}
         </div>
     )
 }

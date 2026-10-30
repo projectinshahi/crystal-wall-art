@@ -2,8 +2,9 @@ import { NextResponse } from "next/server";
 import { withHandler } from "@/lib/api/handler";
 import Razorpay from "razorpay";
 
+// Public so guests can pay; the order itself is created by /api/orders/create.
 export const POST = withHandler(
-  async ({ req, user }) => {
+  async ({ req }) => {
     // ✅ Instantiate inside handler so env vars are always resolved
     const razorpay = new Razorpay({
       key_id: process.env.RAZORPAY_KEY_ID!,
@@ -49,5 +50,5 @@ export const POST = withHandler(
       );
     }
   },
-  { access: "user" }
+  { access: "public" }
 );

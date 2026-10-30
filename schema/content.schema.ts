@@ -59,3 +59,12 @@ export const contentApiSchema = contentSchema.extend({
   image: uploadedImageSchema,
   mobile_image: uploadedImageSchema.nullable().optional(),
 });
+// Floating WhatsApp button: phone with country code (digits only once spaces/+/- are stripped)
+export const whatsappSchema = z.object({
+    phone: z.string().trim()
+        .transform((val) => val.replace(/[\s+()-]/g, ""))
+        .pipe(z.string().regex(/^\d{10,15}$/, "Enter the number with country code, e.g. 919876543210")),
+    message: z.string().trim().max(300, "Message must be under 300 characters").optional().default(""),
+});
+
+export type WhatsAppFormValues = z.input<typeof whatsappSchema>;

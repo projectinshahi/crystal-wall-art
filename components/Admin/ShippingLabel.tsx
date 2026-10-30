@@ -21,6 +21,15 @@ export interface LabelData {
   items: LabelItem[];
 }
 
+// Sender ("From") details printed on every label
+export const SELLER = {
+  name: "Crystal Glass Art",
+  addressLines: ["Maliyekkal Galaxy", "Opp. M S M College", "Kayamkulam, Alappuzha"],
+  phone: "9288010052",
+  gstin: "32EAJPR4283P1ZY",
+  email: "crystalglassart2020@gmail.com",
+};
+
 interface Props {
   data: LabelData;
   /** A4 fits 4 labels per page; A6 = single label per page */
@@ -64,7 +73,7 @@ export function ShippingLabel({ data, size = "A6" }: Props) {
     >
       <div style={{ display: "flex", justifyContent: "space-between", borderBottom: "2px solid #000", paddingBottom: "4mm", marginBottom: "3mm" }}>
         <div>
-          <div style={{ fontWeight: 700, fontSize: "14px" }}>Crystal Art</div>
+          <div style={{ fontWeight: 700, fontSize: "14px" }}>{SELLER.name}</div>
           <div style={{ fontSize: "10px" }}>Shipping Label</div>
         </div>
         <div style={{ textAlign: "right" }}>
@@ -78,6 +87,14 @@ export function ShippingLabel({ data, size = "A6" }: Props) {
         <div style={{ fontWeight: 700, fontSize: "13px" }}>{data.customerName}</div>
         <div style={{ whiteSpace: "pre-wrap", lineHeight: 1.3 }}>{data.address}</div>
         {data.phone && <div><strong>Phone:</strong> {data.phone}</div>}
+      </div>
+
+      <div style={{ marginBottom: "3mm", fontSize: "10px", lineHeight: 1.3 }}>
+        <div style={{ color: "#555", textTransform: "uppercase" }}>From</div>
+        <div style={{ fontWeight: 700 }}>{SELLER.name}</div>
+        {SELLER.addressLines.map((line) => <div key={line}>{line}</div>)}
+        <div><strong>Ph:</strong> {SELLER.phone} · {SELLER.email}</div>
+        <div><strong>GSTIN:</strong> {SELLER.gstin}</div>
       </div>
 
       {data.courier && (
@@ -156,7 +173,7 @@ export function printLabels(labels: LabelData[], size: "A4" | "A6" = "A6") {
     return `<div class="shipping-label" style="width:${labelWidth};min-height:${labelMinHeight};padding:6mm;border:1px solid #000;background:#fff;color:#000;font-family:Arial,sans-serif;font-size:11px;box-sizing:border-box;page-break-after:always;margin:0 auto 4mm">
       <div style="display:flex;justify-content:space-between;border-bottom:2px solid #000;padding-bottom:4mm;margin-bottom:3mm">
         <div>
-          <div style="font-weight:700;font-size:14px">Crystal Art</div>
+          <div style="font-weight:700;font-size:14px">${escape(SELLER.name)}</div>
           <div style="font-size:10px">Shipping Label</div>
         </div>
         <div style="text-align:right">
@@ -169,6 +186,13 @@ export function printLabels(labels: LabelData[], size: "A4" | "A6" = "A6") {
         <div style="font-weight:700;font-size:13px">${escape(data.customerName)}</div>
         <div style="white-space:pre-wrap;line-height:1.3">${escape(data.address)}</div>
         ${data.phone ? `<div><strong>Phone:</strong> ${escape(data.phone)}</div>` : ""}
+      </div>
+      <div style="margin-bottom:3mm;font-size:10px;line-height:1.3">
+        <div style="color:#555;text-transform:uppercase">From</div>
+        <div style="font-weight:700">${escape(SELLER.name)}</div>
+        ${SELLER.addressLines.map(line => `<div>${escape(line)}</div>`).join("")}
+        <div><strong>Ph:</strong> ${escape(SELLER.phone)} · ${escape(SELLER.email)}</div>
+        <div><strong>GSTIN:</strong> ${escape(SELLER.gstin)}</div>
       </div>
       ${data.courier ? `<div style="margin-bottom:2mm"><strong>Courier:</strong> ${escape(data.courier)}</div>` : ""}
       ${barcodeSvg}

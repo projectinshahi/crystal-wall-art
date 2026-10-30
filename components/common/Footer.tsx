@@ -57,8 +57,12 @@ const Footer = () => {
                     </div>
 
                     <div className='flex flex-row gap-3 mt-6 sm:mt-0'>
-                        <Instagram className='text-black' />
-                        <Facebook className='text-black' />
+                        <a href="https://www.instagram.com/crystalwallart" target="_blank" rel="noopener noreferrer" aria-label="Crystal Wall Art on Instagram" className="hover:opacity-70 transition-opacity">
+                            <Instagram className='text-black' />
+                        </a>
+                        <a href="https://www.facebook.com/share/1GyCpedJyQ/" target="_blank" rel="noopener noreferrer" aria-label="Crystal Wall Art on Facebook" className="hover:opacity-70 transition-opacity">
+                            <Facebook className='text-black' />
+                        </a>
                     </div>
 
                 </div>

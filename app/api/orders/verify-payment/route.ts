@@ -2,9 +2,10 @@ import { NextResponse } from "next/server";
 import { withHandler } from "@/lib/api/handler";
 import { writeQuery } from "@/lib/db";
 import crypto from "crypto";
+import Razorpay from "razorpay";
 
 export const POST = withHandler(
-  async ({ req, user }) => {
+  async ({ req }) => {
     const body = await req.json();
     const {
       razorpay_order_id,
@@ -44,6 +45,21 @@ export const POST = withHandler(
 
     console.log("[verify-payment] ✅ Signature valid");
 
+    // 1b️⃣ The route is public (guest checkout), so make sure this Razorpay order was
+    // created for this order — otherwise one valid payment could mark any order paid.
+    const razorpay = new Razorpay({
+      key_id: process.env.RAZORPAY_KEY_ID!,
+      key_secret: secret,
+    });
+    const rzpOrder = await razorpay.orders.fetch(razorpay_order_id);
+    if (rzpOrder.notes?.order_id !== order_id) {
+      console.error("[verify-payment] ❌ Razorpay order does not belong to order", order_id);
+      return NextResponse.json(
+        { verified: false, error: "Order mismatch" },
+        { status: 400 }
+      );
+    }
+
     // 2️⃣ Update order as paid
     await writeQuery(
       `
@@ -80,5 +96,5 @@ export const POST = withHandler(
     console.log("[verify-payment] ✅ timeline updated");
     return NextResponse.json({ verified: true });
   },
-  { access: "user" }
+  { access: "public" }
 );

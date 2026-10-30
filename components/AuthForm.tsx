@@ -9,6 +9,12 @@ import { toast } from 'sonner'
 import { signIn } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 
+// Where to go after login/signup: ?callbackUrl= if it's a same-site path, else home
+const getRedirectPath = () => {
+    const callbackUrl = new URLSearchParams(window.location.search).get('callbackUrl');
+    return callbackUrl?.startsWith('/') && !callbackUrl.startsWith('//') ? callbackUrl : '/';
+};
+
 const AuthForm = () => {
 
     const router = useRouter();
@@ -60,7 +66,7 @@ const AuthForm = () => {
                 if (result?.error) {
                     setError("Internal Server Error!..")
                 } else if (result?.ok) {
-                    router.push('/')
+                    router.push(getRedirectPath())
                     router.refresh();
                 }
             } else if (mode === 'forgot') {
@@ -94,7 +100,7 @@ const AuthForm = () => {
                 if (result?.error) {
                     setError("Invalid credentials")
                 } else if (result?.ok) {
-                    router.push('/')
+                    router.push(getRedirectPath())
                     router.refresh();
                 }
             }

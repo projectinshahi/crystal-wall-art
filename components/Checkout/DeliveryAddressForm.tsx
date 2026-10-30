@@ -15,6 +15,7 @@ interface Props {
     savedAddresses: SavedAddress[];
     setShowAddressForm: any;
     selectAddress: any;
+    submitLabel?: string;
 }
 
 const DeliveryAddressForm = ({ control,
@@ -23,7 +24,8 @@ const DeliveryAddressForm = ({ control,
     editingAddressId,
     savedAddresses,
     setShowAddressForm,
-    selectAddress }: Props) => {
+    selectAddress,
+    submitLabel }: Props) => {
 
     const userId = 13121;
 
@@ -95,7 +97,7 @@ const DeliveryAddressForm = ({ control,
             <div className="flex gap-2">
                 {userId && (
                     <Button size="sm" onClick={handleSubmit(onSubmit)} className='text-white'>
-                        <Check className="h-3.5 w-3.5 mr-1" /> {editingAddressId ? "Update" : "Save"} Address
+                        <Check className="h-3.5 w-3.5 mr-1" /> {submitLabel ?? `${editingAddressId ? "Update" : "Save"} Address`}
                     </Button>
                 )}
                 {savedAddresses.length > 0 && (

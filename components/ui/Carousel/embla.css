@@ -33,7 +33,7 @@
 .embla__slide__content {
   position: relative;
   width: 100%;
-  height: 20rem;
+  aspect-ratio: 1 / 1;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -141,34 +141,14 @@
   height: 1.2rem;
 }
 
-/* Responsive Scaling */
-@media (max-width: 1024px) {
-  .embla__slide__content {
-    height: 26rem;
-  }
-}
-
 @media (max-width: 640px) {
   /* .embla {
     padding: 0 0.5rem;
   } */
-  .embla__slide__content {
-    height: 18rem;
-  }
   .embla__slide__title {
     font-size: 1.25rem;
   }
   .embla__slide__overlay {
     padding: 1.5rem;
-  }
-}
-
-/* Two-column product page (Tailwind lg and up): a taller, square image that never exceeds the screen height.
-   Placed last so it also wins at exactly 1024px. object-fit: cover keeps the aspect ratio (no stretching). */
-@media (min-width: 1024px) {
-  .embla__slide__content {
-    height: auto;
-    aspect-ratio: 1 / 1;
-    max-height: max(24rem, calc(100vh - 11rem));
   }
 }

@@ -7,6 +7,7 @@ import { usePathname } from 'next/navigation';
 import Footer from '../Footer';
 import CartSidebar from '@/components/CartSidebar';
 import { useCartSync } from '@/hooks/useCartSync';
+import WhatsAppButton from '../WhatsAppButton';
 
 export type HeaderMode = "full" | "none" | "back";
 
@@ -93,6 +94,8 @@ const LayoutContext = ({ children }: { children: React.ReactNode }) => {
                     {children}
                 </main>
                 <CartSidebar/>
+                {/* Kept off checkout so it doesn't cover the Place Order button */}
+                {pathname !== "/checkout" && !pathname.startsWith("/order-success") && <WhatsAppButton />}
                 {showFooter && <Footer />}
             </div>
         </RouteLayoutContext.Provider >

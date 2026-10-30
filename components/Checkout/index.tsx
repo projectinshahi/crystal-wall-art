@@ -11,7 +11,7 @@ import React, { useEffect, useState } from 'react'
 
 const items = [{}]
 
-const CheckOut = () => {
+const CheckOut = ({ isGuest }: { isGuest: boolean }) => {
     const isMobile = useIsMobile();
     const { setOverride } = useStoreLayout();
 
@@ -41,7 +41,7 @@ const CheckOut = () => {
 
     return (
         <Container>
-            <Checkout />
+            <Checkout isGuest={isGuest} />
         </Container>
     )
 }

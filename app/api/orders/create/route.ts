@@ -1,9 +1,12 @@
 import { NextResponse } from "next/server";
 import { withHandler } from "@/lib/api/handler";
 import { writeQuery } from "@/lib/db";
+import { getOptionalAuthUser } from "@/lib/api/auth";
 
+// Public so guests can check out; signed-in customers get the order linked to their account.
 export const POST = withHandler(
-  async ({ req, user }) => {
+  async ({ req }) => {
+    const user = await getOptionalAuthUser(req);
     const body = await req.json();
     const {
       orderNumber,
@@ -57,7 +60,7 @@ export const POST = withHandler(
       `,
       [
         orderNumber,                       // $1
-        user.id,                           // $2
+        user?.id ?? null,                  // $2 (null for guest orders)
         form.name.trim(),                  // $3
         form.email.trim().toLowerCase(),   // $4
         form.phone?.trim() || null,        // $5
@@ -154,5 +157,5 @@ export const POST = withHandler(
     console.log("[orders/create] ✅ done");
     return NextResponse.json({ success: true, order });
   },
-  { access: "user" }
+  { access: "public" }
 );

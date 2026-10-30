@@ -18,6 +18,15 @@ export async function getAuthUser(req: NextRequest) {
   return token;
 }
 
+// Customer session if signed in, otherwise null (guest checkout)
+export async function getOptionalAuthUser(req: NextRequest) {
+  return getToken({
+    req,
+    secret: process.env.NEXTAUTH_SECRET,
+    cookieName: CUSTOMER_SESSION_COOKIE,
+  });
+}
+
 // Admin session (separate cookie from the customer session)
 export async function requireAdmin(req: NextRequest) {
   const user = await getToken({

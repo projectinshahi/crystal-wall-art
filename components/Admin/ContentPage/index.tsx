@@ -11,21 +11,23 @@ import { ContentFormOutput, ContentFormInput } from '@/types/Admin/content.types
 import ContentsListing from './ContentsListing'
 import { PaginationMeta } from '@/lib/db/content.db'
 import HomeIntroForm from './HomeIntroForm'
-import { HOME_INTRO_CONTENT_TYPE } from '@/lib/constants/content.constants'
+import WhatsAppForm from './WhatsAppForm'
+import { HOME_INTRO_CONTENT_TYPE, WHATSAPP_CONTENT_TYPE } from '@/lib/constants/content.constants'
 
 interface Props {
     data: ContentFormOutput[];
     metaData: PaginationMeta;
+    whatsapp?: ContentFormOutput;
 }
 
-const ContentPage = ({ data, metaData }: Props) => {
+const ContentPage = ({ data, metaData, whatsapp }: Props) => {
 
     const [editContent, setEditContent] = useState<ContentFormOutput | null>(null)
     const [dialogOpen, setDialogOpen] = useState<boolean>(false);
     const [isLoading, setIsLoading] = useState<boolean>(true);
-    // The homepage intro section is edited in its own card, not in the banner/hero listing
+    // The homepage intro section and WhatsApp number are edited in their own cards, not in the banner/hero listing
     const homeIntro = data?.find((c) => c.type === HOME_INTRO_CONTENT_TYPE)
-    const [contentsData, setContentsData] = useState<ContentFormOutput[]>((data || []).filter((c) => c.type !== HOME_INTRO_CONTENT_TYPE))
+    const [contentsData, setContentsData] = useState<ContentFormOutput[]>((data || []).filter((c) => c.type !== HOME_INTRO_CONTENT_TYPE && c.type !== WHATSAPP_CONTENT_TYPE))
 
     const form = useForm<ContentFormInput>({
         resolver: zodResolver(contentFormSchema),
@@ -100,8 +102,9 @@ const ContentPage = ({ data, metaData }: Props) => {
                 <AddContentButton handleAction={openAddDialog} />
             </AdminPageHeader>
 
-            <div className="my-6">
+            <div className="my-6 grid gap-6">
                 <HomeIntroForm content={homeIntro} />
+                <WhatsAppForm content={whatsapp} />
             </div>
 
             <ContectForm control={control} dialogOpen={dialogOpen} formSubmit={handleSubmit} closeDialog={handleCloseDialog} setError={setError} editContent={editContent ?? null} setContentsData={setContentsData} />

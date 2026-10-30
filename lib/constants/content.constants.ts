@@ -16,3 +16,12 @@ export const HOME_INTRO_DEFAULTS = {
   title: 'Crystal Wall Art- Wings To Your Imagination. Best Quality Acrylic Printing At Affordable Rate',
   description: 'Because Acrylic prints are personalized products, we understand there are a lot of expectations that our clients have and we have a fantastic consumer carrier group that is reachable round the clock simply to assist you get the precise product that you have in mind. The substances we use for our prints are higher than or at least up to the enterprise requirements and we can guarantee you that our purchaser pleasant fees have now not come at the cost of quality',
 }
+// Floating WhatsApp button. Stored as a single `contents` row with this type:
+// title = phone number (digits with country code), description = optional pre-filled message.
+export const WHATSAPP_CONTENT_TYPE = 'whatsapp'
+
+// Shown when no row exists yet (first number from the Terms & Conditions contact details).
+export const WHATSAPP_DEFAULTS = {
+  phone: '919288010051',
+  message: 'Hi, I have a question about Crystal Wall Art.',
+}
